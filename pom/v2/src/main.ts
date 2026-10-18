@@ -42,7 +42,7 @@ let toastTimer = 0;
 const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
@@ -56,8 +56,8 @@ let targetCameraAngle = 0;
 let cameraZoom = 1;
 let targetCameraZoom = 1;
 
-scene.add(new THREE.HemisphereLight(0xfff5df, 0x66744f, 2.25));
-const sun = new THREE.DirectionalLight(0xfff2d1, 2.25);
+scene.add(new THREE.HemisphereLight(0xfff5df, 0x66744f, 0.8));
+const sun = new THREE.DirectionalLight(0xfff2d1, 0.8);
 sun.position.set(-5, 9, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -181,18 +181,18 @@ function makePlayer(): void {
     });
   }
   playerActor = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 24, 20),
-    new THREE.MeshStandardMaterial({ color: 0xef5941, roughness: 0.48, metalness: 0 }),
-  );
+  const bodyGeometry = new THREE.SphereGeometry(1, 24, 20);
+  const outline = new THREE.Mesh(bodyGeometry, new THREE.MeshBasicMaterial({ color: ink }));
+  outline.scale.set(0.335, 0.405, 0.28);
+  outline.position.set(0, 0.39, -0.012);
+  playerActor.add(outline);
+  const body = new THREE.Mesh(bodyGeometry, new THREE.MeshBasicMaterial({ color: 0xef5941 }));
   body.scale.set(0.31, 0.39, 0.27);
   body.position.y = 0.39;
-  body.castShadow = true;
-  body.receiveShadow = true;
   playerActor.add(body);
 
-  const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xfff0d8, roughness: 0.32 });
-  const pupilMat = new THREE.MeshStandardMaterial({ color: ink, roughness: 0.35 });
+  const eyeWhite = new THREE.MeshBasicMaterial({ color: 0xfff0d8 });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: ink });
   for (const x of [-0.105, 0.105]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.071, 14, 12), eyeWhite);
     eye.position.set(x, 0.49, 0.212);
@@ -268,12 +268,12 @@ function rebuildBlocks(): void {
     const sideColor = new THREE.Color(frontColor).multiplyScalar(0.73).getHex();
     const topColor = new THREE.Color(frontColor).lerp(new THREE.Color('#fff1c6'), 0.34).getHex();
     const materials = [
-      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: topColor, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: frontColor, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 1 }),
+      new THREE.MeshBasicMaterial({ color: sideColor }),
+      new THREE.MeshBasicMaterial({ color: sideColor }),
+      new THREE.MeshBasicMaterial({ color: topColor }),
+      new THREE.MeshBasicMaterial({ color: sideColor }),
+      new THREE.MeshBasicMaterial({ color: frontColor }),
+      new THREE.MeshBasicMaterial({ color: sideColor }),
     ];
     for (const cell of piece.cells) {
       const depth = Math.max(piece.depth + 0.06, 0.06);
@@ -511,29 +511,19 @@ function resize(): void {
   renderer.setSize(width, height, false);
 }
 
-function resetCamera(): void {
-  targetCameraAngle = 0;
-  targetCameraZoom = 1;
-  updateViewButtons();
-  $('viewStatus').textContent = 'Camera view reset.';
-}
-
 function updateViewButtons(): void {
-  $('turnLeft').toggleAttribute('disabled', targetCameraAngle <= -Math.PI / 4 + 0.001);
-  $('turnRight').toggleAttribute('disabled', targetCameraAngle >= Math.PI / 4 - 0.001);
-  $('zoomOut').toggleAttribute('disabled', targetCameraZoom <= 0.82 + 0.001);
-  $('zoomIn').toggleAttribute('disabled', targetCameraZoom >= 1.28 - 0.001);
+  const left = $('turnLeft');
+  const right = $('turnRight');
+  left.toggleAttribute('disabled', targetCameraAngle <= -Math.PI / 4 + 0.001);
+  right.toggleAttribute('disabled', targetCameraAngle >= Math.PI / 4 - 0.001);
+  left.classList.toggle('is-active', targetCameraAngle < -0.001);
+  right.classList.toggle('is-active', targetCameraAngle > 0.001);
 }
 
 function rotateView(direction: -1 | 1): void {
   targetCameraAngle = THREE.MathUtils.clamp(targetCameraAngle + direction * Math.PI / 12, -Math.PI / 4, Math.PI / 4);
   const degrees = Math.round(targetCameraAngle * 180 / Math.PI);
   $('viewStatus').textContent = degrees === 0 ? 'View centered.' : `View rotated ${Math.abs(degrees)} degrees ${degrees < 0 ? 'left' : 'right'}.`;
-  updateViewButtons();
-}
-
-function zoomView(direction: -1 | 1): void {
-  targetCameraZoom = THREE.MathUtils.clamp(targetCameraZoom + direction * 0.12, 0.82, 1.28);
   updateViewButtons();
 }
 
@@ -626,11 +616,8 @@ function initialize(): void {
     if (previous) restore(previous); else showToast('Nothing to undo yet.');
   });
   $('reset').addEventListener('click', resetPuzzle);
-  $('resetView').addEventListener('click', resetCamera);
   $('turnLeft').addEventListener('click', () => rotateView(-1));
   $('turnRight').addEventListener('click', () => rotateView(1));
-  $('zoomOut').addEventListener('click', () => zoomView(-1));
-  $('zoomIn').addEventListener('click', () => zoomView(1));
   levelSelect.addEventListener('change', () => startLevel(levelSelect.value));
   requestAnimationFrame(frame);
 }
