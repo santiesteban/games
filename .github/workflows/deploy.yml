@@ -1,0 +1,66 @@
+name: Deploy games site to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: pom/v2/package-lock.json
+
+      - name: Install Pom dependencies
+        run: npm ci
+        working-directory: pom/v2
+
+      - name: Build Pom v2
+        run: npm run build
+        working-directory: pom/v2
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Stage the site
+        run: |
+          mkdir -p _site/pom/v1 _site/pom/v2
+          cp pom/index.html pom/meadow-foreground.png pom/sky-background.png _site/pom/
+          cp -a pom/v1/. _site/pom/v1/
+          cp -a pom/v2/dist/. _site/pom/v2/
+          touch _site/.nojekyll
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./_site
+
+  deploy:
+    if: github.ref_name == github.event.repository.default_branch
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

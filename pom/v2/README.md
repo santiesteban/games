@@ -5,18 +5,18 @@ Pom is a small web-first pull-and-climb puzzle built with Three.js, TypeScript, 
 ## Run locally
 
 ```sh
-cd v2
+cd pom/v2
 npm install
 npm run dev
 ```
 
-Create a production web build from `v2/` with `npm run build`, then serve the `v2/dist/` folder with any static web host.
+Create a production web build from `pom/v2/` with `npm run build`, then serve the `pom/v2/dist/` folder with any static web host.
 
 ## Publish with GitHub Pages
 
-The workflow in the repository-root `.github/workflows/deploy.yml` builds the game from `v2/` and publishes it to GitHub Pages when you push to the default branch. It can also be started manually from the repository's **Actions** tab. GitHub Pages serves the generated `v2/dist/` folder; no server-side runtime is needed.
+The repository-root workflow at `.github/workflows/deploy.yml` builds the game from `pom/v2/` and publishes its compiled files at `/games/pom/v2/` when you push to `main`. It also preserves the original game at `/games/pom/` and `/games/pom/v1/`. You can run it manually from the repository's **Actions** tab. No server-side runtime is needed.
 
-To enable it, push the project to GitHub, then open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. After the workflow finishes, GitHub will show the published URL in the workflow run and under Pages settings. The Vite configuration uses relative asset paths, so it works both at a GitHub project URL and at a custom domain.
+In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. After the workflow finishes, GitHub will show the published URL in the workflow run and under Pages settings. The Vite configuration uses relative asset paths, so the game works in this nested path.
 
 ## Project structure
 
