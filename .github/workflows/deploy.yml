@@ -30,6 +30,7 @@ jobs:
           cache-dependency-path: |
             pom/v2/package-lock.json
             pom/v3/package-lock.json
+            pom/v4/package-lock.json
 
       - name: Install Pom dependencies
         run: npm ci
@@ -51,16 +52,25 @@ jobs:
         run: npm run build
         working-directory: pom/v3
 
+      - name: Install Pom v4 dependencies
+        run: npm ci
+        working-directory: pom/v4
+
+      - name: Build Pom v4
+        run: npm run build
+        working-directory: pom/v4
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 
       - name: Stage the site
         run: |
-          mkdir -p _site/pom/v1 _site/pom/v2 _site/pom/v3
+          mkdir -p _site/pom/v1 _site/pom/v2 _site/pom/v3 _site/pom/v4
           cp pom/index.html pom/meadow-foreground.png pom/sky-background.png _site/pom/
           cp -a pom/v1/. _site/pom/v1/
           cp -a pom/v2/dist/. _site/pom/v2/
           cp -a pom/v3/dist/. _site/pom/v3/
+          cp -a pom/v4/dist/. _site/pom/v4/
           touch _site/.nojekyll
 
       - name: Upload site artifact

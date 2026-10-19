@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#d8c6a4"><title>Little Ledges — Pull, climb, discover</title>
+</head>
+<body>
+  <main class="app"><section class="stage">
+    <div class="topline"><div class="brand"><span class="brandmark">L</span> LITTLE LEDGES</div><span class="edition">A LITTLEJS 3D REMAKE</span></div>
+    <div class="heading"><h1><span class="level-number">01</span> Pull out a path</h1><p>Bring the blocks toward you, then climb your way to the flag.</p></div>
+    <div class="canvas-wrap" id="canvasWrap"><div class="toast" id="toast" role="status"></div></div>
+    <div class="block-panel"><div class="pullrow"><button class="btn" id="push">← Push in</button><button class="btn pull" id="pull">Pull out →</button></div><p class="selected-help" id="selectionHelp">Click a block to select it, or a ledge to move Pom.</p></div>
+    <div class="below"><div class="compact-actions"><button class="btn" id="undo">↶ Undo</button><button class="btn" id="reset">Start over ↻</button></div><div class="view-controls"><button class="view-btn" id="turnLeft" aria-pressed="false">↶ Rotate left</button><button class="view-btn" id="turnRight" aria-pressed="false">Rotate right ↷</button></div></div>
+    <div class="key-help">CLICK TO MOVE · SELECT A BLOCK TO PULL · <kbd>Z</kbd> UNDO · <kbd>R</kbd> RESET</div>
+  </section></main>
+  <script type="module" src="./src/main.js"></script>
+</body></html>
