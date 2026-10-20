@@ -1,34 +1,13 @@
 [
   {
-    "id": 0,
-    "name": "Pull out a path",
-    "description": "Bring the blocks toward you, then climb your way to the flag.",
-    "grid": [
-      "...YY...",
-      ".BBBYY..",
-      "OOBBBOO.",
-      "OGGGGOO.",
-      "RRGGRRR.",
-      "RRRRRRR."
-    ],
-    "start": {
-      "x": 0,
-      "z": 0
-    },
-    "goal": {
-      "x": 4,
-      "y": 0
-    }
-  },
-  {
     "id": 1,
     "name": "Challenge 1-1",
     "description": "Climb the little staircase.",
     "grid": [
-      "GGGY",
-      "GGRO",
-      "GROO",
-      "OOOO"
+      "RRRG",
+      "RRGG",
+      "RGGG",
+      "GGGG"
     ],
     "start": {
       "x": 0,
@@ -44,10 +23,11 @@
     "name": "Challenge 1-2",
     "description": "Find a path through the cross.",
     "grid": [
-      "GGYG",
-      "GOOG",
-      "OOOO",
-      "GOOG"
+      "GGBGG",
+      "GBBBG",
+      "BBBBB",
+      "GBBBG",
+      "GGBGG"
     ],
     "start": {
       "x": 0,
@@ -63,9 +43,9 @@
     "name": "Challenge 1-3",
     "description": "Climb from one colored row to the next.",
     "grid": [
-      "OYO",
-      "GGG",
-      "RRR"
+      "BBB",
+      "YYY",
+      "BBB"
     ],
     "start": {
       "x": 0,
@@ -81,16 +61,17 @@
     "name": "Challenge 1-4",
     "description": "Step into the center of the square.",
     "grid": [
-      "GGY",
-      "GOG",
-      "GGG"
+      "YYYY",
+      "YOOY",
+      "ROOR",
+      "RRRR"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 2,
+      "x": 3,
       "y": 0
     }
   },
@@ -99,10 +80,10 @@
     "name": "Challenge 1-5",
     "description": "Follow the rising green steps.",
     "grid": [
-      "YGGGGGG",
-      "OOGGGGG",
-      "OOOGGGG",
-      "OOOGOGG",
+      "ORRRRRR",
+      "OORRRRR",
+      "OOORORR",
+      "OOOROOR",
       "OOOOOOO"
     ],
     "start": {
@@ -119,11 +100,13 @@
     "name": "Challenge 1-6",
     "description": "Cross the dips to reach the top.",
     "grid": [
-      "YGGGGGG",
-      "OOGGGGG",
-      "OOOGGGO",
-      "OOOOGOO",
-      "OOOOOOO"
+      "RGGGGGGGGGGG",
+      "RRGGGGGGGGGG",
+      "RRRGGGGRGGGG",
+      "RRRRGGGRRRGG",
+      "RRRRRGGRRRGG",
+      "RRRRRGGRRRRG",
+      "RRRRRRRRRRRR"
     ],
     "start": {
       "x": 0,
@@ -139,19 +122,20 @@
     "name": "Challenge 1-7",
     "description": "Climb the green cross set into the orange wall.",
     "grid": [
-      "OOOOGOOOO",
-      "OOOGGGOOO",
-      "OOGGGGGOO",
-      "OGGGGGGGO",
-      "OOGGGGGOO",
-      "OOOGGGOOO"
+      "GGGGGGG",
+      "BGGGGGG",
+      "BBGGGGG",
+      "BBBGGGG",
+      "BBBGBGG",
+      "BBBGBBG",
+      "BBBGBBB"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 4,
+      "x": 0,
       "y": 0
     }
   },
@@ -160,19 +144,21 @@
     "name": "Challenge 1-8",
     "description": "Find a route through the winding color bands.",
     "grid": [
-      "OGYGG",
-      "OOGGG",
-      "GGYGO",
-      "GGYOO",
-      "OYYOO",
-      "YYYOO"
+      "BBBYYY",
+      "BBYYYY",
+      "OOOYYY",
+      "OOOOYY",
+      "OOBBBB",
+      "YYYBBB",
+      "YYYYBB",
+      "YYYYBB"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 0,
+      "x": 5,
       "y": 0
     }
   },
@@ -181,10 +167,10 @@
     "name": "Challenge 1-9",
     "description": "Pull through the doorway in the orange wall.",
     "grid": [
+      "YYYY",
       "OOOO",
-      "OOOO",
-      "OGGO",
-      "OGGO"
+      "RRYY",
+      "OOOO"
     ],
     "start": {
       "x": 0,
@@ -201,9 +187,10 @@
     "description": "Reach the top of the green doorway.",
     "grid": [
       "OOOO",
-      "OGGO",
-      "OGGO",
-      "OGGO"
+      "RRRR",
+      "GGOO",
+      "RRRR",
+      "OOOO"
     ],
     "start": {
       "x": 0,
@@ -219,9 +206,10 @@
     "name": "Challenge 1-11",
     "description": "Climb from the broad orange wall onto green.",
     "grid": [
-      "OOOO",
-      "OOOO",
-      "GGGG"
+      "RGRG",
+      "RGRR",
+      "RGGR",
+      "RRGR"
     ],
     "start": {
       "x": 0,
@@ -237,16 +225,18 @@
     "name": "Challenge 1-12",
     "description": "Cross three broad bands to reach the flag.",
     "grid": [
-      "OOOO",
-      "GGGG",
-      "OOOO"
+      "GBBBGGGGG",
+      "GGBBGGGGG",
+      "GGGBBBBGG",
+      "GGGGGBBBG",
+      "GGGGGBBBB"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 1,
+      "x": 0,
       "y": 0
     }
   },
@@ -255,16 +245,17 @@
     "name": "Challenge 1-13",
     "description": "Climb across the checker of colored panels.",
     "grid": [
-      "OG",
-      "GO",
-      "OG"
+      "BBBB",
+      "BYBO",
+      "BYOO",
+      "BBOO"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 1,
+      "x": 0,
       "y": 0
     }
   },
@@ -273,24 +264,18 @@
     "name": "Challenge 1-14",
     "description": "Follow the stepped path around the center.",
     "grid": [
-      "OOOOOGOOOOO",
-      "OOOOOGOOOOO",
-      "OOOOGGGOOOO",
-      "OOGGOOGGOOO",
-      "OGGOOOOGGOO",
-      "GGGOOOOOGGG",
-      "OGGOOOOGGOO",
-      "OOGGOOGGOOO",
-      "OOOOGGGOOOO",
-      "OOOOOGOOOOO",
-      "OOOOOOOOOOO"
+      "YYYYY",
+      "YOYYY",
+      "YOOYY",
+      "YYYOY",
+      "YYOOY"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 5,
+      "x": 0,
       "y": 0
     }
   },
@@ -299,22 +284,17 @@
     "name": "Challenge 1-15",
     "description": "Make your way through the nested square walls.",
     "grid": [
-      "OOOOOOOOO",
-      "OGGGGGGGO",
-      "OGYYYYYGO",
-      "OGYGGGYGO",
-      "OGYGYGYGO",
-      "OGYGGGYGO",
-      "OGYYYYYGO",
-      "OGGGGGGGO",
-      "OOOOOOOOO"
+      "OOOO",
+      "ORGO",
+      "ORRO",
+      "OOOO"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 4,
+      "x": 0,
       "y": 0
     }
   },
@@ -323,21 +303,17 @@
     "name": "Challenge 1-16",
     "description": "Climb the stepped center between the orange walls.",
     "grid": [
-      "OOOOGG",
-      "OOOOGG",
-      "OOOOGG",
-      "OOOOYG",
-      "OOOYYG",
-      "OOYYYG",
-      "OYYYYG",
-      "YYYYYG"
+      "RRRR",
+      "RGBR",
+      "RGGR",
+      "RRGR"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 5,
+      "x": 3,
       "y": 0
     }
   },
@@ -346,21 +322,16 @@
     "name": "Challenge 1-17",
     "description": "Trace the green and cream switchback.",
     "grid": [
-      "OGGGGO",
-      "OGGGGO",
-      "OOGGGO",
-      "OOYYGO",
-      "OYYGGO",
-      "YYGGGO",
-      "GGGGOO",
-      "GGGGOO"
+      "GBGGG",
+      "GGBBG",
+      "GBBGG"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 5,
+      "x": 2,
       "y": 0
     }
   },
@@ -369,17 +340,42 @@
     "name": "Challenge 1-18",
     "description": "Climb the alternating color panels.",
     "grid": [
-      "GO",
-      "OG",
-      "GO",
-      "OG"
+      "BYYYYYYY",
+      "BYYYYYYY",
+      "BYBYYYYY",
+      "BYBOYYYY",
+      "BBBOOYYY",
+      "YYYOOOYY",
+      "BBBOOOOY",
+      "BBBOOOOO"
     ],
     "start": {
       "x": 0,
       "z": 0
     },
     "goal": {
-      "x": 1,
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 19,
+    "name": "Pull out a path",
+    "description": "Bring the blocks toward you, then climb your way to the flag.",
+    "grid": [
+      "...YY...",
+      ".BBBYY..",
+      "OOBBBOO.",
+      "OGGGGOO.",
+      "RRGGRRR.",
+      "RRRRRRR."
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 4,
       "y": 0
     }
   }

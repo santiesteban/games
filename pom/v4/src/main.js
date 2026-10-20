@@ -16,9 +16,9 @@ const irisSvg=document.createElementNS(svgNS,'svg');irisSvg.setAttribute('class'
 const irisShade=document.createElementNS(svgNS,'path'),irisRing=document.createElementNS(svgNS,'circle');
 // Cut a transparent opening directly into the opaque shade.
 irisShade.setAttribute('fill','#28251f');irisShade.setAttribute('fill-rule','evenodd');irisRing.setAttribute('fill','none');irisRing.setAttribute('stroke','#fff0d8');irisRing.setAttribute('stroke-width','3');irisSvg.append(irisShade,irisRing);wrap.append(irisSvg);
-const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16,VIEW_PITCH=.33, ink='#28251f';
+const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16,VIEW_PITCH=.38, ink='#28251f';
 const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
-let activeLevel=levels.find(level=>level.id===0),W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
+let activeLevel=levels.find(level=>level.id===19),W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
 const palette={R:new Color(1,.443,.22),O:new Color(.949,.627,.353),G:new Color(.475,.651,.431),B:new Color(.333,.663,.682),Y:new Color(1,.875,.247)};
 let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=1,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomParts=[],pomShadow,hoverObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
@@ -163,19 +163,19 @@ function syncFloorGrid(){
 }
 function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selected===g?tinted(colors[g.color],.12):colors[g.color];o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.color=face}syncExtrusions();syncFloorGrid()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
-function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio;
+function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio,sceneHeight=baseCameraHeight||ortho;
   render3D.updateMatrices(ratio);const base=render3D.worldToScreen(vec3(4,0,0),vec2(width,height)),groundQ=base?(height/2-base.y)*ortho/height:-ortho*.28;if(base)wrap.style.setProperty('--horizon-y',`${Math.max(0,Math.min(100,base.y/height*100))}%`);
   const place=(o,distance,x,y,w,h)=>{o.pos3D=cam.pos.add(forward.scale(distance)).add(right.scale(x)).add(up.scale(y));o.scale3D=vec3(w,h,.012)};
-  const sky=backgroundObjects[0],meadow=backgroundObjects[1],skyH=ortho*1.15;place(sky,90,0,-ortho/2+skyH/2,skyH*3,skyH);
+  const sky=backgroundObjects[0],meadow=backgroundObjects[1],skyH=sceneHeight*1.15;place(sky,90,0,-ortho/2+skyH/2,skyH*3,skyH);
   // The meadow's center ridge starts 60% down its image. Anchor that ridge
   // to the projected ground, and cover the area below it at every aspect ratio.
-  const ridge=.60,groundToBottom=Math.max(0,ortho/2+groundQ),meadowH=Math.max(worldWidth/3,groundToBottom/(1-ridge));
+  const ridge=.60,groundToBottom=Math.max(0,ortho/2+groundQ),meadowH=Math.max(sceneHeight*1.15,worldWidth/3,groundToBottom/(1-ridge));
   place(meadow,89.7,0,groundQ+(ridge-.5)*meadowH,meadowH*3,meadowH);meadow.color=new Color(1,1,1,.8);
 }
 function syncPlayer(){const p=worldPosition(player),top=player.y===H?0:H-player.y,jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);if(pomShadow)pomShadow=worldPoint(player.x+.5,top+.018,player.z+.5)}
 function syncFlag(){const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;const depth=g.depth,cx=goalCell.x+.5,cy=H-goalCell.y-.5;flagPole.color=new Color(.16,.15,.12);flagCloth.color=new Color(1,.443,.22);flagPole.rotation3D=vec3();flagCloth.rotation3D=vec3();if(!depth){flagPole.scale3D=vec3(.04,.27,.04);flagCloth.scale3D=vec3(.205,.13,.035);flagPole.pos3D=vec3(cx,cy+.085,.08);flagCloth.pos3D=vec3(cx+.105,cy+.165,.09)}else{const base=worldPoint(cx,H-goalCell.y,depth-.5);flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);flagPole.pos3D=base.add(vec3(0,.34,0));flagCloth.pos3D=base.add(vec3(.19,.56,.025))}}
 function updateUI(){
-  document.querySelector('#level-number').textContent=activeLevel.id===0?'0':String(activeLevel.id).padStart(2,'0');document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=busy;
+  document.querySelector('#level-number').textContent=String(activeLevel.id).padStart(2,'0');document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
   document.querySelector('#pull').disabled=busy||won||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
   document.querySelector('#push').disabled=busy||won||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
   document.querySelector('#undo').disabled=busy||!history.length;
@@ -189,14 +189,14 @@ function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return '
 function showHelp(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on')}
 function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
 function showMenu(panel='title'){
-  const menu=document.querySelector('#menuScreen');menu.hidden=false;document.querySelector('#titlePanel').hidden=panel!=='title';document.querySelector('#levelsPanel').hidden=panel!=='levels';if(panel==='levels')menu.scrollTop=0;document.querySelector('.stage').inert=true;
+  const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');document.querySelector('#titlePanel').hidden=panel!=='title';document.querySelector('#levelsPanel').hidden=panel!=='levels';if(panel==='levels')document.querySelector('#levelList').scrollTop=0;document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;document.querySelector('.stage').inert=true;
 }
 function renderLevelList(){
-  const list=document.querySelector('#levelList');list.replaceChildren();
+  const list=document.querySelector('#levelList'),tones=['orange','peach','green','blue','yellow'];list.replaceChildren();
   for(const level of levels){
-    const button=document.createElement('button');button.type='button';button.className='level-card';button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
-    const number=document.createElement('span');number.className='card-number';number.textContent=level.id===0?'0':String(level.id).padStart(2,'0');
-    const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;const description=document.createElement('small');description.textContent=level.description;details.append(name,description);
+    const button=document.createElement('button');button.type='button';button.className='level-card';button.dataset.tone=tones[level.id%tones.length];button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
+    const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');
+    const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);
     const status=document.createElement('span');status.className='level-status';status.textContent='Unlocked';button.append(number,details,status);button.addEventListener('click',()=>startLevel(level.id));list.append(button);
   }
 }
@@ -205,10 +205,19 @@ function resetLevelState(level){
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=1;celebration=null;irisSvg.style.opacity='0';
   rebuildBlockMeshes();updateUI();startBoardView();
 }
-function startLevel(id){if(!gameReady)return;const level=levels.find(item=>item.id===id);if(!level)return;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
+function startLevel(id){if(!gameReady)return;const level=levels.find(item=>item.id===id);if(!level)return;document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
 document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
 document.querySelector('#backTitle').addEventListener('click',()=>showMenu('title'));
-document.querySelector('#exitLevel').addEventListener('click',()=>{if(!busy)showMenu('levels')});
+document.querySelector('#exitLevel').addEventListener('click',()=>showMenu('levels'));
+document.querySelector('#nextLevel').addEventListener('click',()=>{if(busy)return;const index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1];if(next)startLevel(next.id)});
+document.querySelector('#victoryLevels').addEventListener('click',()=>showMenu('levels'));
+const menuScreen=document.querySelector('#menuScreen'),levelList=document.querySelector('#levelList');
+window.addEventListener('wheel',e=>{
+  if(menuScreen.hidden||!menuScreen.classList.contains('is-levels'))return;
+  const unit=e.deltaMode===1?16:e.deltaMode===2?levelList.clientHeight:1;
+  if(e.deltaY)levelList.scrollTop+=e.deltaY*unit;
+  e.preventDefault();e.stopPropagation();
+},{capture:true,passive:false});
 renderLevelList();
 function sceneFrame(width,height,side=viewSide){
   const pitch=VIEW_PITCH,c=Math.cos(pitch),s=Math.sin(pitch),points=[];
@@ -224,7 +233,7 @@ function sceneFrame(width,height,side=viewSide){
 function fitCamera(width,height){return sceneFrame(width,height).height}
 function positionCameraForView(side,targetOverride){render3D.camera.orbit(targetOverride||sceneFrame(wrap.clientWidth,wrap.clientHeight,side).target,15,0,VIEW_PITCH)}
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
-const tappingUnit=()=>40/Math.sin(VIEW_PITCH);
+const tappingUnit=()=>36/Math.sin(VIEW_PITCH);
 function stopIntro(){introFrame++;}
 function clampBoardView(){
   const width=wrap.clientWidth,height=wrap.clientHeight,f=sceneFrame(width,height),fitUnit=height/f.height;
@@ -286,6 +295,7 @@ function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function syncVictoryOverlay(now){
   if(!celebration)return;
   const width=wrap.clientWidth,height=wrap.clientHeight,elapsed=now-celebration.start,progress=Math.min(1,elapsed/2400),zoom=ease(progress),close=ease((progress-.15)/.85),size=vec2(width,height);
+  if(progress>=1&&!celebration.finished){celebration.finished=true;document.querySelector('.stage').classList.add('is-won');document.querySelector('#victoryActions').hidden=false;const index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1],button=document.querySelector('#nextLevel');button.disabled=!next;button.textContent=next?'Next level →':'Last level'}
   celebration.zoom=zoom;celebration.jump=Math.abs(Math.sin(elapsed/220))*.14*zoom;
   const anchor=worldPosition(player),focus=anchor.add(vec3(.12,.3,0));
   positionCameraForView(viewSide,celebration.baseTarget.lerp(focus,zoom));render3D.camera.orthographic=celebration.baseHeight*(1-.4*zoom);render3D.updateMatrices(width/height);syncBackground();syncFloorGrid();syncPlayer();
@@ -352,7 +362,7 @@ function moveTo(p){
     if(t<1){requestAnimationFrame(n=>edge(n,from,to,start));return}
     player={...to};falling=false;setUmbrellaVisible(false);
     if(index<path.length-1){index++;requestAnimationFrame(n=>edge(n,player,path[index],n));return}
-    busy=false;if(nodeKey(player)===nodeKey(goalNode())){won=true;say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();
+    busy=false;if(nodeKey(player)===nodeKey(goalNode())){won=true;document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();
   }
   requestAnimationFrame(now=>edge(now));
 }
@@ -376,7 +386,18 @@ wrap.addEventListener('wheel',e=>{if(won||!viewReady)return;e.preventDefault();s
 const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',()=>{hovered=null;if(hoverObject)hoverObject.color=new Color(1,1,1,0)});
 document.querySelector('#pull').onclick=()=>manipulate(1);document.querySelector('#push').onclick=()=>manipulate(-1);document.querySelector('#toggleView').onclick=()=>rotate(-viewSide);
 document.querySelector('#undo').onclick=()=>busy?null:history.length?restore(history.pop()):say('Nothing to undo yet.');document.querySelector('#reset').onclick=()=>{if(busy)return;celebration=null;irisSvg.style.opacity='0';groups.forEach(g=>g.depth=0);player={x:0,y:H,z:0};selected=null;history=[];won=false;positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView();say('Puzzle reset.')};
-window.addEventListener('keydown',e=>{if(busy)return;if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click();if(e.key==='ArrowLeft')rotate(-1);if(e.key==='ArrowRight')rotate(1)});
+window.addEventListener('keydown',e=>{
+  if(!menuScreen.hidden&&menuScreen.classList.contains('is-levels')){
+    const step=Math.max(120,levelList.clientHeight*.72);
+    if(e.key==='ArrowDown'||e.key==='PageDown'){levelList.scrollBy({top:e.key==='PageDown'?step:48});e.preventDefault()}
+    else if(e.key==='ArrowUp'||e.key==='PageUp'){levelList.scrollBy({top:e.key==='PageUp'?-step:-48});e.preventDefault()}
+    else if(e.key==='Home'){levelList.scrollTop=0;e.preventDefault()}
+    else if(e.key==='End'){levelList.scrollTop=levelList.scrollHeight;e.preventDefault()}
+    return;
+  }
+  if(document.querySelector('.stage').inert||busy)return;
+  if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click();if(e.key==='ArrowLeft')rotate(-1);if(e.key==='ArrowRight')rotate(1)
+});
 setCanvasPixelRatio(Math.min(window.devicePixelRatio||1,2));
 glSetAntialias(true);
 setLoadingScreen(undefined);

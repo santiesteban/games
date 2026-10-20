@@ -27,7 +27,51 @@
 
 @media(max-width:780px){.brandmark{display:none}}
 
+/* Keep level browsing in a dedicated scroll region, independent of canvas gestures. */
+#menuScreen.is-levels{height:100dvh;overflow:hidden;overscroll-behavior:none;touch-action:auto}
+#menuScreen.is-levels #levelsPanel{display:flex;height:100dvh;min-height:0;flex-direction:column;overflow:hidden}
+#menuScreen.is-levels .levels-topbar{flex:0 0 64px}
+#menuScreen.is-levels #levelList{display:grid;flex:1 1 auto;min-height:0;align-content:start;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-gutter:stable;}
+@media(max-width:600px){#menuScreen.is-levels .levels-topbar{flex-basis:60px}}
+
 [hidden]{display:none!important}
+
+/* The level browser shares the game header and block palette. */
+.menu-screen .levels-panel{padding:0;overflow:hidden}
+.levels-topbar{position:relative;top:auto;justify-content:center;min-height:64px;margin:0;padding:10px 60px;background:var(--paper);border-bottom:2px solid var(--ink);border-radius:22px 22px 0 0}
+.levels-topbar .menu-home{position:absolute;left:16px;top:50%;transform:translateY(-50%) rotate(6deg)}
+.levels-brand{display:flex;align-items:center;justify-content:center;gap:10px;font:800 clamp(21px,3vw,29px)/1 'DM Sans',sans-serif;letter-spacing:-.045em;text-transform:lowercase;white-space:nowrap}
+.levels-brandmark{width:32px;height:34px;border-radius:11px;font-size:23px;transform:rotate(-6deg)}
+.level-list{margin:20px clamp(14px,4vw,30px) 24px;padding:0;gap:9px}
+.level-card{min-height:68px;padding:9px 13px;border:0;border-radius:12px;box-shadow:none;border-bottom:3px solid color-mix(in srgb,var(--ink) 20%,transparent);transition:transform .12s,filter .12s}
+.level-card[data-tone="orange"]{background:#ff7138}.level-card[data-tone="peach"]{background:#f2a05a}.level-card[data-tone="green"]{background:#79a66e}.level-card[data-tone="blue"]{background:#55a9ae}.level-card[data-tone="yellow"]{background:#ffe03f}
+.level-card .card-number{background:rgba(255,255,255,.56);border-color:var(--ink)}
+.level-card .level-status{background:rgba(255,255,255,.55);color:var(--ink)}
+.level-card:hover{filter:brightness(1.04) saturate(1.04)}
+.stage.is-won .canvas-actions{display:none}
+.stage.is-won .victory-actions:not([hidden]){flex:1;width:100%;justify-content:space-between}
+.stage.is-won .victory-actions .btn{min-width:min(220px,45%)}
+@media(max-width:600px){.menu-screen .levels-panel{padding:0}.levels-topbar{min-height:58px;padding-inline:54px;border-radius:18px 18px 0 0}.levels-topbar .menu-home{left:12px;width:34px;height:36px}.levels-brand{font-size:22px}.levels-brandmark{width:29px;height:31px;font-size:21px}.level-list{margin:16px 14px 20px}.stage.is-won .victory-actions{justify-content:space-between}.stage.is-won .victory-actions .btn{flex:0 1 48%;min-width:0}}
+
+/* Match the level header: back control, game mark, then lowercase title. */
+.levels-topbar{justify-content:flex-start;gap:14px;min-height:0;padding:14px 22px;background:var(--paper);border-bottom:2px solid var(--ink);border-radius:22px 22px 0 0}
+.levels-topbar .menu-home{position:relative;inset:auto;transform:rotate(6deg);flex:0 0 auto}
+.levels-brand{justify-content:flex-start;gap:10px;font-size:clamp(20px,2.4vw,25px)}
+.levels-brandmark{flex:0 0 auto}
+@media(max-width:600px){.levels-topbar{gap:11px;min-height:0;padding:11px 14px;border-radius:18px 18px 0 0}.levels-topbar .menu-home{left:auto;top:auto;width:34px;height:36px}.levels-brand{font-size:clamp(18px,5vw,22px)}}
+
+/* The level picker is a full-screen page with the same fixed header as play. */
+.menu-screen.is-levels{display:block;padding:0;overflow-x:hidden;overflow-y:auto;background:#fffaf0;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.menu-screen.is-levels .levels-panel{display:block;width:100%;min-height:100dvh;height:auto;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;overflow:visible;background:#fffaf0}
+.menu-screen.is-levels .levels-topbar{position:sticky;top:0;z-index:5;display:flex;width:100%;min-height:64px;height:64px;margin:0;padding:10px 72px;background:var(--paper);border:0;border-bottom:2px solid var(--ink);border-radius:0}
+.menu-screen.is-levels .levels-topbar .menu-home{position:absolute;left:22px;top:50%;transform:translateY(-50%) rotate(6deg)}
+.menu-screen.is-levels .levels-brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);justify-content:center;gap:10px;max-width:calc(100% - 120px);font-size:clamp(20px,2.4vw,25px);line-height:1.2}
+.menu-screen.is-levels .levels-brandmark{display:grid;place-items:center}
+.menu-screen.is-levels .levels-brand>span:last-child{white-space:nowrap}
+.menu-screen.is-levels .level-list{margin:20px clamp(14px,4vw,30px) 28px}
+@media(max-width:600px){.menu-screen.is-levels .levels-topbar{height:60px;min-height:60px;padding-inline:56px}.menu-screen.is-levels .levels-topbar .menu-home{left:14px;width:34px;height:36px}.menu-screen.is-levels .levels-brand{max-width:calc(100% - 100px);gap:8px;font-size:clamp(17px,5vw,22px)}.menu-screen.is-levels .levels-brandmark{width:29px;height:31px;font-size:21px}.menu-screen.is-levels .level-list{margin:16px 14px 22px}}
+.back-arrow{display:block;line-height:1;transform:translate(1px,1px)}
+.menu-screen.is-levels .levels-brandmark{font-family:'DM Sans',sans-serif;font-weight:800;text-transform:uppercase;transform:rotate(-6deg)}
 .menu-screen{position:fixed;z-index:20;inset:0;display:flex;align-items:safe center;justify-content:center;overflow-x:hidden;overflow-y:auto;padding:24px;background:linear-gradient(145deg,#e8dfc9,#f4ecd9 58%,#e5e1cf);color:var(--ink);overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .menu-panel{flex:0 0 auto;width:min(700px,100%);max-height:none;overflow:visible;padding:clamp(24px,5vw,48px);border:2px solid var(--ink);border-radius:26px;background:#fffaf0;box-shadow:8px 8px 0 var(--ink);text-align:center}
 .menu-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 22px;border:2px solid var(--ink);border-radius:19px;background:#f65d17;box-shadow:3px 3px 0 var(--ink);font-size:38px;font-weight:800;transform:rotate(-5deg)}
@@ -50,3 +94,31 @@
 .level-status{border-radius:999px;background:#f2d9ac;padding:6px 9px;font-size:10px;font-weight:700;white-space:nowrap}
 @media(max-width:560px){.menu-screen{padding:12px}.menu-panel{padding:24px 18px;border-radius:21px;box-shadow:5px 5px 0 var(--ink)}.menu-copy{font-size:13px}.level-list{gap:8px}.level-card{grid-template-columns:30px minmax(0,1fr) auto;gap:9px;min-height:64px;padding:8px}.card-number{width:28px;height:28px;font-size:11px}.level-details strong{font-size:12px}.level-details small{font-size:10px}.level-status{padding:4px 8px;font-size:9px}}
 @media(max-width:370px){.level-card{grid-template-columns:27px minmax(0,1fr) auto;gap:7px;padding:7px}.level-details small{display:none}}
+
+/* Level and game navigation */
+.game-header{position:relative;justify-content:flex-start;gap:16px}
+.game-header .game-back.brandmark,.levels-topbar .menu-home.brandmark{display:grid;flex:0 0 auto;place-items:center;border:2px solid var(--ink);background:#f65d17;color:var(--ink);box-shadow:3px 3px 0 var(--ink);cursor:pointer}
+.game-back{width:42px;height:42px;padding:0;border-radius:13px;font-size:27px;line-height:1;transform:rotate(6deg)}
+.game-header .heading{position:absolute;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 116px);min-width:0;flex:none}
+.game-header .heading h1{justify-content:center;font-size:clamp(17px,2.4vw,25px);line-height:1.1;min-width:0}
+.game-header .heading h1>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.levels-topbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;margin:-18px -18px 24px;padding:10px 18px;background:#fffaf0}
+.levels-topbar>span{font:800 clamp(22px,3vw,30px)/1 'DM Sans',sans-serif;letter-spacing:-.04em}
+.levels-topbar .menu-home{width:38px;height:38px;padding:0;border-radius:12px;font-size:24px;line-height:1}
+.levels-panel .menu-kicker{margin-top:0}
+.level-card{touch-action:pan-y}
+.level-card[data-tone="sun"]{background:#f8e2ad}.level-card[data-tone="coral"]{background:#f3c4aa}.level-card[data-tone="sky"]{background:#d7e6df}.level-card[data-tone="leaf"]{background:#e1e4c4}.level-card[data-tone="gold"]{background:#f1d492}
+.level-card[data-tone="sun"] .card-number,.level-card[data-tone="sun"] .level-status{background:#efc96e}
+.level-card[data-tone="coral"] .card-number,.level-card[data-tone="coral"] .level-status{background:#eaa17f}
+.level-card[data-tone="sky"] .card-number,.level-card[data-tone="sky"] .level-status{background:#b4d0c5}
+.level-card[data-tone="leaf"] .card-number,.level-card[data-tone="leaf"] .level-status{background:#c6ce97}
+.level-card[data-tone="gold"] .card-number,.level-card[data-tone="gold"] .level-status{background:#e6bb50}
+.level-card:hover{filter:saturate(1.06)}
+.control-deck{padding:12px max(22px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(22px,env(safe-area-inset-left,0px))}
+.victory-actions{display:none;gap:10px;align-items:center;margin-inline:auto}
+.victory-actions .btn{min-height:44px;padding-inline:18px}
+.victory-next{background:#f6cf58}
+.stage.is-won .compact-actions,.stage.is-won .view-toggle{display:none}
+.stage.is-won .victory-actions:not([hidden]){display:flex}
+@media(max-width:850px){.game-header .heading{max-width:calc(100% - 100px)}}
+@media(max-width:600px){.game-header{gap:10px}.game-header .game-back.brandmark{width:34px;height:36px;border-radius:11px;font-size:23px}.game-header .heading{max-width:calc(100% - 92px)}.game-header .heading h1{font-size:clamp(14px,4.2vw,19px);gap:6px}.game-header .level-number{flex:0 0 auto}.control-deck{padding-right:max(18px,env(safe-area-inset-right,0px));padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px))}.victory-actions{width:100%;justify-content:center}.victory-actions .btn{flex:1;min-width:0;padding-inline:8px}.levels-topbar{margin:-2px -2px 20px;padding:2px 2px 10px}}
