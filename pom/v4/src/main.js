@@ -57,10 +57,11 @@ function nodesAt(x,y){if(x< -1||x>=W||y<0||y>H)return[];if(y===H){const front=Ma
 function validNode(x,y,z){return nodesAt(x,y).some(n=>n.z===z)}
 function nodeKey(p){return `${p.x},${p.y},${p.z}`}
 function jumpHeight(from,to){return .5+(to.y===from.y-1&&Math.abs(to.x-from.x)===2?.2:0)}
+function jumpProgress(t,from,to){return to.y<from.y?ease(Math.max(0,Math.min(1,(t-.4)/.5))):ease(t)}
 function jumpPathClear(from,to){
   const a=worldPosition(from),b=worldPosition(to),arc=jumpHeight(from,to),samples=18,halfWidth=.34,halfDown=.205,halfUp=.31;
   for(let i=1;i<samples;i++){
-    const t=i/samples,smooth=ease(t),x=a.x+(b.x-a.x)*smooth,y=a.y+(b.y-a.y)*smooth+Math.sin(Math.PI*t)*arc,z=a.z+(b.z-a.z)*smooth,logicalX=x-viewSide*DEPTH_SKEW*z;
+    const t=i/samples,smooth=ease(t),travel=jumpProgress(t,from,to),x=a.x+(b.x-a.x)*travel,y=a.y+(b.y-a.y)*smooth+Math.sin(Math.PI*t)*arc,z=a.z+(b.z-a.z)*travel,logicalX=x-viewSide*DEPTH_SKEW*z;
     for(const g of groups){if(!g.depth)continue;for(const c of g.cells){
       if(logicalX+halfWidth<=c.x||logicalX-halfWidth>=c.x+1||y-halfDown>=H-c.y+.01||y+halfUp<=H-c.y-1-.01||z+.18<0||z-.18>g.depth)continue;
       return false;
@@ -366,8 +367,8 @@ function moveTo(p){
   save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=1;
   function edge(now,from=player,to=path[index],start=now){
     const isLongFall=to.y-from.y>1,plan=isLongFall?fallPlan(from,to):null,duration=plan?plan.duration:to.y!==from.y||Math.abs(to.x-from.x)>1?260:175,elapsed=Math.min(duration,now-start),t=elapsed/duration,smooth=ease(t),a=worldPosition(from),b=worldPosition(to);
-    const jump=!isLongFall&&(to.y!==from.y||Math.abs(to.x-from.x)>1)?Math.sin(Math.PI*t)*jumpHeight(from,to):0;
-    const motion=isLongFall?fallMotion(from,to,elapsed,plan):{pose:vec3(a.x+(b.x-a.x)*smooth,a.y+(b.y-a.y)*smooth+jump,a.z+(b.z-a.z)*smooth),umbrella:false,flight:0};
+    const isJump=!isLongFall&&(to.y!==from.y||Math.abs(to.x-from.x)>1),travel=isJump?jumpProgress(t,from,to):smooth,jump=isJump?Math.sin(Math.PI*t)*jumpHeight(from,to):0;
+    const motion=isLongFall?fallMotion(from,to,elapsed,plan):{pose:vec3(a.x+(b.x-a.x)*travel,a.y+(b.y-a.y)*smooth+jump,a.z+(b.z-a.z)*travel),umbrella:false,flight:0};
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
     const fromTop=from.y===H?0:H-from.y,toTop=to.y===H?0:H-to.y;pomShadow=worldPoint(motion.pose.x-viewSide*DEPTH_SKEW*motion.pose.z,fromTop+(toTop-fromTop)*smooth+.018,motion.pose.z);
