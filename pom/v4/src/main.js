@@ -1,7 +1,8 @@
 import {
   engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, vec2, vec3,
-  Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, engineObjectsRaycast3D,
+  Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
+import levelData from './data/levels.json';
 import skyBackground from '../../sky-background.png';
 import meadowForeground from '../../meadow-foreground.png';
 import './style.css';
@@ -15,10 +16,11 @@ const irisSvg=document.createElementNS(svgNS,'svg');irisSvg.setAttribute('class'
 const irisShade=document.createElementNS(svgNS,'path'),irisRing=document.createElementNS(svgNS,'circle');
 // Cut a transparent opening directly into the opaque shade.
 irisShade.setAttribute('fill','#28251f');irisShade.setAttribute('fill-rule','evenodd');irisRing.setAttribute('fill','none');irisRing.setAttribute('stroke','#fff0d8');irisRing.setAttribute('stroke-width','3');irisSvg.append(irisShade,irisRing);wrap.append(irisSvg);
-const W=8,H=6,FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16,VIEW_PITCH=.33, ink='#28251f';
-const mural=[['.','.','.','Y','Y','.','.','.'],['.','B','B','B','Y','Y','.','.'],['O','O','B','B','B','O','O','.'],['O','G','G','G','G','O','O','.'],['R','R','G','G','R','R','R','.'],['R','R','R','R','R','R','R','.']];
+const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16,VIEW_PITCH=.33, ink='#28251f';
+const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
+let activeLevel=levels.find(level=>level.id===0),W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
 const palette={R:new Color(1,.443,.22),O:new Color(.949,.627,.353),G:new Color(.475,.651,.431),B:new Color(.333,.663,.682),Y:new Color(1,.875,.247)};
-let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:0,y:H,z:0},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=1,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomParts=[],pomShadow,hoverObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0;
+let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=1,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomParts=[],pomShadow,hoverObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const colors=palette,inkColor=new Color(.157,.145,.122);
 const topPalette=Object.fromEntries(Object.entries(palette).map(([key,color])=>[key,tinted(color,.035)])),sidePalette=Object.fromEntries(Object.entries(palette).map(([key,color])=>[key,shaded(color,.96)]));
@@ -59,7 +61,7 @@ function findPath(target){const start=nodeKey(player),q=[player],prev=new Map([[
 function standableReachable(){const q=[player],seen=new Set([nodeKey(player)]),out=[];while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}return out.filter(p=>validNode(p.x,p.y,p.z))}
 function reachableTop(target){if(findPath(target))return target;return standableReachable().filter(p=>Math.abs(p.x-target.x)+Math.abs(p.y-target.y)<=1).sort((a,b)=>(Math.abs(a.x-target.x)+Math.abs(a.y-target.y)+Math.abs(a.z-target.z))-(Math.abs(b.x-target.x)+Math.abs(b.y-target.y)+Math.abs(b.z-target.z)))[0]||target}
 function canReach(g){if(player.y<H&&byCell[player.y]?.[player.x]===g&&player.z<g.depth)return false;return g.cells.some(c=>{if(player.x===c.x&&player.y===c.y+1&&player.z===g.depth)return true;const dx=player.x-c.x;if(Math.abs(dx)!==1||player.y!==c.y+1)return false;const sideDepth=cellDepth(player.x,c.y);return sideDepth<g.depth&&player.z>=Math.max(0,sideDepth)&&player.z<g.depth})}
-function goalNode(){const g=byCell[0][4];return{x:4,y:0,z:Math.max(0,(g?.depth||0)-1)}}
+function goalNode(){const g=byCell[goalCell.y]?.[goalCell.x];return{x:goalCell.x,y:goalCell.y,z:Math.max(0,(g?.depth||0)-1)}}
 function save(){history.push({player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,won});if(history.length>80)history.shift()}
 function safeManipulation(g,next,dir){const old=g.depth;g.depth=next;const safe=validNode(player.x,player.y,player.z+dir);g.depth=old;return safe}
 
@@ -171,8 +173,9 @@ function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,
   place(meadow,89.7,0,groundQ+(ridge-.5)*meadowH,meadowH*3,meadowH);meadow.color=new Color(1,1,1,.8);
 }
 function syncPlayer(){const p=worldPosition(player),top=player.y===H?0:H-player.y,jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);if(pomShadow)pomShadow=worldPoint(player.x+.5,top+.018,player.z+.5)}
-function syncFlag(){if(!flagPole||!byCell[0][4])return;const depth=byCell[0][4].depth;flagPole.color=new Color(.16,.15,.12);flagCloth.color=new Color(1,.443,.22);flagPole.rotation3D=vec3();flagCloth.rotation3D=vec3();if(!depth){flagPole.scale3D=vec3(.04,.27,.04);flagCloth.scale3D=vec3(.205,.13,.035);flagPole.pos3D=vec3(4.5,5.585,.08);flagCloth.pos3D=vec3(4.605,5.665,.09)}else{const base=worldPoint(4.5,6,depth-.5);flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);flagPole.pos3D=base.add(vec3(0,.34,0));flagCloth.pos3D=base.add(vec3(.19,.56,.025))}}
+function syncFlag(){const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;const depth=g.depth,cx=goalCell.x+.5,cy=H-goalCell.y-.5;flagPole.color=new Color(.16,.15,.12);flagCloth.color=new Color(1,.443,.22);flagPole.rotation3D=vec3();flagCloth.rotation3D=vec3();if(!depth){flagPole.scale3D=vec3(.04,.27,.04);flagCloth.scale3D=vec3(.205,.13,.035);flagPole.pos3D=vec3(cx,cy+.085,.08);flagCloth.pos3D=vec3(cx+.105,cy+.165,.09)}else{const base=worldPoint(cx,H-goalCell.y,depth-.5);flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);flagPole.pos3D=base.add(vec3(0,.34,0));flagCloth.pos3D=base.add(vec3(.19,.56,.025))}}
 function updateUI(){
+  document.querySelector('#level-number').textContent=activeLevel.id===0?'0':String(activeLevel.id).padStart(2,'0');document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=busy;
   document.querySelector('#pull').disabled=busy||won||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
   document.querySelector('#push').disabled=busy||won||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
   document.querySelector('#undo').disabled=busy||!history.length;
@@ -185,10 +188,32 @@ function updateUI(){
 function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return 'Pom is on his way…';if(selected){if(!canReach(selected))return 'Move Pom beside this block to push or pull it.';return `Block pulled ${selected.depth} of 3 steps out. ${selected.depth===3?'Push it in to make a different path.':'Use Push in or Pull out to make a path.'}`}return viewMobile?'Tap a block or walking spot. Drag to pan · pinch to zoom.':'Select a block to pull it. Click a walking spot to move Pom.'}
 function showHelp(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on')}
 function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
+function showMenu(panel='title'){
+  const menu=document.querySelector('#menuScreen');menu.hidden=false;document.querySelector('#titlePanel').hidden=panel!=='title';document.querySelector('#levelsPanel').hidden=panel!=='levels';if(panel==='levels')menu.scrollTop=0;document.querySelector('.stage').inert=true;
+}
+function renderLevelList(){
+  const list=document.querySelector('#levelList');list.replaceChildren();
+  for(const level of levels){
+    const button=document.createElement('button');button.type='button';button.className='level-card';button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
+    const number=document.createElement('span');number.className='card-number';number.textContent=level.id===0?'0':String(level.id).padStart(2,'0');
+    const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;const description=document.createElement('small');description.textContent=level.description;details.append(name,description);
+    const status=document.createElement('span');status.className='level-status';status.textContent='Unlocked';button.append(number,details,status);button.addEventListener('click',()=>startLevel(level.id));list.append(button);
+  }
+}
+function resetLevelState(level){
+  activeLevel=level;W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=1;celebration=null;irisSvg.style.opacity='0';
+  rebuildBlockMeshes();updateUI();startBoardView();
+}
+function startLevel(id){if(!gameReady)return;const level=levels.find(item=>item.id===id);if(!level)return;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
+document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
+document.querySelector('#backTitle').addEventListener('click',()=>showMenu('title'));
+document.querySelector('#exitLevel').addEventListener('click',()=>{if(!busy)showMenu('levels')});
+renderLevelList();
 function sceneFrame(width,height,side=viewSide){
   const pitch=VIEW_PITCH,c=Math.cos(pitch),s=Math.sin(pitch),points=[];
   for(const x of [-1,W])for(const z of [0,GRID_DEPTH])points.push([x+side*DEPTH_SKEW*z,-s*z]);
-  for(const x of [0,7])for(const y of [0,6.85])for(const z of [0,3])points.push([x+side*DEPTH_SKEW*z,c*y-s*z]);
+  for(const x of [0,W-1])for(const y of [0,H+.85])for(const z of [0,3])points.push([x+side*DEPTH_SKEW*z,c*y-s*z]);
   const minX=Math.min(...points.map(p=>p[0])),maxX=Math.max(...points.map(p=>p[0])),minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
   const action=document.querySelector('.canvas-actions'),actionHeight=action.getBoundingClientRect().height,buttonBottom=parseFloat(getComputedStyle(action).bottom)||12;
   const top=Math.min(64,height*.16),bottom=Math.min(actionHeight+buttonBottom+22,height*.34),margin=width<600?14:24;
@@ -298,7 +323,7 @@ function gameInit(){
   umbrellaHandle=new EngineObject3D(vec3(0,.84,2.96),makeFanMesh([[-.035,-.02],[.035,-.02],[.035,-.6],[-.035,-.6]]),undefined,new Color(.15,.2,.27,0));umbrellaHandle.lighting=false;umbrellaHandle.transparent=true;playerObject.addChild(umbrellaHandle);setUmbrellaVisible(false);
   flagPole=new EngineObject3D(vec3(4.5,5.57,.08),buildBox(),undefined,new Color(.16,.15,.12));flagPole.scale3D=vec3(.035,.24,.035);
   flagCloth=new EngineObject3D(vec3(4.59,5.64,.09),flagMesh,undefined,new Color(1,.443,.22));flagCloth.scale3D=vec3(.17,.105,.035);flagCloth.lighting=false;
-  updateUI();startBoardView();
+  updateUI();startBoardView();gameReady=true;document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Choose a level';
 }
 function gameUpdate(){
 }
@@ -354,6 +379,7 @@ document.querySelector('#undo').onclick=()=>busy?null:history.length?restore(his
 window.addEventListener('keydown',e=>{if(busy)return;if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click();if(e.key==='ArrowLeft')rotate(-1);if(e.key==='ArrowRight')rotate(1)});
 setCanvasPixelRatio(Math.min(window.devicePixelRatio||1,2));
 glSetAntialias(true);
+setLoadingScreen(undefined);
 await engineInit(gameInit,gameUpdate,undefined,undefined,undefined,[skyBackground,meadowForeground],wrap);
 new ResizeObserver(()=>{
   const r={width:wrap.clientWidth,height:wrap.clientHeight};setCanvasFixedSize(vec2(Math.max(1,r.width),Math.max(1,r.height)));if(!backgroundObjects.length)return;
