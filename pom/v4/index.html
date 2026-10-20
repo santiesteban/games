@@ -1,17 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#d8c6a4"><title>Little Ledges — Pull, climb, discover</title>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eee8fa"><title>pom's little ledges — Pull, climb, discover</title>
+
 </head>
 <body>
-  <main class="app"><section class="stage">
-    <div class="topline"><div class="brand"><span class="brandmark">L</span> LITTLE LEDGES</div><span class="edition">A LITTLEJS 3D REMAKE</span></div>
-    <div class="heading"><h1><span class="level-number">01</span> Pull out a path</h1><p>Bring the blocks toward you, then climb your way to the flag.</p></div>
-    <div class="canvas-wrap" id="canvasWrap"><div class="toast" id="toast" role="status"></div></div>
-    <div class="block-panel"><div class="pullrow"><button class="btn" id="push">← Push in</button><button class="btn pull" id="pull">Pull out →</button></div><p class="selected-help" id="selectionHelp">Click a block to select it, or a ledge to move Pom.</p></div>
-    <div class="below"><div class="compact-actions"><button class="btn" id="undo">↶ Undo</button><button class="btn" id="reset">Start over ↻</button></div><div class="view-controls"><button class="view-btn" id="turnLeft" aria-pressed="false">↶ Rotate left</button><button class="view-btn" id="turnRight" aria-pressed="false">Rotate right ↷</button></div></div>
-    <div class="key-help">CLICK TO MOVE · SELECT A BLOCK TO PULL · <kbd>Z</kbd> UNDO · <kbd>R</kbd> RESET</div>
+  <main class="app"><section class="stage" aria-label="Pom’s little ledges game">
+
+    <header class="game-header"><div class="topline"><div class="brand"><span class="brandmark" aria-hidden="true"><span class="logo-letter">p</span></span><span class="brand-name">pom's little ledges</span></div><span class="edition">PULL · CLIMB · DISCOVER</span></div><div class="heading"><h1><span class="level-number">01</span><span>Pull out a path</span></h1></div></header>
+    <div class="canvas-wrap" id="canvasWrap"><div class="toast on" id="toast" role="status" aria-live="polite">Select a block to pull it. Click a walking spot to move Pom.</div><div class="canvas-actions" aria-label="Move selected block"><button class="btn block-action" id="push" disabled><span aria-hidden="true">←</span> Push in</button><button class="btn block-action" id="pull" disabled>Pull out <span aria-hidden="true">→</span></button></div></div>
+    <footer class="control-deck"><div class="compact-actions"><button class="btn" id="undo" disabled>↻ Undo</button><button class="btn" id="reset" disabled>Start over</button></div><button class="view-toggle" id="toggleView" role="switch" aria-checked="true" aria-label="Looking right. Switch to look left"><span class="view-toggle-label">Look right</span><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb">→</span></span></button></footer>
   </section></main>
   <script type="module" src="./src/main.js"></script>
 </body></html>
