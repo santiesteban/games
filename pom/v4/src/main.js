@@ -56,7 +56,19 @@ function cellDepth(x,y){return y===H?0:(byCell[y]?.[x]?.depth??-1)}
 function nodesAt(x,y){if(x< -1||x>=W||y<0||y>H)return[];if(y===H){const front=Math.max(0,cellDepth(x,H-1));return Array.from({length:Math.max(0,FLOOR_DEPTH-front)},(_,i)=>({x,y,z:front+i}))}if(x<0)return[];const d=cellDepth(x,y),above=cellDepth(x,y-1);if(d<=0)return[];return Array.from({length:Math.max(0,d-Math.max(0,above))},(_,i)=>({x,y,z:Math.max(0,above)+i}))}
 function validNode(x,y,z){return nodesAt(x,y).some(n=>n.z===z)}
 function nodeKey(p){return `${p.x},${p.y},${p.z}`}
-function neighbors(p){const out=[];for(let dx=-2;dx<=2;dx++)for(let dy=-1;dy<=H;dy++){const fall=dy>0;if(fall?(Math.abs(dx)>1):(Math.abs(dx)+Math.abs(dy)>2))continue;const x=p.x+dx,y=p.y+dy;for(const n of nodesAt(x,y)){const depthChange=Math.abs(n.z-p.z);if(fall?depthChange>1:Math.abs(dx)+Math.abs(dy)+depthChange>2)continue;if(dy>1&&Array.from({length:dy-1},(_,i)=>cellDepth(x,p.y+i+1)).some(d=>d>Math.max(p.z,n.z)+.5))continue;if(Math.abs(dx)===2&&nodesAt(p.x+Math.sign(dx),p.y).some(mid=>mid.z===p.z))continue;if(nodeKey(n)!==nodeKey(p))out.push(n)}}return out}
+function jumpHeight(from,to){return .5+(to.y===from.y-1&&Math.abs(to.x-from.x)===2?.2:0)}
+function jumpPathClear(from,to){
+  const a=worldPosition(from),b=worldPosition(to),arc=jumpHeight(from,to),samples=18,halfWidth=.34,halfDown=.205,halfUp=.31;
+  for(let i=1;i<samples;i++){
+    const t=i/samples,smooth=ease(t),x=a.x+(b.x-a.x)*smooth,y=a.y+(b.y-a.y)*smooth+Math.sin(Math.PI*t)*arc,z=a.z+(b.z-a.z)*smooth,logicalX=x-viewSide*DEPTH_SKEW*z;
+    for(const g of groups){if(!g.depth)continue;for(const c of g.cells){
+      if(logicalX+halfWidth<=c.x||logicalX-halfWidth>=c.x+1||y-halfDown>=H-c.y+.01||y+halfUp<=H-c.y-1-.01||z+.18<0||z-.18>g.depth)continue;
+      return false;
+    }}
+  }
+  return true;
+}
+function neighbors(p){const out=[];for(let dx=-2;dx<=2;dx++)for(let dy=-1;dy<=H;dy++){const fall=dy>0,upwardHop=dy===-1&&Math.abs(dx)<=2;if(fall?(Math.abs(dx)>1):!(Math.abs(dx)+Math.abs(dy)<=2||upwardHop))continue;const x=p.x+dx,y=p.y+dy;for(const n of nodesAt(x,y)){const depthChange=Math.abs(n.z-p.z);if(fall?depthChange>1:!(Math.abs(dx)+Math.abs(dy)+depthChange<=2||upwardHop&&depthChange<=1))continue;if(dy>1&&Array.from({length:dy-1},(_,i)=>cellDepth(x,p.y+i+1)).some(d=>d>Math.max(p.z,n.z)+.5))continue;if(Math.abs(dx)===2&&dy===0&&nodesAt(p.x+Math.sign(dx),p.y).some(mid=>mid.z===p.z))continue;if((dy!==0||Math.abs(dx)>1)&&!fall&&!jumpPathClear(p,n))continue;if(nodeKey(n)!==nodeKey(p))out.push(n)}}return out}
 function findPath(target){const start=nodeKey(player),q=[player],prev=new Map([[start,null]]);while(q.length){const p=q.shift(),k=nodeKey(p);if(k===nodeKey(target)){const path=[];let at=k;while(at){const [x,y,z]=at.split(',').map(Number);path.push({x,y,z});at=prev.get(at)}return path.reverse()}for(const n of neighbors(p)){const nk=nodeKey(n);if(!prev.has(nk)){prev.set(nk,k);q.push(n)}}}return null}
 function standableReachable(){const q=[player],seen=new Set([nodeKey(player)]),out=[];while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}return out.filter(p=>validNode(p.x,p.y,p.z))}
 function reachableTop(target){if(findPath(target))return target;return standableReachable().filter(p=>Math.abs(p.x-target.x)+Math.abs(p.y-target.y)<=1).sort((a,b)=>(Math.abs(a.x-target.x)+Math.abs(a.y-target.y)+Math.abs(a.z-target.z))-(Math.abs(b.x-target.x)+Math.abs(b.y-target.y)+Math.abs(b.z-target.z)))[0]||target}
@@ -354,7 +366,7 @@ function moveTo(p){
   save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=1;
   function edge(now,from=player,to=path[index],start=now){
     const isLongFall=to.y-from.y>1,plan=isLongFall?fallPlan(from,to):null,duration=plan?plan.duration:to.y!==from.y||Math.abs(to.x-from.x)>1?260:175,elapsed=Math.min(duration,now-start),t=elapsed/duration,smooth=ease(t),a=worldPosition(from),b=worldPosition(to);
-    const jump=!isLongFall&&(to.y!==from.y||Math.abs(to.x-from.x)>1)?Math.sin(Math.PI*t)*.5:0;
+    const jump=!isLongFall&&(to.y!==from.y||Math.abs(to.x-from.x)>1)?Math.sin(Math.PI*t)*jumpHeight(from,to):0;
     const motion=isLongFall?fallMotion(from,to,elapsed,plan):{pose:vec3(a.x+(b.x-a.x)*smooth,a.y+(b.y-a.y)*smooth+jump,a.z+(b.z-a.z)*smooth),umbrella:false,flight:0};
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);

@@ -103,7 +103,7 @@
       "RGGGGGGGGGGG",
       "RRGGGGGGGGGG",
       "RRRGGGGRGGGG",
-      "RRRRGGGRRRGG",
+      "RRRRGGGRRGGG",
       "RRRRRGGRRRGG",
       "RRRRRGGRRRRG",
       "RRRRRRRRRRRR"
@@ -150,7 +150,6 @@
       "OOOOYY",
       "OOBBBB",
       "YYYBBB",
-      "YYYYBB",
       "YYYYBB"
     ],
     "start": {
@@ -209,7 +208,7 @@
       "RGRG",
       "RGRR",
       "RGGR",
-      "RRGR"
+      "RRRR"
     ],
     "start": {
       "x": 0,
@@ -322,7 +321,7 @@
     "name": "Challenge 1-17",
     "description": "Trace the green and cream switchback.",
     "grid": [
-      "GBGGG",
+      "GBBGG",
       "GGBBG",
       "GBBGG"
     ],
@@ -340,7 +339,7 @@
     "name": "Challenge 1-18",
     "description": "Climb the alternating color panels.",
     "grid": [
-      "BYYYYYYY",
+      "YYYYYYYY",
       "BYYYYYYY",
       "BYBYYYYY",
       "BYBOYYYY",
