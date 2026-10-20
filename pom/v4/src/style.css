@@ -22,3 +22,7 @@
 
 .logo-letter{position:relative}
 @media(max-width:600px){}
+
+.canvas-wrap{touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}.canvas-wrap.is-panning{cursor:grabbing}
+
+@media(max-width:780px){.brandmark{display:none}}
