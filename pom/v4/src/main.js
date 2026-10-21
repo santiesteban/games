@@ -4,7 +4,7 @@ import {
 } from 'littlejsengine';
 import levelData from './data/levels.json';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
-import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath } from './movement-routes.js';
+import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import skyBackground from '../../sky-background.png';
 import meadowForeground from '../../meadow-foreground.png';
@@ -63,19 +63,19 @@ function cellDepth(x,y){return y===H?0:(byCell[y]?.[x]?.depth??-1)}
 function nodesAt(x,y){if(x< -1||x>=W||y<0||y>H)return[];if(y===H){const front=Math.max(0,cellDepth(x,H-1));return Array.from({length:Math.max(0,FLOOR_DEPTH-front)},(_,i)=>({x,y,z:front+i}))}if(x<0)return[];const d=cellDepth(x,y),above=cellDepth(x,y-1);if(d<=0)return[];return Array.from({length:Math.max(0,d-Math.max(0,above))},(_,i)=>({x,y,z:Math.max(0,above)+i}))}
 function validNode(x,y,z){return nodesAt(x,y).some(n=>n.z===z)}
 function nodeKey(p){return `${p.x},${p.y},${p.z}`}
-function jumpPose(from,to,t){const p=sampleMovement(routeFor(from,to),t);return worldPoint(p.x,p.y,p.z)}
+function jumpPose(from,to,t,profile){const p=sampleMovement(routeFor(from,to),t,profile);return worldPoint(p.x,p.y,p.z)}
 function resetPomShape(){
   if(!pomReaching)return;
   playerObject.setMesh(pomBlob);pomBody.setMesh(pomBlob);pomBody.scale3D=vec3(.88,.88,1);setPomFaceDepth();pomReaching=false;
 }
 function setPomFaceDepth(depth=2){for(const {white,black} of pomEyes){white.pos3D.z=depth;black.pos3D.z=depth+.2}}
-function shapePomReach(from,to,t){
+function shapePomReach(from,to,t,profile){
   const timing=reachTiming(t),plan=routeFor(from,to),board=movementBoard();let tailTime=timing.tail;
-  while(timing.head-tailTime>.0001&&!movementSegmentClear(board,sampleMovement(plan,tailTime),sampleMovement(plan,timing.head)))tailTime=(tailTime+timing.head)/2;
-  const head=jumpPose(from,to,timing.head);
+  while(timing.head-tailTime>.0001&&!movementSegmentClear(board,sampleMovement(plan,tailTime,profile),sampleMovement(plan,timing.head,profile)))tailTime=(tailTime+timing.head)/2;
+  const head=jumpPose(from,to,timing.head,profile);
   if(timing.head-timing.tail<.00001){resetPomShape();return head}
   const right=render3D.camera.getRight(),up=render3D.camera.getUp(),back=right.cross(up);
-  const tailDelta=jumpPose(from,to,tailTime).subtract(head),span=Math.hypot(tailDelta.dot(right)/.72,tailDelta.dot(up)/.56),amount=Math.min(1,.45/Math.max(.001,span));
+  const tailDelta=jumpPose(from,to,tailTime,profile).subtract(head),span=Math.hypot(tailDelta.dot(right)/.72,tailDelta.dot(up)/.56),amount=Math.min(1,.45/Math.max(.001,span));
   // Allow a visible stretch, capped at 45% of Pom's width on steeper climbs.
   const centers=[{x:tailDelta.dot(right)/.72*amount,y:tailDelta.dot(up)/.56*amount,z:tailDelta.dot(back)/.018*amount},{x:0,y:0,z:0}];
   const outline=reachOutline(centers,pomContour),fill=reachOutline(centers,pomContour,.055);
@@ -378,19 +378,25 @@ function gameUpdate(){
 }
 function moveTo(p){
   if(won||busy)return;const path=findPath(p);if(!path||path.length<2){say('That ledge is out of reach. Pull a block out to make a step.');return}
-  save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=1;
-  function edge(now,from=player,to=path[index],start=now){
-    const plan=routeFor(from,to),duration=plan.duration,elapsed=Math.min(duration,now-start),t=elapsed/duration,reaching=plan.stretch;
-    const motion={pose:reaching?shapePomReach(from,to,t):jumpPose(from,to,t),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
+  const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
+  save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
+  function tick(now){
+    start??=now;
+    // Carry elapsed time across cell boundaries instead of inserting a fresh
+    // animation frame and a full stop at the beginning of every next step.
+    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape()}
+    if(index===plans.length){
+      falling=false;setUmbrellaVisible(false);busy=false;
+      if(nodeKey(player)===nodeKey(goalNode())){won=true;document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();return;
+    }
+    const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
+    const motion={pose:plan.stretch?shapePomReach(from,to,t,profile):jumpPose(from,to,t,profile),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
     const toTop=to.y===H?0:H-to.y;pomShadow=worldPoint(motion.pose.x-viewSide*DEPTH_SKEW*motion.pose.z,plan.isFall?toTop+.018:motion.pose.y-.202,motion.pose.z);
-    if(t<1){requestAnimationFrame(n=>edge(n,from,to,start));return}
-    resetPomShape();player={...to};falling=false;setUmbrellaVisible(false);
-    if(index<path.length-1){index++;requestAnimationFrame(n=>edge(n,player,path[index],n));return}
-    busy=false;if(nodeKey(player)===nodeKey(goalNode())){won=true;document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();
+    requestAnimationFrame(tick);
   }
-  requestAnimationFrame(now=>edge(now));
+  requestAnimationFrame(tick);
 }
 function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return ray.getPosition(t)}
 function standableAt(ray){let best=null,bestD=Infinity;if(Math.abs(ray.direction.y)>1e-6)for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+viewSide*DEPTH_SKEW*(p.z+.5),t=(h-ray.origin.y)/ray.direction.y;if(t<0)continue;const q=ray.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best)return best;const floor=pointOnFloor(ray);if(floor){const p=standableReachable().filter(n=>n.y===H).sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<.9)return p}}return null}

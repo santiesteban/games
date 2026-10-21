@@ -1,7 +1,6 @@
 const EPS=.0001, BODY={x:.38,down:.205,up:.31,z:.18};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
-const ease=t=>t*t*(3-2*t);
 
 export function createMovementBoard(grid,depths=[]){
   const height=grid.length,width=grid[0].length,byCell=Array.from({length:height},()=>Array(width).fill(null)),groups=[];
@@ -115,12 +114,27 @@ export function planMovement(board,from,to){
   }
   const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
   const drop=to.y-from.y,isFall=drop>1,level=drop===0,diagonal=from.x!==to.x&&from.z!==to.z;
-  const duration=isFall?450+drop*165:level?(diagonal?250:175)+(lengths.at(-1)-distance(a,b))*65:390+(lengths.at(-1)-distance(a,b))*65;
+  const duration=isFall?360+drop*135:level?(diagonal?200:175)+(lengths.at(-1)-distance(a,b))*25:240+(lengths.at(-1)-distance(a,b))*25;
   return{points,lengths,length:lengths.at(-1),duration,isFall,stretch:!isFall&&(drop<0||diagonal||points.length>2)};
 }
 
-export function sampleMovement(plan,time){
-  const t=Math.max(0,Math.min(1,time)),travel=ease(t)*plan.length;
+// Share a cruising speed between connected steps. Only the beginning and end
+// of the complete trip ease to a stop; intermediate cells keep their momentum.
+export function movementProfiles(plans){
+  const profiles=plans.map(()=>({entry:0,exit:0}));
+  for(let i=1;i<plans.length;i++){
+    const before=plans[i-1],after=plans[i],a=before.points.at(-2),b=before.points.at(-1),c=after.points[0],d=after.points[1];
+    const dot=((b.x-a.x)*(d.x-c.x)+(b.y-a.y)*(d.y-c.y)+(b.z-a.z)*(d.z-c.z))/(distance(a,b)*distance(c,d));
+    const turn=Math.max(0,Math.min(1,(dot+1)/2)),speed=Math.min(before.length/before.duration,after.length/after.duration)*turn;
+    profiles[i-1].exit=speed*before.duration/before.length;
+    profiles[i].entry=speed*after.duration/after.length;
+  }
+  return profiles;
+}
+
+export function sampleMovement(plan,time,profile={entry:0,exit:0}){
+  const t=Math.max(0,Math.min(1,time)),t2=t*t,t3=t2*t;
+  const progress=(-2*t3+3*t2)+(t3-2*t2+t)*profile.entry+(t3-t2)*profile.exit,travel=progress*plan.length;
   let i=1;while(i<plan.lengths.length-1&&plan.lengths[i]<travel)i++;
   return mix(plan.points[i-1],plan.points[i],(travel-plan.lengths[i-1])/(plan.lengths[i]-plan.lengths[i-1]||1));
 }

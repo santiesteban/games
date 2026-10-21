@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createMovementBoard,planMovement,sampleMovement,movementSegmentClear,nodePose,findMovementPath,isSingleMove} from './movement-routes.js';
+import {createMovementBoard,planMovement,sampleMovement,movementSegmentClear,nodePose,findMovementPath,isSingleMove,movementProfiles} from './movement-routes.js';
 import {movementExamples,studioLevel} from './movement-studio.js';
 const levels=JSON.parse(fs.readFileSync(new URL('./data/levels.json',import.meta.url)));
 
@@ -53,4 +53,33 @@ test('two-cell horizontal moves and climbs of two levels remain forbidden',()=>{
 test('Pom cannot pass through a solid wall to a nearby target',()=>{
   const board={height:4,validNode:()=>true,blocks:[{min:{x:.9,y:-1,z:-1},max:{x:1.1,y:6,z:4}}]};
   assert.equal(planMovement(board,{x:0,y:2,z:0},{x:1,y:2,z:1}),null);
+});
+
+test('simple movement keeps its original speed while climbs and diagonals are quicker',()=>{
+  const ground=createMovementBoard(['...','...']);
+  assert.equal(planMovement(ground,{x:0,y:2,z:1},{x:1,y:2,z:1}).duration,175);
+  for(const example of movementExamples.filter(ex=>!ex.multiStep)){
+    const level=studioLevel(levels,example),board=createMovementBoard(level.grid,level.initialDepths),plan=planMovement(board,example.from,example.to);
+    assert(plan.duration<(plan.isFall?700:300));
+  }
+});
+
+test('connected steps retain speed through intermediate cells',()=>{
+  const board=createMovementBoard(['...','...']),nodes=[-1,0,1,2].map(x=>({x,y:2,z:1}));
+  const plans=nodes.slice(1).map((to,i)=>planMovement(board,nodes[i],to)),profiles=movementProfiles(plans),epsilon=.0001;
+  assert.equal(profiles[0].entry,0);assert.equal(profiles.at(-1).exit,0);
+  for(let i=1;i<plans.length;i++){
+    const before=plans[i-1],after=plans[i];
+    const exit=(sampleMovement(before,1,profiles[i-1]).x-sampleMovement(before,1-epsilon,profiles[i-1]).x)/(epsilon*before.duration);
+    const entry=(sampleMovement(after,epsilon,profiles[i]).x-sampleMovement(after,0,profiles[i]).x)/(epsilon*after.duration);
+    assert(exit>.9/before.duration,'Pom does not stop at the intermediate cell');
+    assert(Math.abs(exit-entry)<.001/175,'both steps share the same physical speed');
+  }
+  for(let i=0;i<plans.length;i++){
+    let previous=sampleMovement(plans[i],0,profiles[i]);
+    for(let frame=1;frame<=100;frame++){
+      const p=sampleMovement(plans[i],frame/100,profiles[i]);
+      assert(p.x>previous.x);assert(movementSegmentClear(board,previous,p));previous=p;
+    }
+  }
 });
