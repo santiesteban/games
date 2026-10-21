@@ -3,6 +3,9 @@ import {
   Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
 import levelData from './data/levels.json';
+import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
+import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath } from './movement-routes.js';
+import { movementExamples, studioLevel } from './movement-studio.js';
 import skyBackground from '../../sky-background.png';
 import meadowForeground from '../../meadow-foreground.png';
 import './style.css';
@@ -17,11 +20,11 @@ const irisShade=document.createElementNS(svgNS,'path'),irisRing=document.createE
 // Cut a transparent opening directly into the opaque shade.
 irisShade.setAttribute('fill','#28251f');irisShade.setAttribute('fill-rule','evenodd');irisRing.setAttribute('fill','none');irisRing.setAttribute('stroke','#fff0d8');irisRing.setAttribute('stroke-width','3');irisSvg.append(irisShade,irisRing);wrap.append(irisSvg);
 const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16,VIEW_PITCH=.38, ink='#28251f';
-const jumpArcCache=new Map;
+const movementRouteCache=new Map;let movementBoardCache,movementBoardKey,reachableKey,reachableValue;
 const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
-let activeLevel=levels.find(level=>level.id===19),W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
+let activeLevel=levels[0],W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
 const palette={R:new Color(1,.443,.22),O:new Color(.949,.627,.353),G:new Color(.475,.651,.431),B:new Color(.333,.663,.682),Y:new Color(1,.875,.247)};
-let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=1,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomParts=[],pomShadow,hoverObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
+let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=1,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],pomShadow,hoverObject,studioTargetObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const colors=palette,inkColor=new Color(.157,.145,.122);
 const topPalette=Object.fromEntries(Object.entries(palette).map(([key,color])=>[key,tinted(color,.035)])),sidePalette=Object.fromEntries(Object.entries(palette).map(([key,color])=>[key,shaded(color,.96)]));
@@ -36,7 +39,7 @@ function standingSpotMesh(){
   const vertices=[vec3(),...points],indices=[];for(let i=1;i<vertices.length;i++)indices.push(0,i,i===vertices.length-1?1:i+1);m.addTriangles(vertices,indices,vec3(0,1,0),undefined,new Color(1,1,1));m.doubleSided=true;return m;
 }
 function standingSpotCenter(p){const ground=p.y===H,top=ground?0:H-p.y;return worldPoint(p.x+.5,top+(ground?.005:.006),p.z+.5+(ground?.025:0))}
-function syncHoverSpot(){if(!hoverObject)return;hoverObject.setMesh(standingSpotMesh());if(hovered)hoverObject.pos3D=standingSpotCenter(hovered)}
+function syncHoverSpot(){if(!hoverObject)return;hoverObject.setMesh(standingSpotMesh());if(studioTargetObject){studioTargetObject.setMesh(standingSpotMesh());if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}if(hovered)hoverObject.pos3D=standingSpotCenter(hovered)}
 function setUmbrellaVisible(show){if(umbrellaCanopy)umbrellaCanopy.color=new Color(.15,.2,.27,show?1:0);if(umbrellaHandle)umbrellaHandle.color=new Color(.15,.2,.27,show?1:0);for(let i=0;i<umbrellaPanels.length;i++){const color=i%2?new Color(.64,.83,.97):new Color(.98,.99,.96);color.a=show?1:0;umbrellaPanels[i].color=color}}
 function positionUmbrella(t=0){const sway=Math.sin(t*Math.PI*2)*.06,y=.84+Math.sin(t*Math.PI*4)*.025;if(umbrellaCanopy)umbrellaCanopy.pos3D=vec3(sway,y,3);if(umbrellaHandle)umbrellaHandle.pos3D=vec3(sway,y,2.96);for(const panel of umbrellaPanels)panel.pos3D=vec3(sway,y,3.035)}
 function animateEffort(){
@@ -52,81 +55,42 @@ function animateEffort(){
 const pomContour=[quadraticSegment([-1,.28],[-1.02,1.15],[0,1.22]),quadraticSegment([0,1.22],[1.02,1.15],[1,.28]),quadraticSegment([1,.28],[.84,-.12],[0,-.12]),quadraticSegment([0,-.12],[-.84,-.12],[-1,.28])].flatMap((segment,index)=>index?segment.slice(1):segment).map(([x,y])=>[x*.5,y*.709-.294]).reverse();
 const pomBlob=makeFanMesh(pomContour),pomEye=makeFanMesh(Array.from({length:20},(_,i)=>[Math.cos(i*Math.PI/10)*.5,Math.sin(i*Math.PI/10)*.5]));
 
-function makeGroups(){let seen=new Set;for(let y=0;y<H;y++)for(let x=0;x<W;x++){const c=mural[y][x],key=x+','+y;if(c==='.'||seen.has(key))continue;const cells=[],q=[[x,y]];seen.add(key);while(q.length){const [a,b]=q.pop();cells.push({x:a,y:b});for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=a+dx,ny=b+dy,k=nx+','+ny;if(nx>=0&&nx<W&&ny>=0&&ny<H&&mural[ny][nx]===c&&!seen.has(k)){seen.add(k);q.push([nx,ny])}}}const g={id:groups.length,color:c,cells,depth:0,objects:[]};groups.push(g);for(const p of cells)byCell[p.y][p.x]=g}}
+function makeGroups(){const board=createMovementBoard(mural,activeLevel.initialDepths);groups=board.groups;byCell=board.byCell;for(const g of groups)g.objects=[]}
+function clearMovementRoutes(){movementRouteCache.clear();movementBoardCache=null;movementBoardKey=null;reachableKey=null;reachableValue=null}
+function movementBoard(){const key=groups.map(g=>g.depth).join(',');if(!movementBoardCache||key!==movementBoardKey){movementBoardKey=key;movementBoardCache=createMovementBoard(mural,groups.map(g=>g.depth))}return movementBoardCache}
+function routeFor(from,to){const board=movementBoard(),key=`${nodeKey(from)}>${nodeKey(to)}:${movementBoardKey}`;if(!movementRouteCache.has(key))movementRouteCache.set(key,planMovement(board,from,to));return movementRouteCache.get(key)}
 function cellDepth(x,y){return y===H?0:(byCell[y]?.[x]?.depth??-1)}
 function nodesAt(x,y){if(x< -1||x>=W||y<0||y>H)return[];if(y===H){const front=Math.max(0,cellDepth(x,H-1));return Array.from({length:Math.max(0,FLOOR_DEPTH-front)},(_,i)=>({x,y,z:front+i}))}if(x<0)return[];const d=cellDepth(x,y),above=cellDepth(x,y-1);if(d<=0)return[];return Array.from({length:Math.max(0,d-Math.max(0,above))},(_,i)=>({x,y,z:Math.max(0,above)+i}))}
 function validNode(x,y,z){return nodesAt(x,y).some(n=>n.z===z)}
 function nodeKey(p){return `${p.x},${p.y},${p.z}`}
-function isJumpMove(from,to){return to.y!==from.y||(to.x!==from.x&&to.z!==from.z)}
-function jumpArcClear(from,to,arc){
-  const a=worldPosition(from),b=worldPosition(to),samples=48;
-  for(let i=1;i<samples;i++){
-    const t=i/samples,travel=jumpProgress(t,from,to),vertical=jumpVerticalProgress(t,from,to),p=vec3(a.x+(b.x-a.x)*travel,a.y+(b.y-a.y)*vertical+jumpLift(t)*arc,a.z+(b.z-a.z)*travel);
-    if(!bodyClearsAt(p))return false;
-  }
-  return true;
+function jumpPose(from,to,t){const p=sampleMovement(routeFor(from,to),t);return worldPoint(p.x,p.y,p.z)}
+function resetPomShape(){
+  if(!pomReaching)return;
+  playerObject.setMesh(pomBlob);pomBody.setMesh(pomBlob);pomBody.scale3D=vec3(.88,.88,1);setPomFaceDepth();pomReaching=false;
 }
-function jumpHeight(from,to){
-  const key=`${activeLevel.id}:${viewSide}:${nodeKey(from)}>${nodeKey(to)}:${groups.map(g=>g.depth).join(',')}`;
-  if(jumpArcCache.has(key))return jumpArcCache.get(key);
-  const base=to.y<from.y?.38:.34;
-  // Search for the gentlest trajectory first, raising the apex only when an
-  // intervening piece blocks the normal hop.
-  for(let step=0;step<=50;step++){
-    const arc=base+step*.04;
-    if(jumpArcClear(from,to,arc)){jumpArcCache.set(key,arc);return arc}
-  }
-  jumpArcCache.set(key,null);return null;
+function setPomFaceDepth(depth=2){for(const {white,black} of pomEyes){white.pos3D.z=depth;black.pos3D.z=depth+.2}}
+function shapePomReach(from,to,t){
+  const timing=reachTiming(t),plan=routeFor(from,to),board=movementBoard();let tailTime=timing.tail;
+  while(timing.head-tailTime>.0001&&!movementSegmentClear(board,sampleMovement(plan,tailTime),sampleMovement(plan,timing.head)))tailTime=(tailTime+timing.head)/2;
+  const head=jumpPose(from,to,timing.head);
+  if(timing.head-timing.tail<.00001){resetPomShape();return head}
+  const right=render3D.camera.getRight(),up=render3D.camera.getUp(),back=right.cross(up);
+  const tailDelta=jumpPose(from,to,tailTime).subtract(head),span=Math.hypot(tailDelta.dot(right)/.72,tailDelta.dot(up)/.56),amount=Math.min(1,.45/Math.max(.001,span));
+  // Allow a visible stretch, capped at 45% of Pom's width on steeper climbs.
+  const centers=[{x:tailDelta.dot(right)/.72*amount,y:tailDelta.dot(up)/.56*amount,z:tailDelta.dot(back)/.018*amount},{x:0,y:0,z:0}];
+  const outline=reachOutline(centers,pomContour),fill=reachOutline(centers,pomContour,.055);
+  const mesh=contour=>{const m=new Mesh().addTriangles(contour.map(p=>vec3(p.x,p.y,p.z)),triangulateContour(contour),vec3(0,0,1));m.doubleSided=true;return m};
+  playerObject.setMesh(mesh(outline));pomBody.setMesh(mesh(fill));pomBody.scale3D=vec3(1,1,1);setPomFaceDepth(reachFaceDepth(outline,fill));pomReaching=true;
+  return head;
 }
-function jumpLift(t){const remaining=1-t;return 16*t*t*remaining*remaining}
-function jumpDuration(from,to){return 330+Math.max(0,jumpHeight(from,to)-.38)*130}
-function jumpProgress(t,from,to){
-  return ease(t);
+function neighbors(p){return movementNeighbors(movementBoard(),p,routeFor)}
+function findPath(target){return findMovementPath(movementBoard(),player,target,routeFor)}
+function standableReachable(){
+  const board=movementBoard(),key=`${nodeKey(player)}:${movementBoardKey}`;if(key===reachableKey)return reachableValue;
+  const q=[player],seen=new Set([nodeKey(player)]),out=[];
+  while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}
+  reachableKey=key;reachableValue=out.filter(p=>board.validNode(p));return reachableValue;
 }
-function jumpVerticalProgress(t,from,to){return ease(t)}
-function bodyClearsAt(p){
-  const logicalX=p.x-viewSide*DEPTH_SKEW*p.z,halfWidth=.34,halfDown=.205,halfUp=.31;
-  for(const g of groups){if(!g.depth)continue;for(const c of g.cells){
-    if(logicalX+halfWidth<=c.x||logicalX-halfWidth>=c.x+1||p.y-halfDown>=H-c.y+.01||p.y+halfUp<=H-c.y-1-.01||p.z+.18<0||p.z-.18>g.depth)continue;
-    return false;
-  }}
-  return true;
-}
-function fallPathClear(from,to){
-  const plan=fallPlan(from,to),samples=28;
-  for(let i=1;i<samples;i++)if(!bodyClearsAt(fallMotion(from,to,plan.duration*i/samples,plan).pose))return false;
-  return true;
-}
-function neighbors(p){
-  const out=[];
-  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=H;dy++){
-    const x=p.x+dx,y=p.y+dy;
-    for(const n of nodesAt(x,y)){
-      const depthChange=Math.abs(n.z-p.z),horizontalSteps=Math.abs(dx)+depthChange,fall=dy>1;
-      if(depthChange>1||horizontalSteps<1)continue;
-      if(dy< -1)continue;
-      if(fall&&!fallPathClear(p,n))continue;
-      if(!fall&&isJumpMove(p,n)&&jumpHeight(p,n)===null)continue;
-      if(nodeKey(n)!==nodeKey(p))out.push(n);
-    }
-  }
-  return out;
-}
-function findPath(target){
-  const start=nodeKey(player),goal=nodeKey(target),frontier=[{p:player,key:start,cost:0,jumps:0}],costs=new Map([[start,0]]),jumpCounts=new Map([[start,0]]),prev=new Map([[start,null]]);
-  while(frontier.length){
-    frontier.sort((a,b)=>a.cost-b.cost||a.jumps-b.jumps);const current=frontier.shift();
-    if(current.cost!==costs.get(current.key)||current.jumps!==jumpCounts.get(current.key))continue;
-    if(current.key===goal){const path=[];let at=goal;while(at){const [x,y,z]=at.split(',').map(Number);path.push({x,y,z});at=prev.get(at)}return path.reverse()}
-    for(const next of neighbors(current.p)){
-      const key=nodeKey(next),longFall=next.y-current.p.y>1,jump=isJumpMove(current.p,next),duration=longFall?fallPlan(current.p,next).duration:jump?jumpDuration(current.p,next):175,cost=current.cost+duration+(jump||longFall?80:0),jumps=current.jumps+(jump||longFall?1:0),oldCost=costs.get(key),oldJumps=jumpCounts.get(key);
-      if(oldCost!==undefined&&(cost>oldCost||cost===oldCost&&jumps>=oldJumps))continue;
-      costs.set(key,cost);jumpCounts.set(key,jumps);prev.set(key,current.key);frontier.push({p:next,key,cost,jumps});
-    }
-  }
-  return null;
-}
-function standableReachable(){const q=[player],seen=new Set([nodeKey(player)]),out=[];while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}return out.filter(p=>validNode(p.x,p.y,p.z))}
 function reachableTop(target){if(findPath(target))return target;return standableReachable().filter(p=>Math.abs(p.x-target.x)+Math.abs(p.y-target.y)<=1).sort((a,b)=>(Math.abs(a.x-target.x)+Math.abs(a.y-target.y)+Math.abs(a.z-target.z))-(Math.abs(b.x-target.x)+Math.abs(b.y-target.y)+Math.abs(b.z-target.z)))[0]||target}
 function canReach(g){if(player.y<H&&byCell[player.y]?.[player.x]===g&&player.z<g.depth)return false;return g.cells.some(c=>{if(player.x===c.x&&player.y===c.y+1&&player.z===g.depth)return true;const dx=player.x-c.x;if(Math.abs(dx)!==1||player.y!==c.y+1)return false;const sideDepth=cellDepth(player.x,c.y);return sideDepth<g.depth&&player.z>=Math.max(0,sideDepth)&&player.z<g.depth})}
 function goalNode(){const g=byCell[goalCell.y]?.[goalCell.x];return{x:goalCell.x,y:goalCell.y,z:Math.max(0,(g?.depth||0)-1)}}
@@ -197,13 +161,13 @@ function drawMapOutlines(){
 function roundedInsetLoop(points,offset,radius){if(points.length<3)return[];let area=0;for(let i=0;i<points.length;i++){const a=points[i],b=points[(i+1)%points.length];area+=a.x*b.y-b.x*a.y}const sign=area>=0?1:-1,verts=points.map((v,i)=>{const prev=points[(i+points.length-1)%points.length],next=points[(i+1)%points.length],normal=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:-dy/l*sign,y:dx/l*sign}},n0=normal(prev,v),n1=normal(v,next),sx=n0.x+n1.x,sy=n0.y+n1.y,l=Math.hypot(sx,sy)||1,n={x:sx/l,y:sy/l},k=offset/(n.x*n1.x+n.y*n1.y||1);return{x:v.x+n.x*k,y:v.y+n.y*k}}),result=[];for(let i=0;i<verts.length;i++){const v=verts[i],prev=verts[(i+verts.length-1)%verts.length],next=verts[(i+1)%verts.length],unit=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:dx/l,y:dy/l}},u0=unit(v,prev),u1=unit(v,next),r=Math.min(radius,Math.hypot(v.x-prev.x,v.y-prev.y)/2,Math.hypot(v.x-next.x,v.y-next.y)/2),a={x:v.x+u0.x*r,y:v.y+u0.y*r},b={x:v.x+u1.x*r,y:v.y+u1.y*r};for(let step=0;step<=5;step++){const t=step/5,s=1-t;result.push({x:s*s*a.x+2*s*t*v.x+t*t*b.x,y:s*s*a.y+2*s*t*v.y+t*t*b.y})}}return result}
 function drawSelectedOutline(){const g=selected;if(!g)return;const width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=g.depth+.028,offset=5.5,radius=6,dash=6,gap=4,stroke=2.2*render3D.camera.orthographic/height,frontWorld=point=>{const ray=render3D.screenToRay(vec2(point.x,point.y),size),t=(z-ray.origin.z)/ray.direction.z;return ray.getPosition(t)},edges=[],has=(x,y)=>byCell[y]?.[x]===g;for(const c of g.cells){const x=c.x,y0=H-c.y-1,y1=H-c.y;if(!has(c.x,c.y+1))edges.push([[x,y0],[x+1,y0]]);if(!has(c.x+1,c.y))edges.push([[x+1,y0],[x+1,y1]]);if(!has(c.x,c.y-1))edges.push([[x+1,y1],[x,y1]]);if(!has(c.x-1,c.y))edges.push([[x,y1],[x,y0]])}const key=p=>p.join(','),loops=[];while(edges.length){const first=edges.pop(),loop=[first[0],first[1]];while(key(loop.at(-1))!==key(loop[0])){const at=edges.findIndex(e=>key(e[0])===key(loop.at(-1)));if(at<0)break;loop.push(edges.splice(at,1)[0][1])}if(key(loop.at(-1))===key(loop[0])){loop.pop();const screen=loop.map(([x,y])=>render3D.worldToScreen(vec3(x+viewSide*DEPTH_SKEW*z,y,z),size));loops.push(roundedInsetLoop(screen,offset,radius))}}for(const loop of loops){if(loop.length<2)continue;const points=[...loop,loop[0]],period=dash+gap;let traveled=0;for(let i=0;i<points.length-1;i++){const a=points[i],b=points[i+1],length=Math.hypot(b.x-a.x,b.y-a.y)||0;let local=0;while(local<length){const phase=(traveled+local)%period;if(phase<dash){const step=Math.min(length-local,dash-phase),t0=local/length,t1=(local+step)/length,p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0},p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};render3D.drawLine(frontWorld(p0),frontWorld(p1),stroke,inkColor);local+=step}else local+=Math.min(length-local,period-phase)}traveled+=length}}}
 function drawHoverSpot(){
-  if(!hovered||!hoverObject||hoverObject.color.a===0)return;
+  if(!hoverObject)return;
   render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthTest:render3D.depthTest,depthWrite:render3D.depthWrite,lighting:render3D.lighting};
   render3D.blend=true;render3D.depthTest=false;render3D.depthWrite=false;render3D.lighting=false;
-  render3D.drawMesh(hoverObject.mesh,hoverObject.getMatrix(),undefined,hoverObject.color);render3D.flush();
+  for(const spot of [hoverObject,studioTargetObject])if(spot&&spot.color.a>0)render3D.drawMesh(spot.mesh,spot.getMatrix(),undefined,spot.color);render3D.flush();
   render3D.blend=state.blend;render3D.depthTest=state.depthTest;render3D.depthWrite=state.depthWrite;render3D.lighting=state.lighting;
 }
-function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(pomBlob,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
+function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(playerObject.mesh,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
 function syncFloorGrid(){
   const o=backgroundObjects[backgroundObjects.length-1];if(!o)return;
   const m=new Mesh(),width=wrap.clientWidth,height=wrap.clientHeight,ortho=render3D.camera.orthographic,aspect=width/height,worldWidth=ortho*aspect,line=1.5*ortho/height,gridColor=new Color(1,1,1,.55),floorWash=new Color(1,1,1,.16),size=vec2(width,height);
@@ -240,7 +204,7 @@ function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,
   const ridge=.60,groundToBottom=Math.max(0,ortho/2+groundQ),meadowH=Math.max(sceneHeight*1.15,worldWidth/3,groundToBottom/(1-ridge));
   place(meadow,89.7,0,groundQ+(ridge-.5)*meadowH,meadowH*3,meadowH);meadow.color=new Color(1,1,1,.8);
 }
-function syncPlayer(){const p=worldPosition(player),top=player.y===H?0:H-player.y,jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);if(pomShadow)pomShadow=worldPoint(player.x+.5,top+.018,player.z+.5)}
+function syncPlayer(){resetPomShape();const p=worldPosition(player),top=player.y===H?0:H-player.y,jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);if(pomShadow)pomShadow=worldPoint(player.x+.5,top+.018,player.z+.5)}
 function syncFlag(){const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;const depth=g.depth,cx=goalCell.x+.5,cy=H-goalCell.y-.5;flagPole.color=new Color(.16,.15,.12);flagCloth.color=new Color(1,.443,.22);flagPole.rotation3D=vec3();flagCloth.rotation3D=vec3();if(!depth){flagPole.scale3D=vec3(.04,.27,.04);flagCloth.scale3D=vec3(.205,.13,.035);flagPole.pos3D=vec3(cx,cy+.085,.08);flagCloth.pos3D=vec3(cx+.105,cy+.165,.09)}else{const base=worldPoint(cx,H-goalCell.y,depth-.5);flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);flagPole.pos3D=base.add(vec3(0,.34,0));flagCloth.pos3D=base.add(vec3(.19,.56,.025))}}
 function updateUI(){
   document.querySelector('#level-number').textContent=String(activeLevel.id).padStart(2,'0');document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
@@ -248,12 +212,15 @@ function updateUI(){
   document.querySelector('#push').disabled=busy||won||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
   document.querySelector('#undo').disabled=busy||!history.length;
   document.querySelector('#reset').disabled=busy||(!history.length&&!won&&!groups.some(g=>g.depth));
+  document.querySelector('#studioControls').hidden=!activeLevel.previewMove;document.querySelector('#previewClimb').disabled=busy;document.querySelector('#movementCase').disabled=busy;
+  if(activeLevel.studioExample)document.querySelector('#movementCase').value=activeLevel.studioExample.id;
+  if(studioTargetObject){studioTargetObject.color=new Color(1,.95,.73,activeLevel.previewMove ? .85 : 0);if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}
   if(!toastTimer)showHelp(contextHelp());
   const toggle=document.querySelector('#toggleView'),right=viewSide>0;toggle.disabled=busy||won;toggle.setAttribute('aria-checked',String(right));toggle.setAttribute('aria-label',`Looking ${right?'right':'left'}. Switch to look ${right?'left':'right'}`);toggle.querySelector('.view-toggle-label').textContent=`Look ${right?'right':'left'}`;toggle.querySelector('.toggle-thumb').textContent=right?'→':'←';
   const color=selected?tinted(colors[selected.color],.12):null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
   syncBlocks();syncPlayer();syncFlag();
 }
-function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return 'Pom is on his way…';if(selected){if(!canReach(selected))return 'Move Pom beside this block to push or pull it.';return `Block pulled ${selected.depth} of 3 steps out. ${selected.depth===3?'Push it in to make a different path.':'Use Push in or Pull out to make a path.'}`}return viewMobile?'Tap a block or walking spot. Drag to pan · pinch to zoom.':'Select a block to pull it. Click a walking spot to move Pom.'}
+function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return 'Pom is on his way…';if(selected){if(!canReach(selected))return 'Move Pom beside this block to push or pull it.';return `Block pulled ${selected.depth} of 3 steps out. ${selected.depth===3?'Push it in to make a different path.':'Use Push in or Pull out to make a path.'}`}if(activeLevel.studioExample)return activeLevel.studioExample.help;return viewMobile?'Tap a block or walking spot. Drag to pan · pinch to zoom.':'Select a block to pull it. Click a walking spot to move Pom.'}
 function showHelp(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on')}
 function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
 function showMenu(panel='title'){
@@ -270,10 +237,11 @@ function renderLevelList(){
 }
 function resetLevelState(level){
   activeLevel=level;W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
-  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=1;celebration=null;irisSvg.style.opacity='0';
-  rebuildBlockMeshes();updateUI();startBoardView();
+  clearMovementRoutes();
+  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=1;celebration=null;irisSvg.style.opacity='0';
+  clearTimeout(toastTimer);toastTimer=undefined;setUmbrellaVisible(false);rebuildBlockMeshes();updateUI();startBoardView();
 }
-function startLevel(id){if(!gameReady)return;const level=levels.find(item=>item.id===id);if(!level)return;document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
+function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level)return;if(id===55)level=studioLevel(levels,movementExamples[0]);document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
 document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
 document.querySelector('#backTitle').addEventListener('click',()=>showMenu('title'));
 document.querySelector('#exitLevel').addEventListener('click',()=>showMenu('levels'));
@@ -322,8 +290,10 @@ function applyBoardView(clamp=true){
 }
 function startBoardView(animate=true){
   stopIntro();viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;showHelp(contextHelp());
-  const f=sceneFrame(viewWidth,viewHeight),fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView();
-  if(!viewMobile||fitUnit>=tappingUnit())return;
+  const f=sceneFrame(viewWidth,viewHeight);
+  if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
+  const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
+  if(!viewMobile||fitUnit>=tappingUnit()||activeLevel.name==='Movement Studio')return;
   const token=introFrame,start=performance.now(),from=viewTarget.copy(),unit=tappingUnit(),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(VIEW_PITCH)),target=pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0));
   const duration=animate&&!matchMedia('(prefers-reduced-motion:reduce)').matches?850:0,delay=duration?450:0;
   function tick(now){if(token!==introFrame||celebration)return;const t=duration?Math.min(1,Math.max(0,(now-start-delay)/duration)):1,q=ease(t);viewUnit=fitUnit+(unit-fitUnit)*q;viewTarget=from.lerp(target,q);applyBoardView();if(t<1)requestAnimationFrame(tick)}
@@ -390,8 +360,9 @@ function gameInit(){
   makeGroups();rebuildBlockMeshes();
   pomShadow=worldPoint(player.x+.5,.018,player.z+.5);
   hoverObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));hoverObject.transparent=true;hoverObject.render3D=()=>{};
+  studioTargetObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));studioTargetObject.transparent=true;studioTargetObject.render3D=()=>{};
   playerObject=new EngineObject3D(vec3(.5,.2,.14),pomBlob,undefined,inkColor);playerObject.scale3D=vec3(.72,.56,.018);playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.lighting=false;playerObject.softShadow=0;pomParts=[playerObject];
-  const pomBody=new EngineObject3D(vec3(0,0,1),pomBlob,undefined,new Color(.97,.22,.16));pomBody.scale3D=vec3(.88,.88,1);pomBody.lighting=false;playerObject.addChild(pomBody);pomParts.push(pomBody);
+  pomBody=new EngineObject3D(vec3(0,0,1),pomBlob,undefined,new Color(.97,.22,.16));pomBody.scale3D=vec3(.88,.88,1);pomBody.lighting=false;playerObject.addChild(pomBody);pomParts.push(pomBody);
   for(const x of [-.17,.17]){const white=new EngineObject3D(vec3(x,.19,2),pomEye,undefined,new Color(1,.95,.83)),black=new EngineObject3D(vec3(x,.19,2.2),pomEye,undefined,new Color(.12,.1,.09));white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1);white.lighting=false;black.lighting=false;playerObject.addChild(white);playerObject.addChild(black);pomEyes.push({white,black});pomParts.push(white,black)}
   const sweatContour=[...quadraticSegment([0,.6],[-.65,-.05],[-.35,-.3],10),...quadraticSegment([-.35,-.3],[0,-.7],[.35,-.3],10).slice(1),...quadraticSegment([.35,-.3],[.65,-.05],[0,.6],10).slice(1)],sweatMesh=makeFanMesh(sweatContour);
   for(let i=0;i<2;i++){const outline=new EngineObject3D(vec3(.48+i*.17,.65-i*.2,2.8),sweatMesh,undefined,new Color(.157,.145,.122,0)),fill=new EngineObject3D(vec3(0,0,.2),sweatMesh,undefined,new Color(.64,.83,.97,0));outline.scale3D=vec3(.17,.19,1);fill.scale3D=vec3(.70,.72,1);outline.lighting=fill.lighting=false;outline.transparent=fill.transparent=true;outline.addChild(fill);playerObject.addChild(outline);sweatDrops.push({outline,fill})}
@@ -405,30 +376,17 @@ function gameInit(){
 }
 function gameUpdate(){
 }
-function fallPlan(from,to){
-  const a=worldPosition(from),b=worldPosition(to),depth=byCell[from.y]?.[from.x]?.depth??0,takeoffZ=Math.max(a.z,depth+.12),landingZ=Math.max(b.z,takeoffZ);
-  const approach=150,flight=Math.min(950,350+(to.y-from.y)*105),finish=Math.abs(landingZ-b.z)>.01?150:0;
-  return {a,b,takeoffZ,landingZ,approach,flight,finish,duration:approach+flight+finish};
-}
-function fallMotion(from,to,elapsed,plan=fallPlan(from,to)){
-  const {a,b,takeoffZ,landingZ,approach,flight,finish}=plan;
-  if(elapsed<approach){const t=Math.min(1,elapsed/approach);return {pose:worldPoint(from.x+.5,a.y,a.z+(takeoffZ-a.z)*ease(t)),umbrella:t>.90,flight:0}}
-  if(elapsed<approach+flight){const t=Math.min(1,(elapsed-approach)/flight),lift=(a.y-b.y)*.25+.48;return {pose:worldPoint(from.x+.5+(to.x-from.x)*t,a.y+(b.y-a.y)*t+4*lift*t*(1-t),takeoffZ+(landingZ-takeoffZ)*t),umbrella:true,flight:t}}
-  const t=finish?ease(Math.min(1,(elapsed-approach-flight)/finish)):1;
-  return {pose:worldPoint(to.x+.5,b.y,landingZ+(b.z-landingZ)*t),umbrella:false,flight:1};
-}
 function moveTo(p){
   if(won||busy)return;const path=findPath(p);if(!path||path.length<2){say('That ledge is out of reach. Pull a block out to make a step.');return}
   save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=1;
   function edge(now,from=player,to=path[index],start=now){
-    const isLongFall=to.y-from.y>1,plan=isLongFall?fallPlan(from,to):null,isJump=!isLongFall&&isJumpMove(from,to),duration=plan?plan.duration:isJump?jumpDuration(from,to):175,elapsed=Math.min(duration,now-start),t=elapsed/duration,smooth=ease(t),a=worldPosition(from),b=worldPosition(to);
-    const travel=isJump?jumpProgress(t,from,to):smooth,vertical=isJump?jumpVerticalProgress(t,from,to):smooth,jump=isJump?jumpLift(t)*jumpHeight(from,to):0;
-    const motion=isLongFall?fallMotion(from,to,elapsed,plan):{pose:vec3(a.x+(b.x-a.x)*travel,a.y+(b.y-a.y)*vertical+jump,a.z+(b.z-a.z)*travel),umbrella:false,flight:0};
+    const plan=routeFor(from,to),duration=plan.duration,elapsed=Math.min(duration,now-start),t=elapsed/duration,reaching=plan.stretch;
+    const motion={pose:reaching?shapePomReach(from,to,t):jumpPose(from,to,t),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
-    const fromTop=from.y===H?0:H-from.y,toTop=to.y===H?0:H-to.y;pomShadow=worldPoint(motion.pose.x-viewSide*DEPTH_SKEW*motion.pose.z,fromTop+(toTop-fromTop)*smooth+.018,motion.pose.z);
+    const toTop=to.y===H?0:H-to.y;pomShadow=worldPoint(motion.pose.x-viewSide*DEPTH_SKEW*motion.pose.z,plan.isFall?toTop+.018:motion.pose.y-.202,motion.pose.z);
     if(t<1){requestAnimationFrame(n=>edge(n,from,to,start));return}
-    player={...to};falling=false;setUmbrellaVisible(false);
+    resetPomShape();player={...to};falling=false;setUmbrellaVisible(false);
     if(index<path.length-1){index++;requestAnimationFrame(n=>edge(n,player,path[index],n));return}
     busy=false;if(nodeKey(player)===nodeKey(goalNode())){won=true;document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();
   }
@@ -452,8 +410,10 @@ wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermov
 wrap.addEventListener('wheel',e=>{if(won||!viewReady)return;e.preventDefault();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView()},{passive:false});
 // Overlay controls must never select or move a ground spot underneath them.
 const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',()=>{hovered=null;if(hoverObject)hoverObject.color=new Color(1,1,1,0)});
+const studioControls=document.querySelector('#studioControls'),movementCase=document.querySelector('#movementCase');for(const example of movementExamples){const option=document.createElement('option');option.value=example.id;option.textContent=example.label;movementCase.append(option)}movementCase.onchange=()=>{if(!busy)resetLevelState(studioLevel(levels,movementExamples.find(example=>example.id===movementCase.value)))};
+const previewClimb=document.querySelector('#previewClimb');for(const event of ['pointerdown','pointerup','pointermove'])studioControls.addEventListener(event,e=>e.stopPropagation());previewClimb.onclick=()=>{if(busy||!activeLevel.previewMove)return;const side=viewSide;resetLevelState(activeLevel);if(side!==viewSide)rotate(side);moveTo(activeLevel.previewMove)};
 document.querySelector('#pull').onclick=()=>manipulate(1);document.querySelector('#push').onclick=()=>manipulate(-1);document.querySelector('#toggleView').onclick=()=>rotate(-viewSide);
-document.querySelector('#undo').onclick=()=>busy?null:history.length?restore(history.pop()):say('Nothing to undo yet.');document.querySelector('#reset').onclick=()=>{if(busy)return;celebration=null;irisSvg.style.opacity='0';groups.forEach(g=>g.depth=0);player={x:0,y:H,z:0};selected=null;history=[];won=false;positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView();say('Puzzle reset.')};
+document.querySelector('#undo').onclick=()=>busy?null:history.length?restore(history.pop()):say('Nothing to undo yet.');document.querySelector('#reset').onclick=()=>{if(busy)return;celebration=null;irisSvg.style.opacity='0';groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView();say('Puzzle reset.')};
 window.addEventListener('keydown',e=>{
   if(!menuScreen.hidden&&menuScreen.classList.contains('is-levels')){
     const step=Math.max(120,levelList.clientHeight*.72);

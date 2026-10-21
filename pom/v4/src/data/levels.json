@@ -740,6 +740,444 @@
   },
   {
     "id": 37,
+    "name": "Challenge 2-1",
+    "description": "Challenge 2-1.",
+    "grid": [
+      "OOO",
+      "OBO",
+      "YBO",
+      "YBY",
+      "OBY",
+      "OBO",
+      "OOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 1,
+      "y": 0
+    }
+  },
+  {
+    "id": 38,
+    "name": "Challenge 2-2",
+    "description": "Challenge 2-2.",
+    "grid": [
+      "OOOBBO",
+      "OBOBOO",
+      "OBBOOO",
+      "OOBOBO",
+      "OOOBBO",
+      "OBOBOO",
+      "OBBOOO",
+      "OOBOBO",
+      "OOOBBO",
+      "OBOBOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 39,
+    "name": "Challenge 2-3",
+    "description": "Challenge 2-3.",
+    "grid": [
+      "OOOOOOO",
+      "OOOOOBO",
+      "OYOBOBO",
+      "OBOBOBO",
+      "OOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 40,
+    "name": "Challenge 2-4",
+    "description": "Challenge 2-4.",
+    "grid": [
+      "OOOOOOOOOOBBBO",
+      "OOOOOBBBOBBYBO",
+      "OOOOBBYBBBYYBO",
+      "OOOBBYYYBYYBBO",
+      "OOBBYYBYYYBBOO",
+      "OBBYYBBBYBBOOO",
+      "OOBBBBOBBBOOOO",
+      "OOOOOOOOOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  {
+    "id": 41,
+    "name": "Challenge 2-5",
+    "description": "Challenge 2-5.",
+    "grid": [
+      "YYYYYYYYYYYY",
+      "BBBBBBBBYYYY",
+      "OOOOOOOBBYYY",
+      "BBBBBOOBBBYY",
+      "BBBBBOOBBBOO",
+      "BBBOOOOBBOOO",
+      "BBOOBBBBOOOO",
+      "BOOOBBOOOOOO",
+      "OOOOBBOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 42,
+    "name": "Challenge 2-6",
+    "description": "Challenge 2-6.",
+    "grid": [
+      "OOOO",
+      "OYBO",
+      "OBYO",
+      "OOOO",
+      "OYBO",
+      "OBYO",
+      "OOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 3,
+      "y": 0
+    }
+  },
+  {
+    "id": 43,
+    "name": "Challenge 2-7",
+    "description": "Challenge 2-7.",
+    "grid": [
+      "OOOOOOO",
+      "OOOOYBO",
+      "OYBOBYO",
+      "OBYOOOO",
+      "OOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  {
+    "id": 44,
+    "name": "Challenge 2-8",
+    "description": "Challenge 2-8.",
+    "grid": [
+      "OOOOOBOOOBBBB",
+      "OOOOBBOOOBBBO",
+      "OOOBBOOOBBBOO",
+      "OOBBOOOBBBOOO",
+      "OBBOOOBBBOOOO",
+      "OOBBOOOBBBOOO",
+      "OOOBBOOOBBBOO",
+      "OOOOBBOOOBBBO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 45,
+    "name": "Challenge 2-9",
+    "description": "Challenge 2-9.",
+    "grid": [
+      "OOOOOOOOOOO",
+      "OBBBBBBBBBO",
+      "OBBBOOOOOBO",
+      "OBBOOOYYOBO",
+      "OBOOYYYBBBO",
+      "OYYYYYBBBBO",
+      "OYYYYYOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 46,
+    "name": "Challenge 2-10",
+    "description": "Challenge 2-10.",
+    "grid": [
+      "OOOOOBBBBB",
+      "OOOBBOOBBB",
+      "OOBBOBOOBB",
+      "OBBOOBBOOB",
+      "OOBBOBOOBB",
+      "OOOBBOOBBB",
+      "OOOOOBBBBB"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 4,
+      "y": 0
+    }
+  },
+  {
+    "id": 47,
+    "name": "Challenge 2-11",
+    "description": "Challenge 2-11.",
+    "grid": [
+      "OOOOO",
+      "OBYBO",
+      "OBBBO",
+      "OBYBO",
+      "OOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 4,
+      "y": 0
+    }
+  },
+  {
+    "id": 48,
+    "name": "Challenge 2-12",
+    "description": "Challenge 2-12.",
+    "grid": [
+      "OBBOO",
+      "OOBBO",
+      "OBBOO",
+      "OOBBO",
+      "OBBOO",
+      "BOOBB",
+      "BBOOB",
+      "BOOBB",
+      "BBOOB",
+      "BOOBB",
+      "OBBOO",
+      "OOBBO",
+      "OBBOO",
+      "OOBBO",
+      "OBBOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 2,
+      "y": 0
+    }
+  },
+  {
+    "id": 49,
+    "name": "Challenge 2-13",
+    "description": "Challenge 2-13.",
+    "grid": [
+      "OOOOO",
+      "OBBBO",
+      "OBYBO",
+      "OOYBO",
+      "OYYYO",
+      "BOOOO",
+      "BBBBB"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 2,
+      "y": 0
+    }
+  },
+  {
+    "id": 50,
+    "name": "Challenge 2-14",
+    "description": "Challenge 2-14.",
+    "grid": [
+      "OOOOOOOOOOOOO",
+      "OOOOOBBBOOOOO",
+      "OOOOBBOBBOOOO",
+      "OOOBBOOOBBOOO",
+      "OOBBOOBOOBBOO",
+      "OBBOOBBBOOBBO",
+      "OOBBOOBOOBBOO",
+      "OOOBBOOOBBOOO",
+      "OOOOBBOBBOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  {
+    "id": 51,
+    "name": "Challenge 2-15",
+    "description": "Challenge 2-15.",
+    "grid": [
+      "OOOOOOO",
+      "OOOYOOO",
+      "OOBBBOO",
+      "OBBOBBO",
+      "OBOYOBO",
+      "OBBBBBO",
+      "OOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 3,
+      "y": 0
+    }
+  },
+  {
+    "id": 52,
+    "name": "Challenge 2-16",
+    "description": "Challenge 2-16.",
+    "grid": [
+      "OOOOO",
+      "OOBOO",
+      "OBOBO",
+      "OOBOO",
+      "OOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 2,
+      "y": 0
+    }
+  },
+  {
+    "id": 53,
+    "name": "Challenge 2-17",
+    "description": "Challenge 2-17.",
+    "grid": [
+      "OOOOOOO",
+      "OBBBBOO",
+      "OBOYBBO",
+      "OBOYYBO",
+      "OBOOYYO",
+      "OBOYYBO",
+      "OBOYBBO",
+      "OBBBBOO",
+      "OOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  {
+    "id": 54,
+    "name": "Challenge 2-18",
+    "description": "Challenge 2-18.",
+    "grid": [
+      "BBBBBBBBBB",
+      "OOOOOOOOOB",
+      "OBBOOOOBBB",
+      "OOBBOOBBOB",
+      "OOOOYYOOOB",
+      "OBBBBBBBBB",
+      "OOOOOOOOOB"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 4,
+      "y": 0
+    }
+  },
+  {
+    "id": 55,
+    "name": "Movement Studio",
+    "previewMove": { "x": 1, "y": 6, "z": 0 },
+    "description": "Try one-step walks, diagonals, climbs, descents, and a long parachute drop. Pull out a piece to open more routes.",
+    "grid": [
+      ".......",
+      ".......",
+      ".....GG",
+      "....R..",
+      "...O...",
+      "..Y....",
+      ".B....O"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 6,
+      "y": 6
+    },
+    "initialDepths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  {
+    "id": 56,
     "name": "Pull out a path",
     "description": "Bring the blocks toward you, then climb your way to the flag.",
     "grid": [
