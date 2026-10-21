@@ -17,6 +17,7 @@ const irisShade=document.createElementNS(svgNS,'path'),irisRing=document.createE
 // Cut a transparent opening directly into the opaque shade.
 irisShade.setAttribute('fill','#28251f');irisShade.setAttribute('fill-rule','evenodd');irisRing.setAttribute('fill','none');irisRing.setAttribute('stroke','#fff0d8');irisRing.setAttribute('stroke-width','3');irisSvg.append(irisShade,irisRing);wrap.append(irisSvg);
 const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16,VIEW_PITCH=.38, ink='#28251f';
+const jumpArcCache=new Map;
 const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
 let activeLevel=levels.find(level=>level.id===19),W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
 const palette={R:new Color(1,.443,.22),O:new Color(.949,.627,.353),G:new Color(.475,.651,.431),B:new Color(.333,.663,.682),Y:new Color(1,.875,.247)};
@@ -56,21 +57,75 @@ function cellDepth(x,y){return y===H?0:(byCell[y]?.[x]?.depth??-1)}
 function nodesAt(x,y){if(x< -1||x>=W||y<0||y>H)return[];if(y===H){const front=Math.max(0,cellDepth(x,H-1));return Array.from({length:Math.max(0,FLOOR_DEPTH-front)},(_,i)=>({x,y,z:front+i}))}if(x<0)return[];const d=cellDepth(x,y),above=cellDepth(x,y-1);if(d<=0)return[];return Array.from({length:Math.max(0,d-Math.max(0,above))},(_,i)=>({x,y,z:Math.max(0,above)+i}))}
 function validNode(x,y,z){return nodesAt(x,y).some(n=>n.z===z)}
 function nodeKey(p){return `${p.x},${p.y},${p.z}`}
-function jumpHeight(from,to){return .5+(to.y===from.y-1&&Math.abs(to.x-from.x)===2?.2:0)}
-function jumpProgress(t,from,to){return to.y<from.y?ease(Math.max(0,Math.min(1,(t-.4)/.5))):ease(t)}
-function jumpPathClear(from,to){
-  const a=worldPosition(from),b=worldPosition(to),arc=jumpHeight(from,to),samples=18,halfWidth=.34,halfDown=.205,halfUp=.31;
+function isJumpMove(from,to){return to.y!==from.y||(to.x!==from.x&&to.z!==from.z)}
+function jumpArcClear(from,to,arc){
+  const a=worldPosition(from),b=worldPosition(to),samples=48;
   for(let i=1;i<samples;i++){
-    const t=i/samples,smooth=ease(t),travel=jumpProgress(t,from,to),x=a.x+(b.x-a.x)*travel,y=a.y+(b.y-a.y)*smooth+Math.sin(Math.PI*t)*arc,z=a.z+(b.z-a.z)*travel,logicalX=x-viewSide*DEPTH_SKEW*z;
-    for(const g of groups){if(!g.depth)continue;for(const c of g.cells){
-      if(logicalX+halfWidth<=c.x||logicalX-halfWidth>=c.x+1||y-halfDown>=H-c.y+.01||y+halfUp<=H-c.y-1-.01||z+.18<0||z-.18>g.depth)continue;
-      return false;
-    }}
+    const t=i/samples,travel=jumpProgress(t,from,to),vertical=jumpVerticalProgress(t,from,to),p=vec3(a.x+(b.x-a.x)*travel,a.y+(b.y-a.y)*vertical+jumpLift(t)*arc,a.z+(b.z-a.z)*travel);
+    if(!bodyClearsAt(p))return false;
   }
   return true;
 }
-function neighbors(p){const out=[];for(let dx=-2;dx<=2;dx++)for(let dy=-1;dy<=H;dy++){const fall=dy>0,upwardHop=dy===-1&&Math.abs(dx)<=2;if(fall?(Math.abs(dx)>1):!(Math.abs(dx)+Math.abs(dy)<=2||upwardHop))continue;const x=p.x+dx,y=p.y+dy;for(const n of nodesAt(x,y)){const depthChange=Math.abs(n.z-p.z);if(fall?depthChange>1:!(Math.abs(dx)+Math.abs(dy)+depthChange<=2||upwardHop&&depthChange<=1))continue;if(dy>1&&Array.from({length:dy-1},(_,i)=>cellDepth(x,p.y+i+1)).some(d=>d>Math.max(p.z,n.z)+.5))continue;if(Math.abs(dx)===2&&dy===0&&nodesAt(p.x+Math.sign(dx),p.y).some(mid=>mid.z===p.z))continue;if((dy!==0||Math.abs(dx)>1)&&!fall&&!jumpPathClear(p,n))continue;if(nodeKey(n)!==nodeKey(p))out.push(n)}}return out}
-function findPath(target){const start=nodeKey(player),q=[player],prev=new Map([[start,null]]);while(q.length){const p=q.shift(),k=nodeKey(p);if(k===nodeKey(target)){const path=[];let at=k;while(at){const [x,y,z]=at.split(',').map(Number);path.push({x,y,z});at=prev.get(at)}return path.reverse()}for(const n of neighbors(p)){const nk=nodeKey(n);if(!prev.has(nk)){prev.set(nk,k);q.push(n)}}}return null}
+function jumpHeight(from,to){
+  const key=`${activeLevel.id}:${viewSide}:${nodeKey(from)}>${nodeKey(to)}:${groups.map(g=>g.depth).join(',')}`;
+  if(jumpArcCache.has(key))return jumpArcCache.get(key);
+  const base=to.y<from.y?.38:.34;
+  // Search for the gentlest trajectory first, raising the apex only when an
+  // intervening piece blocks the normal hop.
+  for(let step=0;step<=50;step++){
+    const arc=base+step*.04;
+    if(jumpArcClear(from,to,arc)){jumpArcCache.set(key,arc);return arc}
+  }
+  jumpArcCache.set(key,null);return null;
+}
+function jumpLift(t){const remaining=1-t;return 16*t*t*remaining*remaining}
+function jumpDuration(from,to){return 330+Math.max(0,jumpHeight(from,to)-.38)*130}
+function jumpProgress(t,from,to){
+  return ease(t);
+}
+function jumpVerticalProgress(t,from,to){return ease(t)}
+function bodyClearsAt(p){
+  const logicalX=p.x-viewSide*DEPTH_SKEW*p.z,halfWidth=.34,halfDown=.205,halfUp=.31;
+  for(const g of groups){if(!g.depth)continue;for(const c of g.cells){
+    if(logicalX+halfWidth<=c.x||logicalX-halfWidth>=c.x+1||p.y-halfDown>=H-c.y+.01||p.y+halfUp<=H-c.y-1-.01||p.z+.18<0||p.z-.18>g.depth)continue;
+    return false;
+  }}
+  return true;
+}
+function fallPathClear(from,to){
+  const plan=fallPlan(from,to),samples=28;
+  for(let i=1;i<samples;i++)if(!bodyClearsAt(fallMotion(from,to,plan.duration*i/samples,plan).pose))return false;
+  return true;
+}
+function neighbors(p){
+  const out=[];
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=H;dy++){
+    const x=p.x+dx,y=p.y+dy;
+    for(const n of nodesAt(x,y)){
+      const depthChange=Math.abs(n.z-p.z),horizontalSteps=Math.abs(dx)+depthChange,fall=dy>1;
+      if(depthChange>1||horizontalSteps<1)continue;
+      if(dy< -1)continue;
+      if(fall&&!fallPathClear(p,n))continue;
+      if(!fall&&isJumpMove(p,n)&&jumpHeight(p,n)===null)continue;
+      if(nodeKey(n)!==nodeKey(p))out.push(n);
+    }
+  }
+  return out;
+}
+function findPath(target){
+  const start=nodeKey(player),goal=nodeKey(target),frontier=[{p:player,key:start,cost:0,jumps:0}],costs=new Map([[start,0]]),jumpCounts=new Map([[start,0]]),prev=new Map([[start,null]]);
+  while(frontier.length){
+    frontier.sort((a,b)=>a.cost-b.cost||a.jumps-b.jumps);const current=frontier.shift();
+    if(current.cost!==costs.get(current.key)||current.jumps!==jumpCounts.get(current.key))continue;
+    if(current.key===goal){const path=[];let at=goal;while(at){const [x,y,z]=at.split(',').map(Number);path.push({x,y,z});at=prev.get(at)}return path.reverse()}
+    for(const next of neighbors(current.p)){
+      const key=nodeKey(next),longFall=next.y-current.p.y>1,jump=isJumpMove(current.p,next),duration=longFall?fallPlan(current.p,next).duration:jump?jumpDuration(current.p,next):175,cost=current.cost+duration+(jump||longFall?80:0),jumps=current.jumps+(jump||longFall?1:0),oldCost=costs.get(key),oldJumps=jumpCounts.get(key);
+      if(oldCost!==undefined&&(cost>oldCost||cost===oldCost&&jumps>=oldJumps))continue;
+      costs.set(key,cost);jumpCounts.set(key,jumps);prev.set(key,current.key);frontier.push({p:next,key,cost,jumps});
+    }
+  }
+  return null;
+}
 function standableReachable(){const q=[player],seen=new Set([nodeKey(player)]),out=[];while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}return out.filter(p=>validNode(p.x,p.y,p.z))}
 function reachableTop(target){if(findPath(target))return target;return standableReachable().filter(p=>Math.abs(p.x-target.x)+Math.abs(p.y-target.y)<=1).sort((a,b)=>(Math.abs(a.x-target.x)+Math.abs(a.y-target.y)+Math.abs(a.z-target.z))-(Math.abs(b.x-target.x)+Math.abs(b.y-target.y)+Math.abs(b.z-target.z)))[0]||target}
 function canReach(g){if(player.y<H&&byCell[player.y]?.[player.x]===g&&player.z<g.depth)return false;return g.cells.some(c=>{if(player.x===c.x&&player.y===c.y+1&&player.z===g.depth)return true;const dx=player.x-c.x;if(Math.abs(dx)!==1||player.y!==c.y+1)return false;const sideDepth=cellDepth(player.x,c.y);return sideDepth<g.depth&&player.z>=Math.max(0,sideDepth)&&player.z<g.depth})}
@@ -366,9 +421,9 @@ function moveTo(p){
   if(won||busy)return;const path=findPath(p);if(!path||path.length<2){say('That ledge is out of reach. Pull a block out to make a step.');return}
   save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=1;
   function edge(now,from=player,to=path[index],start=now){
-    const isLongFall=to.y-from.y>1,plan=isLongFall?fallPlan(from,to):null,duration=plan?plan.duration:to.y!==from.y||Math.abs(to.x-from.x)>1?260:175,elapsed=Math.min(duration,now-start),t=elapsed/duration,smooth=ease(t),a=worldPosition(from),b=worldPosition(to);
-    const isJump=!isLongFall&&(to.y!==from.y||Math.abs(to.x-from.x)>1),travel=isJump?jumpProgress(t,from,to):smooth,jump=isJump?Math.sin(Math.PI*t)*jumpHeight(from,to):0;
-    const motion=isLongFall?fallMotion(from,to,elapsed,plan):{pose:vec3(a.x+(b.x-a.x)*travel,a.y+(b.y-a.y)*smooth+jump,a.z+(b.z-a.z)*travel),umbrella:false,flight:0};
+    const isLongFall=to.y-from.y>1,plan=isLongFall?fallPlan(from,to):null,isJump=!isLongFall&&isJumpMove(from,to),duration=plan?plan.duration:isJump?jumpDuration(from,to):175,elapsed=Math.min(duration,now-start),t=elapsed/duration,smooth=ease(t),a=worldPosition(from),b=worldPosition(to);
+    const travel=isJump?jumpProgress(t,from,to):smooth,vertical=isJump?jumpVerticalProgress(t,from,to):smooth,jump=isJump?jumpLift(t)*jumpHeight(from,to):0;
+    const motion=isLongFall?fallMotion(from,to,elapsed,plan):{pose:vec3(a.x+(b.x-a.x)*travel,a.y+(b.y-a.y)*vertical+jump,a.z+(b.z-a.z)*travel),umbrella:false,flight:0};
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
     const fromTop=from.y===H?0:H-from.y,toTop=to.y===H?0:H-to.y;pomShadow=worldPoint(motion.pose.x-viewSide*DEPTH_SKEW*motion.pose.z,fromTop+(toTop-fromTop)*smooth+.018,motion.pose.z);

@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "name": "Challenge 1-1",
+    "name": "Lesson 1",
     "description": "Climb the little staircase.",
     "grid": [
       "RRRG",
@@ -20,7 +20,7 @@
   },
   {
     "id": 2,
-    "name": "Challenge 1-2",
+    "name": "Lesson 2",
     "description": "Find a path through the cross.",
     "grid": [
       "GGBGG",
@@ -40,7 +40,7 @@
   },
   {
     "id": 3,
-    "name": "Challenge 1-3",
+    "name": "Lesson 3",
     "description": "Climb from one colored row to the next.",
     "grid": [
       "BBB",
@@ -58,7 +58,7 @@
   },
   {
     "id": 4,
-    "name": "Challenge 1-4",
+    "name": "Lesson 4",
     "description": "Step into the center of the square.",
     "grid": [
       "YYYY",
@@ -77,7 +77,7 @@
   },
   {
     "id": 5,
-    "name": "Challenge 1-5",
+    "name": "Lesson 5",
     "description": "Follow the rising green steps.",
     "grid": [
       "ORRRRRR",
@@ -97,7 +97,7 @@
   },
   {
     "id": 6,
-    "name": "Challenge 1-6",
+    "name": "Lesson 6",
     "description": "Cross the dips to reach the top.",
     "grid": [
       "RGGGGGGGGGGG",
@@ -119,7 +119,7 @@
   },
   {
     "id": 7,
-    "name": "Challenge 1-7",
+    "name": "Lesson 7",
     "description": "Climb the green cross set into the orange wall.",
     "grid": [
       "GGGGGGG",
@@ -141,7 +141,7 @@
   },
   {
     "id": 8,
-    "name": "Challenge 1-8",
+    "name": "Lesson 8",
     "description": "Find a route through the winding color bands.",
     "grid": [
       "BBBYYY",
@@ -163,7 +163,7 @@
   },
   {
     "id": 9,
-    "name": "Challenge 1-9",
+    "name": "Lesson 9",
     "description": "Pull through the doorway in the orange wall.",
     "grid": [
       "YYYY",
@@ -182,7 +182,7 @@
   },
   {
     "id": 10,
-    "name": "Challenge 1-10",
+    "name": "Lesson 10",
     "description": "Reach the top of the green doorway.",
     "grid": [
       "OOOO",
@@ -202,7 +202,7 @@
   },
   {
     "id": 11,
-    "name": "Challenge 1-11",
+    "name": "Lesson 11",
     "description": "Climb from the broad orange wall onto green.",
     "grid": [
       "RGRG",
@@ -221,7 +221,7 @@
   },
   {
     "id": 12,
-    "name": "Challenge 1-12",
+    "name": "Lesson 12",
     "description": "Cross three broad bands to reach the flag.",
     "grid": [
       "GBBBGGGGG",
@@ -241,7 +241,7 @@
   },
   {
     "id": 13,
-    "name": "Challenge 1-13",
+    "name": "Lesson 13",
     "description": "Climb across the checker of colored panels.",
     "grid": [
       "BBBB",
@@ -260,7 +260,7 @@
   },
   {
     "id": 14,
-    "name": "Challenge 1-14",
+    "name": "Lesson 14",
     "description": "Follow the stepped path around the center.",
     "grid": [
       "YYYYY",
@@ -280,7 +280,7 @@
   },
   {
     "id": 15,
-    "name": "Challenge 1-15",
+    "name": "Lesson 15",
     "description": "Make your way through the nested square walls.",
     "grid": [
       "OOOO",
@@ -299,7 +299,7 @@
   },
   {
     "id": 16,
-    "name": "Challenge 1-16",
+    "name": "Lesson 16",
     "description": "Climb the stepped center between the orange walls.",
     "grid": [
       "RRRR",
@@ -318,7 +318,7 @@
   },
   {
     "id": 17,
-    "name": "Challenge 1-17",
+    "name": "Lesson 17",
     "description": "Trace the green and cream switchback.",
     "grid": [
       "GBBGG",
@@ -336,7 +336,7 @@
   },
   {
     "id": 18,
-    "name": "Challenge 1-18",
+    "name": "Lesson 18",
     "description": "Climb the alternating color panels.",
     "grid": [
       "YYYYYYYY",
@@ -359,6 +359,387 @@
   },
   {
     "id": 19,
+    "name": "Challenge 1-1",
+    "description": "Challenge 1-1.",
+    "grid": [
+      "YYOO",
+      "GYYO",
+      "GGGO",
+      "OOYY",
+      "OYYG",
+      "OGGG"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 3,
+      "y": 0
+    }
+  },
+  {
+    "id": 20,
+    "name": "Challenge 1-2",
+    "description": "Challenge 1-2.",
+    "grid": [
+      "YOGG",
+      "YOOG",
+      "YYOG",
+      "OGYY",
+      "OGGY",
+      "OOGY"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 21,
+    "name": "Challenge 1-3",
+    "description": "Challenge 1-3.",
+    "grid": [
+      "GGG",
+      "GYG",
+      "OYG",
+      "OYO",
+      "OOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 1,
+      "y": 0
+    }
+  },
+  {
+    "id": 22,
+    "name": "Challenge 1-4",
+    "description": "Challenge 1-4.",
+    "grid": [
+      "OOYYY",
+      "GGGGY",
+      "OOOOY",
+      "GOOOY",
+      "GGOOO",
+      "GGGOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 4,
+      "y": 0
+    }
+  },
+  {
+    "id": 23,
+    "name": "Challenge 1-5",
+    "description": "Challenge 1-5.",
+    "grid": [
+      "GGGGGGGGG",
+      "GOOOOOOGG",
+      "GOOOOOOOG",
+      "GOOOOOOOY",
+      "YOYYYYYOG",
+      "GOOOYOOOG",
+      "GGOOYOOOG",
+      "GGGGGGGGG"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 24,
+    "name": "Challenge 1-6",
+    "description": "Challenge 1-6.",
+    "grid": [
+      "GGGGGGOOOGG",
+      "GGGGGGOOOOG",
+      "GGGGOOOOOOO",
+      "GGGOOGOGOGO",
+      "GGOOOGOGOGO",
+      "GOOOOGGGGGO",
+      "OOOOOOOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  {
+    "id": 25,
+    "name": "Challenge 1-7",
+    "description": "Challenge 1-7.",
+    "grid": [
+      "OOOOOGGOOOOOOOOO",
+      "OOGGOOGGGGGGOOOO",
+      "OOOGGOOOOOOGGOOO",
+      "OOOOGGGGGGOOGGOO",
+      "OOOOOOOOOGGOOGGO",
+      "OOOOGGGGGGOOGGOO",
+      "OOOGGOOOOOOGGOOO",
+      "OOGGOOGGGGGGOOOO",
+      "OGGOOGGOOOOOOOOO",
+      "OOGGOOGGGGGGOOOO",
+      "OOOGGOOOOOOGGOOO",
+      "OOOOGGGGGGOOGGOO",
+      "OOOOOOOOOGGOOOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 26,
+    "name": "Challenge 1-8",
+    "description": "Challenge 1-8.",
+    "grid": [
+      "GGOO",
+      "OGOG",
+      "OOGG",
+      "GOGO",
+      "GGOO",
+      "OGOG",
+      "OOGG",
+      "GOGO",
+      "GGOO",
+      "OGOG"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 27,
+    "name": "Challenge 1-9",
+    "description": "Challenge 1-9.",
+    "grid": [
+      "OOOO",
+      "OGGO",
+      "OGGY",
+      "OOOY"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 28,
+    "name": "Challenge 1-10",
+    "description": "Challenge 1-10.",
+    "grid": [
+      "OOYYY",
+      "GGGGY",
+      "OOOOY",
+      "GOOOG",
+      "GGOOG",
+      "GGGOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 29,
+    "name": "Challenge 1-11",
+    "description": "Challenge 1-11.",
+    "grid": [
+      "OOOOOO",
+      "OOOYGO",
+      "OOOGGO",
+      "OOGOOO",
+      "OGGYYY",
+      "GGGOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 30,
+    "name": "Challenge 1-12",
+    "description": "Challenge 1-12.",
+    "grid": [
+      "OOOOOOOGOO",
+      "OOOOOOOGOY",
+      "OOOOOGGGYY",
+      "OOOOGGYYYO",
+      "OOOGGGYYOO",
+      "OOGGGGYOOO",
+      "OGGGGGGGGG",
+      "GGGGGGGGGG"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 5,
+      "y": 0
+    }
+  },
+  {
+    "id": 31,
+    "name": "Challenge 1-13",
+    "description": "Challenge 1-13.",
+    "grid": [
+      "OOOO",
+      "OYGO",
+      "OGYO",
+      "OOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 2,
+      "y": 0
+    }
+  },
+  {
+    "id": 32,
+    "name": "Challenge 1-14",
+    "description": "Challenge 1-14.",
+    "grid": [
+      "OOOO",
+      "OYOO",
+      "OGGO",
+      "OOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 3,
+      "y": 0
+    }
+  },
+  {
+    "id": 33,
+    "name": "Challenge 1-15",
+    "description": "Challenge 1-15.",
+    "grid": [
+      "OOOO",
+      "OOGO",
+      "OGOO",
+      "GOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 34,
+    "name": "Challenge 1-16",
+    "description": "Challenge 1-16.",
+    "grid": [
+      "GGGG",
+      "OO.G",
+      "O.GG",
+      "OO.G",
+      "O.GG",
+      "OOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 3,
+      "y": 0
+    }
+  },
+  {
+    "id": 35,
+    "name": "Challenge 1-17",
+    "description": "Challenge 1-17.",
+    "grid": [
+      "OOGO",
+      "OGYO",
+      "OOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 2,
+      "y": 0
+    }
+  },
+  {
+    "id": 36,
+    "name": "Challenge 1-18",
+    "description": "Challenge 1-18.",
+    "grid": [
+      "OOOO",
+      "OOYO",
+      "OGYO",
+      "OGOO",
+      "OOOO"
+    ],
+    "start": {
+      "x": 0,
+      "z": 0
+    },
+    "goal": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "id": 37,
     "name": "Pull out a path",
     "description": "Bring the blocks toward you, then climb your way to the flag.",
     "grid": [
