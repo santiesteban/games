@@ -10,8 +10,8 @@ function outlineGrid(items){
     if(check){
       const preview=card.querySelector('.puzzle-thumbnail'),box=preview.getBoundingClientRect(),cardBox=card.getBoundingClientRect(),ratio=preview.viewBox.baseVal.width/preview.viewBox.baseVal.height;
       const imageWidth=Math.min(box.width,box.height*ratio),imageHeight=Math.min(box.height,box.width/ratio);
-      check.style.left=`${box.left-cardBox.left+(box.width+imageWidth)/2-11}px`;
-      check.style.top=`${box.top-cardBox.top+(box.height-imageHeight)/2-11}px`;
+      check.style.left=`${box.left-cardBox.left+(box.width+imageWidth)/2-check.offsetWidth/2}px`;
+      check.style.top=`${box.top-cardBox.top+(box.height-imageHeight)/2-check.offsetHeight/2}px`;
     }
     const rect=card.getBoundingClientRect(),cell={left:Math.round(rect.left-origin.left),top:Math.round(rect.top-origin.top),right:Math.round(rect.right-origin.left)};
     if(rows.at(-1)?.[0].top!==cell.top)rows.push([]);rows.at(-1).push(cell);

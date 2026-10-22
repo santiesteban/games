@@ -11,8 +11,8 @@ import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from '.
 import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW, createViewController } from './camera-view.js';
-import skyBackground from '../../sky-background.png';
-import meadowForeground from '../../meadow-foreground.png';
+import skyBackground from '../../sky-background.webp';
+import meadowForeground from '../../meadow-foreground.webp';
 import './style.css';
 
 const wrap = document.querySelector('#canvasWrap');
@@ -253,6 +253,8 @@ function showMenu(panel='title'){
   document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;document.querySelector('.stage').inert=true;
   if(panel==='settings')document.querySelector('#settingsHome').focus();
 }
+function levelIsAvailable(level){return !levelPreferences.hideKnownIssues||!knownIssueLevels.has(level.id)}
+function nextAvailableLevel(){const index=levels.findIndex(level=>level.id===activeLevel.id);return levels.slice(index+1).find(levelIsAvailable)}
 function renderLevelList(){
   levelGridObserver.disconnect();
   const list=document.querySelector('#levelList'),scroll=list.scrollTop,gallery=document.createElement('div');gallery.className='level-gallery';list.replaceChildren(gallery);
@@ -262,7 +264,7 @@ function renderLevelList(){
     const heading=document.createElement('h2');heading.id=`levelGroup${index}`;heading.textContent=group.name;
     const range=document.createElement('span');range.className='level-group-range';range.textContent=Number.isFinite(group.to)?`${String(group.from).padStart(2,'0')}–${group.to}`:'Studio & more';header.append(heading,range);
     const items=document.createElement('div');items.className='level-group-items';
-    for(const level of levels.filter(level=>level.id>=group.from&&level.id<=group.to&&(!levelPreferences.hideKnownIssues||!knownIssueLevels.has(level.id)))){
+    for(const level of levels.filter(level=>level.id>=group.from&&level.id<=group.to&&levelIsAvailable(level))){
       const issues=knownIssueLevels.has(level.id),completed=levelProgress.has(level.id);
       const button=document.createElement('button');button.type='button';button.className='level-card';button.classList.toggle('has-known-issues',issues);button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
       const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');number.setAttribute('aria-hidden','true');
@@ -310,7 +312,7 @@ document.querySelector('#confirmClearProgress').addEventListener('click',()=>{
 window.addEventListener('storage',event=>{if(event.key===levelProgress.key||event.key===null){levelProgress.reload();renderLevelList();updateProgressSettings();if(levelProgress.count===0){document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false}}});
 document.querySelector('#backTitle').addEventListener('click',()=>showMenu('title'));
 document.querySelector('#exitLevel').addEventListener('click',()=>showMenu('levels'));
-document.querySelector('#nextLevel').addEventListener('click',()=>{if(busy)return;const index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1];if(next)startLevel(next.id)});
+document.querySelector('#nextLevel').addEventListener('click',()=>{if(busy)return;const next=nextAvailableLevel();if(next)startLevel(next.id)});
 document.querySelector('#victoryLevels').addEventListener('click',()=>showMenu('levels'));
 const menuScreen=document.querySelector('#menuScreen'),levelList=document.querySelector('#levelList');
 window.addEventListener('wheel',e=>{
@@ -417,7 +419,7 @@ function syncVictoryOverlay(now){
   const width=wrap.clientWidth,height=wrap.clientHeight,elapsed=now-celebration.start,progress=Math.min(1,elapsed/2400),zoom=ease(progress),close=ease((progress-.15)/.85),size=vec2(width,height);
   if(progress>=1&&!celebration.finished){
     celebration.finished=true;
-    const actions=document.querySelector('#victoryActions'),index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1],button=document.querySelector('#nextLevel');
+    const actions=document.querySelector('#victoryActions'),next=nextAvailableLevel(),button=document.querySelector('#nextLevel');
     button.disabled=!next;button.hidden=!next;button.textContent='Next level →';actions.classList.toggle('is-last',!next);actions.hidden=false;
     (next?button:document.querySelector('#victoryLevels')).focus({preventScroll:true});
   }
@@ -436,7 +438,7 @@ function syncVictoryOverlay(now){
 function startCelebration(){
   stopIntro();selected=null;clearBoardHover();
   const stage=document.querySelector('.stage');stage.style.setProperty('--victory-footer-height',`${document.querySelector('.control-deck').getBoundingClientRect().height}px`);
-  const actions=document.querySelector('#victoryActions'),index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1],button=document.querySelector('#nextLevel');
+  const actions=document.querySelector('#victoryActions'),next=nextAvailableLevel(),button=document.querySelector('#nextLevel');
   button.disabled=!next;button.hidden=!next;actions.classList.toggle('is-last',!next);
   actions.style.visibility='hidden';actions.hidden=false;const cardHeight=actions.getBoundingClientRect().height;actions.hidden=true;actions.style.visibility='';
   celebration={start:performance.now(),zoom:0,jump:0,cardHeight,baseHeight:render3D.camera.orthographic,baseTarget:viewTarget.copy(),flagStart:flagPole.pos3D.copy(),clothStart:flagCloth.pos3D.copy()};
