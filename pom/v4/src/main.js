@@ -4,6 +4,9 @@ import {
 } from 'littlejsengine';
 import levelData from './data/levels.json';
 import { createLevelProgress } from './level-progress.js';
+import { createLevelPreferences } from './level-preferences.js';
+import { createLevelGridObserver } from './level-grid.js';
+import { puzzleThumbnail } from './puzzle-thumbnail.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
 import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
@@ -26,12 +29,14 @@ let viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitc
 const movementRouteCache=new Map;let movementBoardCache,movementBoardKey,reachableKey,reachableValue;
 const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
 const levelProgress=createLevelProgress(levels.map(level=>level.id));
-const knownIssueLevels=new Set([5,6,7,11,15,16,17,18,21,23,24,25,30,32,33,34,35,3,38,39,40,43]);
+const levelPreferences=createLevelPreferences();
+const levelGridObserver=createLevelGridObserver();
+const knownIssueLevels=new Set([5,6,7,11,15,16,17,18,21,23,24,25,30,32,33,34,35,38,39,40,43]);
 const levelGroups=[
-  {name:'Basic Lessons',from:1,to:18,color:'#ff7138'},
-  {name:'First Challenges',from:19,to:36,color:'#79a66e'},
-  {name:'More Challenges',from:37,to:54,color:'#55a9ae'},
-  {name:'Others',from:55,to:Infinity,color:'#ffe03f'},
+  {name:'Basic Lessons',from:1,to:18,color:'#79a66e'},
+  {name:'First Challenges',from:19,to:36,color:'#55a9ae'},
+  {name:'More Challenges',from:37,to:54,color:'#ffe03f'},
+  {name:'Others',from:55,to:Infinity,color:'#f2a05a'},
 ];
 let progressSaved=true;
 let activeLevel=levels[0],W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
@@ -172,10 +177,11 @@ function drawMapOutlines(){
   if(pomShadow)render3D.drawSoftDisc(pomShadow,.92,new Color(.13,.105,.075,.24),vec3(0,1,0),32);
   drawSelectedOutline();drawHoverSpot();drawPomOcclusionShadow();
 }
-function roundedInsetLoop(points,offset,radius){if(points.length<3)return[];let area=0;for(let i=0;i<points.length;i++){const a=points[i],b=points[(i+1)%points.length];area+=a.x*b.y-b.x*a.y}const sign=area>=0?1:-1,verts=points.map((v,i)=>{const prev=points[(i+points.length-1)%points.length],next=points[(i+1)%points.length],normal=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:-dy/l*sign,y:dx/l*sign}},n0=normal(prev,v),n1=normal(v,next),sx=n0.x+n1.x,sy=n0.y+n1.y,l=Math.hypot(sx,sy)||1,n={x:sx/l,y:sy/l},k=offset/(n.x*n1.x+n.y*n1.y||1);return{x:v.x+n.x*k,y:v.y+n.y*k}}),result=[];for(let i=0;i<verts.length;i++){const v=verts[i],prev=verts[(i+verts.length-1)%verts.length],next=verts[(i+1)%verts.length],unit=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:dx/l,y:dy/l}},u0=unit(v,prev),u1=unit(v,next),r=Math.min(radius,Math.hypot(v.x-prev.x,v.y-prev.y)/2,Math.hypot(v.x-next.x,v.y-next.y)/2),a={x:v.x+u0.x*r,y:v.y+u0.y*r},b={x:v.x+u1.x*r,y:v.y+u1.y*r};for(let step=0;step<=5;step++){const t=step/5,s=1-t;result.push({x:s*s*a.x+2*s*t*v.x+t*t*b.x,y:s*s*a.y+2*s*t*v.y+t*t*b.y})}}return result}
-function drawSelectedOutline(){const g=selected;if(!g)return;const width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=g.depth+.028,offset=5.5,radius=6,dash=6,gap=4,stroke=2.2*render3D.camera.orthographic/height,frontWorld=point=>{const ray=render3D.screenToRay(vec2(point.x,point.y),size),t=(z-ray.origin.z)/ray.direction.z;return ray.getPosition(t)},edges=[],has=(x,y)=>byCell[y]?.[x]===g;for(const c of g.cells){const x=c.x,y0=H-c.y-1,y1=H-c.y;if(!has(c.x,c.y+1))edges.push([[x,y0],[x+1,y0]]);if(!has(c.x+1,c.y))edges.push([[x+1,y0],[x+1,y1]]);if(!has(c.x,c.y-1))edges.push([[x+1,y1],[x,y1]]);if(!has(c.x-1,c.y))edges.push([[x,y1],[x,y0]])}const key=p=>p.join(','),loops=[];while(edges.length){const first=edges.pop(),loop=[first[0],first[1]];while(key(loop.at(-1))!==key(loop[0])){const at=edges.findIndex(e=>key(e[0])===key(loop.at(-1)));if(at<0)break;loop.push(edges.splice(at,1)[0][1])}if(key(loop.at(-1))===key(loop[0])){loop.pop();const screen=loop.map(([x,y])=>render3D.worldToScreen(vec3(x+cameraSlant(viewSide)*DEPTH_SKEW*z,y,z),size));loops.push(roundedInsetLoop(screen,offset,radius))}}for(const loop of loops){if(loop.length<2)continue;const points=[...loop,loop[0]],period=dash+gap;let traveled=0;for(let i=0;i<points.length-1;i++){const a=points[i],b=points[i+1],length=Math.hypot(b.x-a.x,b.y-a.y)||0;let local=0;while(local<length){const phase=(traveled+local)%period;if(phase<dash){const step=Math.min(length-local,dash-phase),t0=local/length,t1=(local+step)/length,p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0},p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};render3D.drawLine(frontWorld(p0),frontWorld(p1),stroke,inkColor);local+=step}else local+=Math.min(length-local,period-phase)}traveled+=length}}}
+// Boundary edges keep the selected material on their screen-right side, including holes.
+function roundedInsetLoop(points,offset,radius){if(points.length<3)return[];const sign=-1,verts=points.map((v,i)=>{const prev=points[(i+points.length-1)%points.length],next=points[(i+1)%points.length],normal=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:-dy/l*sign,y:dx/l*sign}},n0=normal(prev,v),n1=normal(v,next),sx=n0.x+n1.x,sy=n0.y+n1.y,l=Math.hypot(sx,sy)||1,n={x:sx/l,y:sy/l},k=offset/(n.x*n1.x+n.y*n1.y||1);return{x:v.x+n.x*k,y:v.y+n.y*k}}),result=[];for(let i=0;i<verts.length;i++){const v=verts[i],prev=verts[(i+verts.length-1)%verts.length],next=verts[(i+1)%verts.length],unit=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:dx/l,y:dy/l}},u0=unit(v,prev),u1=unit(v,next),r=Math.min(radius,Math.hypot(v.x-prev.x,v.y-prev.y)/2,Math.hypot(v.x-next.x,v.y-next.y)/2),a={x:v.x+u0.x*r,y:v.y+u0.y*r},b={x:v.x+u1.x*r,y:v.y+u1.y*r};for(let step=0;step<=5;step++){const t=step/5,s=1-t;result.push({x:s*s*a.x+2*s*t*v.x+t*t*b.x,y:s*s*a.y+2*s*t*v.y+t*t*b.y})}}return result}
+function drawSelectedOutline(){const g=selected;if(!g||won)return;const width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=g.depth+.028,offset=5.5,radius=6,dash=6,gap=4,stroke=2.2*render3D.camera.orthographic/height,frontWorld=point=>{const ray=render3D.screenToRay(vec2(point.x,point.y),size),t=(z-ray.origin.z)/ray.direction.z;return ray.getPosition(t)},edges=[],has=(x,y)=>byCell[y]?.[x]===g;for(const c of g.cells){const x=c.x,y0=H-c.y-1,y1=H-c.y;if(!has(c.x,c.y+1))edges.push([[x,y0],[x+1,y0]]);if(!has(c.x+1,c.y))edges.push([[x+1,y0],[x+1,y1]]);if(!has(c.x,c.y-1))edges.push([[x+1,y1],[x,y1]]);if(!has(c.x-1,c.y))edges.push([[x,y1],[x,y0]])}const key=p=>p.join(','),loops=[];while(edges.length){const first=edges.pop(),loop=[first[0],first[1]];while(key(loop.at(-1))!==key(loop[0])){const at=edges.findIndex(e=>key(e[0])===key(loop.at(-1)));if(at<0)break;loop.push(edges.splice(at,1)[0][1])}if(key(loop.at(-1))===key(loop[0])){loop.pop();const screen=loop.map(([x,y])=>render3D.worldToScreen(vec3(x+cameraSlant(viewSide)*DEPTH_SKEW*z,y,z),size));loops.push(roundedInsetLoop(screen,offset,radius))}}for(const loop of loops){if(loop.length<2)continue;const points=[...loop,loop[0]],period=dash+gap;let traveled=0;for(let i=0;i<points.length-1;i++){const a=points[i],b=points[i+1],length=Math.hypot(b.x-a.x,b.y-a.y)||0;let local=0;while(local<length){const phase=(traveled+local)%period;if(phase<dash){const step=Math.min(length-local,dash-phase),t0=local/length,t1=(local+step)/length,p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0},p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};render3D.drawLine(frontWorld(p0),frontWorld(p1),stroke,inkColor);local+=step}else local+=Math.min(length-local,period-phase)}traveled+=length}}}
 function drawHoverSpot(){
-  if(!hoverObject)return;
+  if(!hoverObject||won)return;
   render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthTest:render3D.depthTest,depthWrite:render3D.depthWrite,lighting:render3D.lighting};
   render3D.blend=true;render3D.depthTest=false;render3D.depthWrite=false;render3D.lighting=false;
   for(const spot of [hoverObject,studioTargetObject])if(spot&&spot.color.a>0)render3D.drawMesh(spot.mesh,spot.getMatrix(),undefined,spot.color);render3D.flush();
@@ -221,7 +227,7 @@ function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,
 function syncPlayer(){resetPomShape();const p=worldPosition(player),top=player.y===H?0:H-player.y,jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);if(pomShadow)pomShadow=worldPoint(player.x+.5,top+.018,player.z+.5)}
 function syncFlag(){const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;const depth=g.depth,cx=goalCell.x+.5,cy=H-goalCell.y-.5;flagPole.color=new Color(.16,.15,.12);flagCloth.color=new Color(1,.443,.22);flagPole.rotation3D=vec3();flagCloth.rotation3D=vec3();if(!depth){flagPole.scale3D=vec3(.04,.27,.04);flagCloth.scale3D=vec3(.205,.13,.035);flagPole.pos3D=vec3(cx,cy+.085,.08);flagCloth.pos3D=vec3(cx+.105,cy+.165,.09)}else{const base=worldPoint(cx,H-goalCell.y,depth-.5);flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);flagPole.pos3D=base.add(vec3(0,.34,0));flagCloth.pos3D=base.add(vec3(.19,.56,.025))}}
 function updateUI(){
-  document.querySelector('#level-number').textContent=String(activeLevel.id).padStart(2,'0');document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
+  document.querySelector('#level-number').textContent=String(activeLevel.id).padStart(2,'0');document.querySelector('#levelBadge').setAttribute('aria-label',`Level ${activeLevel.id}`);document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
   document.querySelector('#pull').disabled=busy||won||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
   document.querySelector('#push').disabled=busy||won||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
   document.querySelector('#undo').disabled=busy||!history.length;
@@ -239,7 +245,7 @@ function showHelp(text){const el=document.querySelector('#toast');el.textContent
 function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
 function showMenu(panel='title'){
   stopIntro();celebration=null;irisSvg.style.opacity='0';viewControls.close();
-  const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');
+  const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
   for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
   document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='';
   if(panel==='levels'){renderLevelList();document.querySelector('#levelList').scrollTop=0}
@@ -248,26 +254,28 @@ function showMenu(panel='title'){
   if(panel==='settings')document.querySelector('#settingsHome').focus();
 }
 function renderLevelList(){
-  const list=document.querySelector('#levelList'),scroll=list.scrollTop;list.replaceChildren();
+  levelGridObserver.disconnect();
+  const list=document.querySelector('#levelList'),scroll=list.scrollTop,gallery=document.createElement('div');gallery.className='level-gallery';list.replaceChildren(gallery);
   for(const [index,group]of levelGroups.entries()){
     const section=document.createElement('section');section.className='level-group';section.style.setProperty('--group-color',group.color);section.setAttribute('aria-labelledby',`levelGroup${index}`);
     const header=document.createElement('header');header.className='level-group-header';
     const heading=document.createElement('h2');heading.id=`levelGroup${index}`;heading.textContent=group.name;
     const range=document.createElement('span');range.className='level-group-range';range.textContent=Number.isFinite(group.to)?`${String(group.from).padStart(2,'0')}–${group.to}`:'Studio & more';header.append(heading,range);
     const items=document.createElement('div');items.className='level-group-items';
-    for(const level of levels.filter(level=>level.id>=group.from&&level.id<=group.to)){
+    for(const level of levels.filter(level=>level.id>=group.from&&level.id<=group.to&&(!levelPreferences.hideKnownIssues||!knownIssueLevels.has(level.id)))){
       const issues=knownIssueLevels.has(level.id),completed=levelProgress.has(level.id);
       const button=document.createElement('button');button.type='button';button.className='level-card';button.classList.toggle('has-known-issues',issues);button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
-      const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');
-      const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);button.append(number,details);
+      const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');number.setAttribute('aria-hidden','true');
+      const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);const preview=document.createElement('span');preview.className='level-preview';preview.append(puzzleThumbnail(level.id===55?studioLevel(levels,movementExamples[0]):level),number);const caption=document.createElement('span');caption.className='level-card-caption';caption.append(details);button.append(preview,caption);
+      if(completed){const check=document.createElement('span');check.className='completion-mark';check.textContent='✓';check.setAttribute('aria-hidden','true');preview.append(check)}
       if(issues||completed){
         const badges=document.createElement('span');badges.className='level-badges';badges.id=`levelStatus${level.id}`;
         for(const [show,label,tone]of [[completed,'Completed','completed'],[issues,'Known issues','issues']])if(show){const status=document.createElement('span');status.className=`level-status is-${tone}`;status.textContent=label;badges.append(status)}
-        button.setAttribute('aria-describedby',badges.id);button.append(badges);
+        button.setAttribute('aria-describedby',badges.id);preview.append(badges);
       }
       button.addEventListener('click',()=>startLevel(level.id));items.append(button);
     }
-    section.append(header,items);list.append(section);
+    if(items.childElementCount){const frame=document.createElement('div');frame.className='level-grid';const outline=document.createElementNS(svgNS,'svg');outline.setAttribute('class','level-grid-outline');outline.setAttribute('aria-hidden','true');outline.setAttribute('focusable','false');frame.append(items,outline);section.append(header,frame);gallery.append(section);levelGridObserver.observe(items)}
   }
   list.scrollTop=scroll;
 }
@@ -276,7 +284,7 @@ function updateProgressSettings(){
   document.querySelector('#clearProgress').disabled=levelProgress.count===0;
   if(!progressSaved)document.querySelector('#progressMessage').textContent='Your browser could not save progress. Check that site storage is allowed.';
 }
-function recordCompletedLevel(){progressSaved=levelProgress.complete(activeLevel.id);renderLevelList();updateProgressSettings()}
+function recordCompletedLevel(){progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
   activeLevel=level;W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();
@@ -286,6 +294,11 @@ function resetLevelState(level){
 function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level)return;if(id===55)level=studioLevel(levels,movementExamples[0]);document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
 document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
 document.querySelector('#openSettings').addEventListener('click',()=>showMenu('settings'));
+for(const name of ['hideKnownIssues']){
+  const toggle=document.querySelector(`#${name}`);toggle.checked=levelPreferences[name];
+  toggle.addEventListener('change',()=>{const saved=levelPreferences.set(name,toggle.checked);document.querySelector('#preferenceMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';renderLevelList()});
+}
+window.addEventListener('storage',event=>{if(event.key===levelPreferences.key||event.key===null){levelPreferences.reload();for(const name of ['hideKnownIssues'])document.querySelector(`#${name}`).checked=levelPreferences[name];renderLevelList()}});
 document.querySelector('#settingsHome').addEventListener('click',()=>showMenu('title'));
 document.querySelector('#clearProgress').addEventListener('click',()=>{document.querySelector('#clearProgress').hidden=true;document.querySelector('#clearProgressConfirm').hidden=false;document.querySelector('#cancelClearProgress').focus()});
 document.querySelector('#cancelClearProgress').addEventListener('click',()=>{document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#clearProgress').focus()});
@@ -409,15 +422,27 @@ function syncVictoryOverlay(now){
     (next?button:document.querySelector('#victoryLevels')).focus({preventScroll:true});
   }
   celebration.zoom=zoom;celebration.jump=(1-Math.cos(elapsed/220))*.07*zoom;
-  const anchor=worldPosition(player),focus=anchor.add(vec3(.12,.3,0));
-  positionCameraForView(viewSide,celebration.baseTarget.lerp(focus,zoom));render3D.camera.orthographic=celebration.baseHeight*(1-.4*zoom);render3D.updateMatrices(width/height);syncBackground();syncFloorGrid();syncPlayer();
+  const anchor=worldPosition(player),hero=anchor.add(vec3(.12,.28,0)),ortho=celebration.baseHeight*(1-.4*zoom);
+  const cardHeight=celebration.cardHeight,stage=document.querySelector('.stage');
+  const cardTop=stage.clientHeight-24-cardHeight-wrap.offsetTop,heroBottom=Math.max(140,cardTop-12),finalRadius=Math.min(width*.45,heroBottom*.47),heroY=Math.max(finalRadius+12,heroBottom*.46);
+  const up=render3D.camera.getUp(),focus=hero.add(up.scale((heroY-height/2)*ortho/height));
+  positionCameraForView(viewSide,celebration.baseTarget.lerp(focus,zoom));render3D.camera.orthographic=ortho;render3D.updateMatrices(width/height);syncBackground();syncFloorGrid();syncPlayer();
   // Wave the original flag beside Pom; its pole stays against his body.
-  const right=render3D.camera.getRight(),up=render3D.camera.getUp(),forward=render3D.camera.getForward(),angle=Math.sin(elapsed/170)*.18,dir=up.scale(Math.cos(angle)).add(right.scale(Math.sin(angle))),base=playerObject.pos3D.add(right.scale(.27)).add(up.scale(-.08)).add(forward.scale(-.09));
+  const right=render3D.camera.getRight(),forward=render3D.camera.getForward(),angle=Math.sin(elapsed/170)*.18,dir=up.scale(Math.cos(angle)).add(right.scale(Math.sin(angle))),base=playerObject.pos3D.add(right.scale(.27)).add(up.scale(-.08)).add(forward.scale(-.09));
   const carry=ease(progress/.35);flagPole.pos3D=celebration.flagStart.lerp(base.add(dir.scale(.34)),carry);flagCloth.pos3D=celebration.clothStart.lerp(base.add(dir.scale(.56)).add(right.scale(.19)).add(forward.scale(-.025)),carry);flagPole.rotation3D=render3D.camera.rotation.add(vec3(0,0,-angle*carry));flagCloth.rotation3D=flagPole.rotation3D.copy();flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);
-  const center=render3D.worldToScreen(anchor.add(vec3(.12,.28,0)),size),radius=Math.hypot(width,height)*(1-close)+Math.min(height*.37,width*.42)*close;
+  const center=render3D.worldToScreen(anchor.add(vec3(.12,.28,0)),size),radius=Math.hypot(width,height)*(1-close)+finalRadius*close;
   irisSvg.setAttribute('viewBox',`0 0 ${width} ${height}`);irisShade.setAttribute('d',`M0 0H${width}V${height}H0Z M${center.x-radius} ${center.y} a${radius} ${radius} 0 1 0 ${radius*2} 0 a${radius} ${radius} 0 1 0 ${-radius*2} 0Z`);irisRing.setAttribute('cx',center.x);irisRing.setAttribute('cy',center.y);irisRing.setAttribute('r',radius);irisSvg.style.opacity='1';requestAnimationFrame(syncVictoryOverlay);
 }
-function startCelebration(){stopIntro();celebration={start:performance.now(),zoom:0,jump:0,baseHeight:render3D.camera.orthographic,baseTarget:viewTarget.copy(),flagStart:flagPole.pos3D.copy(),clothStart:flagCloth.pos3D.copy()};setUmbrellaVisible(false);requestAnimationFrame(syncVictoryOverlay)}
+function startCelebration(){
+  stopIntro();selected=null;clearBoardHover();
+  const stage=document.querySelector('.stage');stage.style.setProperty('--victory-footer-height',`${document.querySelector('.control-deck').getBoundingClientRect().height}px`);
+  const actions=document.querySelector('#victoryActions'),index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1],button=document.querySelector('#nextLevel');
+  button.disabled=!next;button.hidden=!next;actions.classList.toggle('is-last',!next);
+  actions.style.visibility='hidden';actions.hidden=false;const cardHeight=actions.getBoundingClientRect().height;actions.hidden=true;actions.style.visibility='';
+  celebration={start:performance.now(),zoom:0,jump:0,cardHeight,baseHeight:render3D.camera.orthographic,baseTarget:viewTarget.copy(),flagStart:flagPole.pos3D.copy(),clothStart:flagCloth.pos3D.copy()};
+  setUmbrellaVisible(false);requestAnimationFrame(syncVictoryOverlay);
+}
+
 function gameInit(){
   const bounds=wrap.getBoundingClientRect();setCanvasFixedSize(vec2(Math.max(1,bounds.width),Math.max(1,bounds.height)));
   setDebugWatermark(false);new Render3DPlugin();
@@ -446,7 +471,7 @@ function gameInit(){
   umbrellaHandle=new EngineObject3D(vec3(0,.84,2.96),makeFanMesh([[-.035,-.02],[.035,-.02],[.035,-.6],[-.035,-.6]]),undefined,new Color(.15,.2,.27,0));umbrellaHandle.lighting=false;umbrellaHandle.transparent=true;playerObject.addChild(umbrellaHandle);setUmbrellaVisible(false);
   flagPole=new EngineObject3D(vec3(4.5,5.57,.08),buildBox(),undefined,new Color(.16,.15,.12));flagPole.scale3D=vec3(.035,.24,.035);
   flagCloth=new EngineObject3D(vec3(4.59,5.64,.09),flagMesh,undefined,new Color(1,.443,.22));flagCloth.scale3D=vec3(.17,.105,.035);flagCloth.lighting=false;
-  updateUI();startBoardView();gameReady=true;document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Choose a level';
+  updateUI();startBoardView();gameReady=true;document.querySelector('.stage').classList.add('is-ready');document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Choose a level';
 }
 function gameUpdate(){
 }
