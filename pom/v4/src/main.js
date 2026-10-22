@@ -3,6 +3,7 @@ import {
   Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
 import levelData from './data/levels.json';
+import { createLevelProgress } from './level-progress.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
 import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
@@ -24,6 +25,15 @@ const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16, ink='#28251f';
 let viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitch,viewHeightStep=0;
 const movementRouteCache=new Map;let movementBoardCache,movementBoardKey,reachableKey,reachableValue;
 const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
+const levelProgress=createLevelProgress(levels.map(level=>level.id));
+const knownIssueLevels=new Set([5,6,7,11,15,16,17,18,21,23,24,25,30,32,33,34,35,3,38,39,40,43]);
+const levelGroups=[
+  {name:'Basic Lessons',from:1,to:18,color:'#ff7138'},
+  {name:'First Challenges',from:19,to:36,color:'#79a66e'},
+  {name:'More Challenges',from:37,to:54,color:'#55a9ae'},
+  {name:'Others',from:55,to:Infinity,color:'#ffe03f'},
+];
+let progressSaved=true;
 let activeLevel=levels[0],W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
 const palette={R:new Color(1,.443,.22),O:new Color(.949,.627,.353),G:new Color(.475,.651,.431),B:new Color(.333,.663,.682),Y:new Color(1,.875,.247)};
 let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],pomShadow,hoverObject,studioTargetObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
@@ -228,18 +238,45 @@ function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return '
 function showHelp(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on')}
 function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
 function showMenu(panel='title'){
-  viewControls.close();
-  const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');document.querySelector('#titlePanel').hidden=panel!=='title';document.querySelector('#levelsPanel').hidden=panel!=='levels';if(panel==='levels')document.querySelector('#levelList').scrollTop=0;document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;document.querySelector('.stage').inert=true;
+  stopIntro();celebration=null;irisSvg.style.opacity='0';viewControls.close();
+  const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');
+  for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
+  document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='';
+  if(panel==='levels'){renderLevelList();document.querySelector('#levelList').scrollTop=0}
+  if(panel==='settings')updateProgressSettings();
+  document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;document.querySelector('.stage').inert=true;
+  if(panel==='settings')document.querySelector('#settingsHome').focus();
 }
 function renderLevelList(){
-  const list=document.querySelector('#levelList'),tones=['orange','peach','green','blue','yellow'];list.replaceChildren();
-  for(const level of levels){
-    const button=document.createElement('button');button.type='button';button.className='level-card';button.dataset.tone=tones[level.id%tones.length];button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
-    const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');
-    const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);
-    const status=document.createElement('span');status.className='level-status';status.textContent='Unlocked';button.append(number,details,status);button.addEventListener('click',()=>startLevel(level.id));list.append(button);
+  const list=document.querySelector('#levelList'),scroll=list.scrollTop;list.replaceChildren();
+  for(const [index,group]of levelGroups.entries()){
+    const section=document.createElement('section');section.className='level-group';section.style.setProperty('--group-color',group.color);section.setAttribute('aria-labelledby',`levelGroup${index}`);
+    const header=document.createElement('header');header.className='level-group-header';
+    const heading=document.createElement('h2');heading.id=`levelGroup${index}`;heading.textContent=group.name;
+    const range=document.createElement('span');range.className='level-group-range';range.textContent=Number.isFinite(group.to)?`${String(group.from).padStart(2,'0')}–${group.to}`:'Studio & more';header.append(heading,range);
+    const items=document.createElement('div');items.className='level-group-items';
+    for(const level of levels.filter(level=>level.id>=group.from&&level.id<=group.to)){
+      const issues=knownIssueLevels.has(level.id),completed=levelProgress.has(level.id);
+      const button=document.createElement('button');button.type='button';button.className='level-card';button.classList.toggle('has-known-issues',issues);button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
+      const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');
+      const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);button.append(number,details);
+      if(issues||completed){
+        const badges=document.createElement('span');badges.className='level-badges';badges.id=`levelStatus${level.id}`;
+        for(const [show,label,tone]of [[completed,'Completed','completed'],[issues,'Known issues','issues']])if(show){const status=document.createElement('span');status.className=`level-status is-${tone}`;status.textContent=label;badges.append(status)}
+        button.setAttribute('aria-describedby',badges.id);button.append(badges);
+      }
+      button.addEventListener('click',()=>startLevel(level.id));items.append(button);
+    }
+    section.append(header,items);list.append(section);
   }
+  list.scrollTop=scroll;
 }
+function updateProgressSettings(){
+  document.querySelector('#progressCount').textContent=`${levelProgress.count} of ${levels.length} levels completed`;
+  document.querySelector('#clearProgress').disabled=levelProgress.count===0;
+  if(!progressSaved)document.querySelector('#progressMessage').textContent='Your browser could not save progress. Check that site storage is allowed.';
+}
+function recordCompletedLevel(){progressSaved=levelProgress.complete(activeLevel.id);renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
   activeLevel=level;W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();
@@ -248,6 +285,16 @@ function resetLevelState(level){
 }
 function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level)return;if(id===55)level=studioLevel(levels,movementExamples[0]);document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
 document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
+document.querySelector('#openSettings').addEventListener('click',()=>showMenu('settings'));
+document.querySelector('#settingsHome').addEventListener('click',()=>showMenu('title'));
+document.querySelector('#clearProgress').addEventListener('click',()=>{document.querySelector('#clearProgress').hidden=true;document.querySelector('#clearProgressConfirm').hidden=false;document.querySelector('#cancelClearProgress').focus()});
+document.querySelector('#cancelClearProgress').addEventListener('click',()=>{document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#clearProgress').focus()});
+document.querySelector('#confirmClearProgress').addEventListener('click',()=>{
+  const message=document.querySelector('#progressMessage');
+  if(!levelProgress.clear()){message.textContent='Your browser could not clear progress. Check that site storage is allowed.';return}
+  progressSaved=true;renderLevelList();updateProgressSettings();document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;message.textContent='Your progress has been cleared.';document.querySelector('#settingsHome').focus();
+});
+window.addEventListener('storage',event=>{if(event.key===levelProgress.key||event.key===null){levelProgress.reload();renderLevelList();updateProgressSettings();if(levelProgress.count===0){document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false}}});
 document.querySelector('#backTitle').addEventListener('click',()=>showMenu('title'));
 document.querySelector('#exitLevel').addEventListener('click',()=>showMenu('levels'));
 document.querySelector('#nextLevel').addEventListener('click',()=>{if(busy)return;const index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1];if(next)startLevel(next.id)});
@@ -303,9 +350,22 @@ function startBoardView(animate=true){
   if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
   const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
   if(!viewMobile||fitUnit>=tappingUnit()||activeLevel.name==='Movement Studio')return;
-  const token=introFrame,start=performance.now(),from=viewTarget.copy(),unit=tappingUnit(),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch)),target=pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0));
-  const duration=animate&&!matchMedia('(prefers-reduced-motion:reduce)').matches?850:0,delay=duration?450:0;
-  function tick(now){if(token!==introFrame||celebration)return;const t=duration?Math.min(1,Math.max(0,(now-start-delay)/duration)):1,q=ease(t);viewUnit=fitUnit+(unit-fitUnit)*q;viewTarget=from.lerp(target,q);applyBoardView();if(t<1)requestAnimationFrame(tick)}
+  const token=introFrame,from=viewTarget.copy(),unit=tappingUnit(),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
+  // Clamp the destination once, then interpolate between two valid camera poses.
+  // Clamping on every frame can introduce little snaps as a boundary is crossed.
+  viewUnit=unit;viewTarget=pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0));clampBoardView();
+  const target=viewTarget.copy(),endHeight=viewHeight/viewUnit,startHeight=f.height;
+  viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
+  const duration=animate&&!matchMedia('(prefers-reduced-motion:reduce)').matches?850:0,delay=animate?1000:0;
+  let start;
+  function tick(now){
+    if(token!==introFrame||celebration)return;
+    start??=now;const elapsed=now-start;
+    if(elapsed<delay){requestAnimationFrame(tick);return}
+    const t=duration?Math.min(1,(elapsed-delay)/duration):1,q=t*t*t*(t*(t*6-15)+10);
+    viewUnit=viewHeight/(startHeight+(endHeight-startHeight)*q);viewTarget=from.lerp(target,q);applyBoardView(false);
+    if(t<1)requestAnimationFrame(tick);
+  }
   requestAnimationFrame(tick);
 }
 function panBoard(dx,dy){viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
@@ -342,8 +402,13 @@ function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function syncVictoryOverlay(now){
   if(!celebration)return;
   const width=wrap.clientWidth,height=wrap.clientHeight,elapsed=now-celebration.start,progress=Math.min(1,elapsed/2400),zoom=ease(progress),close=ease((progress-.15)/.85),size=vec2(width,height);
-  if(progress>=1&&!celebration.finished){celebration.finished=true;document.querySelector('.stage').classList.add('is-won');document.querySelector('#victoryActions').hidden=false;const index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1],button=document.querySelector('#nextLevel');button.disabled=!next;button.textContent=next?'Next level →':'Last level'}
-  celebration.zoom=zoom;celebration.jump=Math.abs(Math.sin(elapsed/220))*.14*zoom;
+  if(progress>=1&&!celebration.finished){
+    celebration.finished=true;
+    const actions=document.querySelector('#victoryActions'),index=levels.findIndex(level=>level.id===activeLevel.id),next=levels[index+1],button=document.querySelector('#nextLevel');
+    button.disabled=!next;button.hidden=!next;button.textContent='Next level →';actions.classList.toggle('is-last',!next);actions.hidden=false;
+    (next?button:document.querySelector('#victoryLevels')).focus({preventScroll:true});
+  }
+  celebration.zoom=zoom;celebration.jump=(1-Math.cos(elapsed/220))*.07*zoom;
   const anchor=worldPosition(player),focus=anchor.add(vec3(.12,.3,0));
   positionCameraForView(viewSide,celebration.baseTarget.lerp(focus,zoom));render3D.camera.orthographic=celebration.baseHeight*(1-.4*zoom);render3D.updateMatrices(width/height);syncBackground();syncFloorGrid();syncPlayer();
   // Wave the original flag beside Pom; its pole stays against his body.
@@ -396,7 +461,7 @@ function moveTo(p){
     while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape()}
     if(index===plans.length){
       falling=false;setUmbrellaVisible(false);busy=false;
-      if(nodeKey(player)===nodeKey(goalNode())){won=true;document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();return;
+      if(nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updateUI();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const motion={pose:plan.stretch?shapePomReach(from,to,t,profile):jumpPose(from,to,t,profile),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};

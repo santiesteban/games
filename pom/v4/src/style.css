@@ -149,3 +149,52 @@
 .view-drag-help{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @media(max-width:600px){.view-controller{width:86px;height:54px}.view-cube{width:60px;height:46px}}
 @media(max-height:480px){.view-controller{height:48px;width:80px}.view-cube{width:54px;height:42px}}
+
+/* Grouped levels stay inside the existing dedicated scrolling area. */
+.level-group{min-width:0;margin-bottom:20px}.level-group:last-child{margin-bottom:0}
+.level-group-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 3px 12px}
+.level-group-header h2{display:flex;align-items:center;gap:9px;margin:0;font-size:18px;letter-spacing:-.025em}
+.level-group-header h2::before{content:'';width:12px;height:12px;border:1.5px solid var(--ink);border-radius:4px;background:var(--group-color);flex-shrink:0}
+.level-group-range{color:var(--muted);font:500 11px 'DM Mono',monospace;white-space:nowrap}
+.level-group-items{display:grid;gap:10px}.level-group .level-card{background:var(--group-color)}
+.level-group .level-card.has-known-issues{opacity:.58}.level-group .level-card.has-known-issues:hover{opacity:.72}
+.level-group .level-card:focus-visible{opacity:1}
+.level-badges{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.level-card .level-status.is-completed{background:#fffaf0;color:#284936}.level-card .level-status.is-issues{background:rgba(255,255,255,.64)}
+.home-actions{display:flex;flex-direction:column;align-items:center;gap:16px}.home-settings.btn{background:transparent;box-shadow:none;border-color:#b7abbc;padding-inline:22px;min-width:112px}
+.settings-panel{text-align:left;max-width:540px}.settings-header .menu-back{margin:0 0 24px;background:#eee8fa}
+.settings-panel h1{font-size:38px}.progress-settings{margin-top:28px;padding-top:24px;border-top:1.5px solid #d8cede}
+.progress-settings h2{margin:0 0 12px;font-size:19px}.progress-count{font-weight:700;font-size:16px;margin:0 0 10px}
+.settings-copy{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 24px;max-width:330px}
+.clear-progress.btn{background:#f5d6c4}.clear-progress-confirm{border:1.5px solid #d5b7a9;border-radius:14px;padding:16px;background:#fcf0e6}
+.clear-progress-confirm p{margin:0 0 16px;font-size:13px;line-height:1.5}.confirm-actions{display:flex;flex-wrap:wrap;gap:10px}
+.progress-message{font-size:12px;line-height:1.6;margin:18px 0 0;color:var(--muted)}.progress-message:empty{display:none}
+@media(max-width:600px){.level-group-header h2{font-size:16px}.level-group-header{gap:6px}.level-group-range{font-size:10px}.level-group-items{gap:8px}.level-group{margin-bottom:16px}.settings-panel h1{font-size:32px}.settings-panel{padding:24px}.level-badges .level-status{font-size:9px;padding:5px 7px}}
+
+/* Home actions share exactly the same dimensions. */
+.home-actions{display:inline-grid;grid-template-columns:1fr;justify-items:stretch;gap:16px;max-width:100%}
+.home-actions>button{width:100%;min-height:48px;padding:13px 22px;border-radius:14px;font-size:15px;font-weight:800}
+/* An opaque header stays clear of the iPhone's top safe area. Center text without a rasterized transform. */
+.game-header{--header-top:14px;--back-space:42px;display:grid;grid-template-columns:var(--back-space) minmax(0,1fr) var(--back-space);padding-top:calc(var(--header-top) + env(safe-area-inset-top,0px));background:var(--paper);z-index:8;isolation:isolate;filter:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.game-header .game-back{grid-column:1;grid-row:1}
+.game-header .heading{grid-column:2;grid-row:1;position:static;transform:none;width:100%;max-width:none}
+.control-deck{padding-bottom:calc(9px + env(safe-area-inset-bottom,0px)*.5)}
+#exitLevel,#backTitle{transition:translate .1s ease,box-shadow .1s ease}
+#exitLevel{transform:rotate(6deg)}
+#backTitle{transform:translateY(-50%) rotate(6deg)}
+#exitLevel:active:not(:disabled),#backTitle:active:not(:disabled){translate:2px 2px;box-shadow:1px 1px 0 var(--ink)}
+/* Victory actions float over the board without changing its dimensions. */
+.stage.is-won .canvas-actions{display:flex;visibility:hidden}
+.stage.is-won .compact-actions,.stage.is-won .view-controller{display:flex;visibility:hidden}
+.stage.is-won .toast,.stage.is-won .studio-controls{visibility:hidden}
+#victoryActions{position:absolute;z-index:9;left:50%;bottom:clamp(18px,5vh,40px);transform:translateX(-50%);width:min(340px,calc(100% - 40px));margin:0;padding:18px 22px 20px;border:2px solid var(--ink);border-radius:22px;background:#fffaf0;box-shadow:5px 5px 0 var(--ink);flex:none;flex-direction:column;gap:12px;text-align:center}
+.stage.is-won #victoryActions:not([hidden]){display:flex;animation:win-actions-appear .2s ease-out both}
+#victoryActions h2{margin:0 0 2px;font-size:23px;letter-spacing:-.03em}
+#victoryActions .btn{flex:none;width:100%;min-width:0;min-height:48px;padding:12px 16px;font-size:15px;border-radius:13px}
+#victoryActions .victory-next,#victoryActions.is-last .victory-secondary{background:#f65d17;color:var(--ink);border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+#victoryActions .victory-secondary{background:transparent;box-shadow:none;border-color:#bbb0c5;font-size:13px;min-height:42px;padding:9px 12px}
+@keyframes win-actions-appear{from{opacity:0}to{opacity:1}}
+@media(max-width:850px){.game-header{--header-top:11px}}
+@media(max-width:600px){.game-header{--back-space:34px}}
+@media(max-height:480px){.game-header{--header-top:6px}#victoryActions{bottom:14px;width:min(440px,calc(100% - 40px));padding:12px;flex-direction:row;flex-wrap:wrap;gap:10px}#victoryActions h2{width:100%;font-size:18px}#victoryActions .btn{flex:1;width:auto;min-height:40px;padding:8px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){#exitLevel,#backTitle{transition:none}.stage.is-won #victoryActions:not([hidden]){animation:none}}
