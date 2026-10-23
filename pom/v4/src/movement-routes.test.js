@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createMovementBoard,planMovement,sampleMovement,movementSegmentClear,nodePose,findMovementPath,isSingleMove,movementProfiles} from './movement-routes.js';
 import {movementExamples,studioLevel} from './movement-studio.js';
-const levels=JSON.parse(fs.readFileSync(new URL('./data/levels.json',import.meta.url)));
+import {loadLevelCatalog} from './level-format.js';
+const {levels}=loadLevelCatalog(JSON.parse(fs.readFileSync(new URL('./data/levels.json',import.meta.url))));
 
 for(const example of movementExamples)test(`reported movement: ${example.label}`,()=>{
   const level=studioLevel(levels,example),board=createMovementBoard(level.grid,level.initialDepths);

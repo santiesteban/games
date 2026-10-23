@@ -3,6 +3,7 @@ import {
   Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
 import levelData from './data/levels.json';
+import { loadLevelCatalog } from './level-format.js';
 import { createLevelProgress } from './level-progress.js';
 import { createLevelPreferences } from './level-preferences.js';
 import { createLevelGridObserver } from './level-grid.js';
@@ -19,33 +20,39 @@ const wrap = document.querySelector('#canvasWrap');
 let viewUnit=0,viewTarget,viewReady=false,viewMobile=false,viewTouched=false,introFrame=0,viewWidth=0,viewHeight=0;
 const boardPointers=new Map();let boardGesture=null;
 const pageUrl=new URL(location.href);if(pageUrl.searchParams.has('style')){pageUrl.searchParams.delete('style');window.history.replaceState(null,'',pageUrl)}
+function syncScreenAppearance(screen){
+  document.documentElement.dataset.screen=screen;
+  document.querySelector('meta[name="theme-color"]').content=screen==='home'?'#e8dfc9':'#eee8fa';
+}
+window.addEventListener('pageshow',()=>syncScreenAppearance(document.documentElement.dataset.screen));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncScreenAppearance(document.documentElement.dataset.screen)});
 const svgNS='http://www.w3.org/2000/svg';
 const irisSvg=document.createElementNS(svgNS,'svg');irisSvg.setAttribute('class','victory-iris');irisSvg.setAttribute('aria-hidden','true');
 const irisShade=document.createElementNS(svgNS,'path'),irisRing=document.createElementNS(svgNS,'circle');
 // Cut a transparent opening directly into the opaque shade.
-irisShade.setAttribute('fill','#28251f');irisShade.setAttribute('fill-rule','evenodd');irisRing.setAttribute('fill','none');irisRing.setAttribute('stroke','#fff0d8');irisRing.setAttribute('stroke-width','3');irisSvg.append(irisShade,irisRing);wrap.append(irisSvg);
+irisShade.setAttribute('fill','#28251f');irisShade.setAttribute('fill-rule','evenodd');irisRing.setAttribute('fill','none');irisRing.setAttribute('stroke','#fff0d8');irisRing.setAttribute('stroke-width','3');irisSvg.append(irisShade,irisRing);document.querySelector('.stage').append(irisSvg);
 const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16, ink='#28251f';
 let viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitch,viewHeightStep=0;
 const movementRouteCache=new Map;let movementBoardCache,movementBoardKey,reachableKey,reachableValue;
-const levels=levelData.map(level=>({...level,height:level.grid.length,width:level.grid[0].length}));
-const levelProgress=createLevelProgress(levels.map(level=>level.id));
+const {levels,groups:levelGroups}=loadLevelCatalog(levelData);
+const levelProgress=createLevelProgress(levels);
 const levelPreferences=createLevelPreferences();
 const levelGridObserver=createLevelGridObserver();
-const knownIssueLevels=new Set([5,6,7,11,15,16,17,18,21,23,24,25,30,32,33,34,35,38,39,40,43]);
-const levelGroups=[
-  {name:'Basic Lessons',from:1,to:18,color:'#79a66e'},
-  {name:'First Challenges',from:19,to:36,color:'#55a9ae'},
-  {name:'More Challenges',from:37,to:54,color:'#ffe03f'},
-  {name:'Others',from:55,to:Infinity,color:'#f2a05a'},
-];
 let progressSaved=true;
-let activeLevel=levels[0],W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
-const palette={R:new Color(1,.443,.22),O:new Color(.949,.627,.353),G:new Color(.475,.651,.431),B:new Color(.333,.663,.682),Y:new Color(1,.875,.247)};
+let activeLevel=levels.find(level=>level.compatibility.playable);
+if(!activeLevel)throw new Error('The level catalog has no playable puzzles.');
+let W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
+let palette,topPalette,sidePalette;
+function useLevelPalette(level){
+  palette=Object.fromEntries(Object.entries(level.palette).map(([slot,[r,g,b]])=>[slot,new Color(r/255,g/255,b/255)]));
+  topPalette=Object.fromEntries(Object.entries(palette).map(([slot,color])=>[slot,tinted(color,.035)]));
+  sidePalette=Object.fromEntries(Object.entries(palette).map(([slot,color])=>[slot,shaded(color,.96)]));
+}
+useLevelPalette(activeLevel);
 let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],pomShadow,hoverObject,studioTargetObject,flagPole,flagCloth,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
-const colors=palette,inkColor=new Color(.157,.145,.122);
+const inkColor=new Color(.157,.145,.122);
 const viewControls=createViewController(document.querySelector('#viewController'),position=>changeView(position.horizontal,position.vertical));
-const topPalette=Object.fromEntries(Object.entries(palette).map(([key,color])=>[key,tinted(color,.035)])),sidePalette=Object.fromEntries(Object.entries(palette).map(([key,color])=>[key,shaded(color,.96)]));
 function squareFace(m,map,bounds,color,normal){const [u0,u1,v0,v1]=bounds,pts=[[u0,v0],[u1,v0],[u1,v1],[u0,v1]],center=map((u0+u1)/2,(v0+v1)/2),vertices=[center,...pts.map(([u,v])=>map(u,v))],indices=[];for(let i=1;i<=4;i++)indices.push(0,i,i===4?1:i+1);m.addTriangles(vertices,indices,normal,undefined,color);return m}
 function frontTileMesh(){const m=new Mesh();squareFace(m,(x,y)=>vec3(x,y,0),[-.5,.5,-.5,.5],new Color(1),vec3(0,0,1));m.doubleSided=true;return m}
 function makeFanMesh(perimeter){const points=[vec3() ,...perimeter.map(([x,y])=>vec3(x,y,0))],indices=[];for(let i=1;i<points.length;i++)indices.push(0,i,i===points.length-1?1:i+1);const mesh=new Mesh().addTriangles(points,indices,vec3(0,0,1));mesh.doubleSided=true;return mesh}
@@ -120,16 +127,22 @@ function worldPoint(x,y,z){return vec3(x+cameraSlant(viewSide)*DEPTH_SKEW*z,y,z)
 function blockPose(c,depth){return{pos:worldPoint(c.x+.5,H-c.y-.5,depth)}}
 function tinted(color,amount){return new Color(color.r+(1-color.r)*amount,color.g+(1-color.g)*amount,color.b+(1-color.b)*amount)}
 function shaded(color,amount){return new Color(color.r*amount,color.g*amount,color.b*amount)}
+function blockActionText(color){
+  const luminance=channels=>channels.map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4).reduce((sum,value,i)=>sum+value*[.2126,.7152,.0722][i],0);
+  const background=luminance([color.r,color.g,color.b]),dark=luminance([41/255,37/255,55/255]),light=luminance([1,250/255,240/255]);
+  const contrast=value=>(Math.max(value,background)+.05)/(Math.min(value,background)+.05);
+  return contrast(light)>contrast(dark)?'#fffaf0':'#292537';
+}
 function makeSurface(pos,mesh,color){const o=new EngineObject3D(pos,mesh,undefined,color);o.lighting=false;o.emissive=1;o.receiveShadow=false;o.castShadow=false;return o}
 function prismMesh(cx,cy,depth,side,color,top=false,start=0){
   side=cameraSlant(side);
-  const m=new Mesh(),s=side*DEPTH_SKEW,lo=-.5,hi=.5,defaultFace=top?new Color(1):shaded(palette[color]||palette.R,.72);
+  const pigment=palette[color],m=new Mesh(),s=side*DEPTH_SKEW,lo=-.5,hi=.5,defaultFace=top?new Color(1):shaded(pigment,.72);
   const P=(x,y,z)=>vec3(x+s*z,y,z);
   const quad=(a,b,c,d,face=defaultFace)=>m.addQuad(P(...a),P(...b),P(...c),P(...d),face);
   if(top){
     // Contrast is tuned by pigment so the orange faces retain their base color.
-    const dark=(cx+start)%2===1,contrast={R:.90,O:.90,G:.69,B:.80}[color]??1;
-    const shade=color==='Y'?new Color(1,.88,.65):new Color(contrast,contrast,contrast),base=new Color(1);
+    const dark=(cx+start)%2===1,contrast=pigment.g>pigment.r*1.15?(pigment.g>pigment.b*1.15?.69:.80):.90;
+    const shade=pigment.r>.9&&pigment.g>.75&&pigment.b<.4?new Color(1,.88,.65):new Color(contrast,contrast,contrast),base=new Color(1);
     squareFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+1],dark?shade:base,vec3(0,1,0));
   }
   else {
@@ -144,13 +157,13 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0){
   }
   m.doubleSided=true;return m;
 }
-function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),colors[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
+function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),palette[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
 function syncExtrusions(){for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
   for(const g of groups)if(g.depth)for(const c of g.cells){
     const base=vec3(c.x+.5,H-c.y-.5,0),front=worldPoint(base.x,base.y,g.depth).add(vec3(0,0,.025)),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
     extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);
-    const frontFace=makeSurface(front,frontTileMesh(),selected===g?tinted(colors[g.color],.12):colors[g.color]);extrusionObjects.push(frontFace);topObjectInfo.set(frontFace,{x:c.x,y:c.y,z:g.depth-1});sideObjectInfo.set(frontFace,g);
-    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,.003,0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z),colors[g.color]);top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top)}
+    const frontFace=makeSurface(front,frontTileMesh(),selected===g?tinted(palette[g.color],.12):palette[g.color]);extrusionObjects.push(frontFace);topObjectInfo.set(frontFace,{x:c.x,y:c.y,z:g.depth-1});sideObjectInfo.set(frontFace,g);
+    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,.003,0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z),palette[g.color]);top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top)}
   }
 }
 function drawMapOutlines(){
@@ -213,7 +226,7 @@ function syncFloorGrid(){
   m.addQuad(vec3(-worldWidth/2,hy+thickness/2,0),vec3(worldWidth/2,hy+thickness/2,0),vec3(worldWidth/2,hy-thickness/2,0),vec3(-worldWidth/2,hy-thickness/2,0),inkColor);
   m.doubleSided=true;o.setMesh(m);o.pos3D=render3D.camera.pos.add(render3D.camera.getForward().scale(89.4));o.rotation3D=render3D.camera.rotation.copy();o.size3D=vec3(worldWidth,ortho,.1);o.color=new Color(1);o.lighting=false;o.transparent=true;
 }
-function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selected===g?tinted(colors[g.color],.12):colors[g.color];o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.color=face}syncExtrusions();syncFloorGrid()}
+function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selected===g?tinted(palette[g.color],.12):palette[g.color];o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.color=face}syncExtrusions();syncFloorGrid()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
 function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio,sceneHeight=baseCameraHeight||ortho;
   render3D.updateMatrices(ratio);const base=render3D.worldToScreen(vec3(4,0,0),vec2(width,height)),groundQ=base?(height/2-base.y)*ortho/height:-ortho*.28;if(base)wrap.style.setProperty('--horizon-y',`${Math.max(0,Math.min(100,base.y/height*100))}%`);
@@ -227,7 +240,8 @@ function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,
 function syncPlayer(){resetPomShape();const p=worldPosition(player),top=player.y===H?0:H-player.y,jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);if(pomShadow)pomShadow=worldPoint(player.x+.5,top+.018,player.z+.5)}
 function syncFlag(){const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;const depth=g.depth,cx=goalCell.x+.5,cy=H-goalCell.y-.5;flagPole.color=new Color(.16,.15,.12);flagCloth.color=new Color(1,.443,.22);flagPole.rotation3D=vec3();flagCloth.rotation3D=vec3();if(!depth){flagPole.scale3D=vec3(.04,.27,.04);flagCloth.scale3D=vec3(.205,.13,.035);flagPole.pos3D=vec3(cx,cy+.085,.08);flagCloth.pos3D=vec3(cx+.105,cy+.165,.09)}else{const base=worldPoint(cx,H-goalCell.y,depth-.5);flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);flagPole.pos3D=base.add(vec3(0,.34,0));flagCloth.pos3D=base.add(vec3(.19,.56,.025))}}
 function updateUI(){
-  document.querySelector('#level-number').textContent=String(activeLevel.id).padStart(2,'0');document.querySelector('#levelBadge').setAttribute('aria-label',`Level ${activeLevel.id}`);document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
+  document.querySelector('.control-deck').inert=won;
+  document.querySelector('#level-number').textContent=String(activeLevel.number).padStart(2,'0');document.querySelector('#levelBadge').setAttribute('aria-label',`Level ${activeLevel.number}`);document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
   document.querySelector('#pull').disabled=busy||won||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
   document.querySelector('#push').disabled=busy||won||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
   document.querySelector('#undo').disabled=busy||!history.length;
@@ -237,13 +251,15 @@ function updateUI(){
   if(studioTargetObject){studioTargetObject.color=new Color(1,.95,.73,activeLevel.previewMove ? .85 : 0);if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}
   if(!toastTimer)showHelp(contextHelp());
   viewControls.update(viewSide,viewHeightStep);viewControls.setDisabled(busy||won);
-  const color=selected?tinted(colors[selected.color],.12):null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
+  const color=selected?tinted(palette[selected.color],.12):null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
+  wrap.style.setProperty('--block-ink',color?blockActionText(color):'#292537');
   syncBlocks();syncPlayer();syncFlag();
 }
 function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return 'Pom is on his way…';if(selected){if(!canReach(selected))return 'Move Pom beside this block to push or pull it.';return `Block pulled ${selected.depth} of 3 steps out. ${selected.depth===3?'Push it in to make a different path.':'Use Push in or Pull out to make a path.'}`}if(activeLevel.studioExample)return activeLevel.studioExample.help;return viewMobile?'Tap a block or walking spot. Drag to pan · pinch to zoom.':'Select a block to pull it. Click a walking spot to move Pom.'}
 function showHelp(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on')}
 function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
 function showMenu(panel='title'){
+  syncScreenAppearance(panel==='title'?'home':panel);
   stopIntro();celebration=null;irisSvg.style.opacity='0';viewControls.close();
   const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
   for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
@@ -253,22 +269,23 @@ function showMenu(panel='title'){
   document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;document.querySelector('.stage').inert=true;
   if(panel==='settings')document.querySelector('#settingsHome').focus();
 }
-function levelIsAvailable(level){return !levelPreferences.hideKnownIssues||!knownIssueLevels.has(level.id)}
+function levelIsAvailable(level){return level.compatibility.playable&&(!levelPreferences.hideKnownIssues||!level.knownIssues)}
 function nextAvailableLevel(){const index=levels.findIndex(level=>level.id===activeLevel.id);return levels.slice(index+1).find(levelIsAvailable)}
 function renderLevelList(){
   levelGridObserver.disconnect();
   const list=document.querySelector('#levelList'),scroll=list.scrollTop,gallery=document.createElement('div');gallery.className='level-gallery';list.replaceChildren(gallery);
   for(const [index,group]of levelGroups.entries()){
-    const section=document.createElement('section');section.className='level-group';section.style.setProperty('--group-color',group.color);section.setAttribute('aria-labelledby',`levelGroup${index}`);
+    const groupLevels=levels.filter(level=>level.group===group.id);
+    const section=document.createElement('section');section.className='level-group';section.setAttribute('aria-labelledby',`levelGroup${index}`);
     const header=document.createElement('header');header.className='level-group-header';
     const heading=document.createElement('h2');heading.id=`levelGroup${index}`;heading.textContent=group.name;
-    const range=document.createElement('span');range.className='level-group-range';range.textContent=Number.isFinite(group.to)?`${String(group.from).padStart(2,'0')}–${group.to}`:'Studio & more';header.append(heading,range);
+    const range=document.createElement('span');range.className='level-group-range';range.textContent=group.rangeLabel??(groupLevels.length?`${String(groupLevels[0].number).padStart(2,'0')}–${groupLevels.at(-1).number}`:'');header.append(heading,range);
     const items=document.createElement('div');items.className='level-group-items';
-    for(const level of levels.filter(level=>level.id>=group.from&&level.id<=group.to&&levelIsAvailable(level))){
-      const issues=knownIssueLevels.has(level.id),completed=levelProgress.has(level.id);
-      const button=document.createElement('button');button.type='button';button.className='level-card';button.classList.toggle('has-known-issues',issues);button.setAttribute('aria-label',`Level ${level.id}: ${level.name}`);
-      const number=document.createElement('span');number.className='card-number';number.textContent=String(level.id).padStart(2,'0');number.setAttribute('aria-hidden','true');
-      const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);const preview=document.createElement('span');preview.className='level-preview';preview.append(puzzleThumbnail(level.id===55?studioLevel(levels,movementExamples[0]):level),number);const caption=document.createElement('span');caption.className='level-card-caption';caption.append(details);button.append(preview,caption);
+    for(const level of groupLevels.filter(levelIsAvailable)){
+      const issues=level.knownIssues,completed=levelProgress.has(level.id);
+      const button=document.createElement('button');button.type='button';button.className='level-card';button.classList.toggle('has-known-issues',issues);button.setAttribute('aria-label',`Level ${level.number}: ${level.name}`);
+      const number=document.createElement('span');number.className='card-number';number.textContent=String(level.number).padStart(2,'0');number.setAttribute('aria-hidden','true');
+      const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);const preview=document.createElement('span');preview.className='level-preview';preview.append(puzzleThumbnail(level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level),number);const caption=document.createElement('span');caption.className='level-card-caption';caption.append(details);button.append(preview,caption);
       if(completed){const check=document.createElement('span');check.className='completion-mark';check.textContent='✓';check.setAttribute('aria-hidden','true');preview.append(check)}
       if(issues||completed){
         const badges=document.createElement('span');badges.className='level-badges';badges.id=`levelStatus${level.id}`;
@@ -288,12 +305,12 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
-  activeLevel=level;W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  activeLevel=level;useLevelPalette(level);W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitch;viewControls.close();celebration=null;irisSvg.style.opacity='0';
   clearTimeout(toastTimer);toastTimer=undefined;setUmbrellaVisible(false);rebuildBlockMeshes();updateUI();startBoardView();
 }
-function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level)return;if(id===55)level=studioLevel(levels,movementExamples[0]);document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
+function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#victoryActions').hidden=true;resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
 document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
 document.querySelector('#openSettings').addEventListener('click',()=>showMenu('settings'));
 for(const name of ['hideKnownIssues']){
@@ -432,12 +449,14 @@ function syncVictoryOverlay(now){
   // Wave the original flag beside Pom; its pole stays against his body.
   const right=render3D.camera.getRight(),forward=render3D.camera.getForward(),angle=Math.sin(elapsed/170)*.18,dir=up.scale(Math.cos(angle)).add(right.scale(Math.sin(angle))),base=playerObject.pos3D.add(right.scale(.27)).add(up.scale(-.08)).add(forward.scale(-.09));
   const carry=ease(progress/.35);flagPole.pos3D=celebration.flagStart.lerp(base.add(dir.scale(.34)),carry);flagCloth.pos3D=celebration.clothStart.lerp(base.add(dir.scale(.56)).add(right.scale(.19)).add(forward.scale(-.025)),carry);flagPole.rotation3D=render3D.camera.rotation.add(vec3(0,0,-angle*carry));flagCloth.rotation3D=flagPole.rotation3D.copy();flagPole.scale3D=vec3(.05,.68,.05);flagCloth.scale3D=vec3(.38,.24,.045);
-  const center=render3D.worldToScreen(anchor.add(vec3(.12,.28,0)),size),radius=Math.hypot(width,height)*(1-close)+finalRadius*close;
-  irisSvg.setAttribute('viewBox',`0 0 ${width} ${height}`);irisShade.setAttribute('d',`M0 0H${width}V${height}H0Z M${center.x-radius} ${center.y} a${radius} ${radius} 0 1 0 ${radius*2} 0 a${radius} ${radius} 0 1 0 ${-radius*2} 0Z`);irisRing.setAttribute('cx',center.x);irisRing.setAttribute('cy',center.y);irisRing.setAttribute('r',radius);irisSvg.style.opacity='1';requestAnimationFrame(syncVictoryOverlay);
+  // Close one continuous iris over the board and footer, preserving the canvas geometry.
+  const overlayTop=wrap.offsetTop,overlayHeight=stage.clientHeight-overlayTop;
+  const center=render3D.worldToScreen(anchor.add(vec3(.12,.28,0)),size),radius=Math.hypot(width,overlayHeight)*(1-close)+finalRadius*close;
+  irisSvg.style.top=`${overlayTop}px`;irisSvg.style.height=`${overlayHeight}px`;
+  irisSvg.setAttribute('viewBox',`0 0 ${width} ${overlayHeight}`);irisShade.setAttribute('d',`M0 0H${width}V${overlayHeight}H0Z M${center.x-radius} ${center.y} a${radius} ${radius} 0 1 0 ${radius*2} 0 a${radius} ${radius} 0 1 0 ${-radius*2} 0Z`);irisRing.setAttribute('cx',center.x);irisRing.setAttribute('cy',center.y);irisRing.setAttribute('r',radius);irisSvg.style.opacity='1';requestAnimationFrame(syncVictoryOverlay);
 }
 function startCelebration(){
   stopIntro();selected=null;clearBoardHover();
-  const stage=document.querySelector('.stage');stage.style.setProperty('--victory-footer-height',`${document.querySelector('.control-deck').getBoundingClientRect().height}px`);
   const actions=document.querySelector('#victoryActions'),next=nextAvailableLevel(),button=document.querySelector('#nextLevel');
   button.disabled=!next;button.hidden=!next;actions.classList.toggle('is-last',!next);
   actions.style.visibility='hidden';actions.hidden=false;const cardHeight=actions.getBoundingClientRect().height;actions.hidden=true;actions.style.visibility='';

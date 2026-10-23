@@ -12,6 +12,6 @@ export const movementExamples=[
 ];
 
 export function studioLevel(levels,example){
-  const original=levels.find(level=>level.id===example.levelId);
-  return{...original,id:55,name:'Movement Studio',start:{...example.from},initialDepths:[...example.depths],previewMove:{...example.to},studioExample:example,description:example.help};
+  const original=levels.find(level=>level.legacyId===example.levelId),studio=levels.find(level=>level.kind==='movement-studio');
+  return{...original,id:studio.id,legacyId:studio.legacyId,number:studio.number,group:studio.group,kind:studio.kind,knownIssues:studio.knownIssues,name:studio.name,start:{...example.from},initialDepths:[...example.depths],previewMove:{...example.to},studioExample:example,description:example.help};
 }

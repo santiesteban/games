@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Little Ledges level catalog v1",
+  "description": "Structural schema. level-format.js additionally validates palette/group references, unique IDs and numbers, exact dimensions, piece-depth counts and gameplay compatibility. Unknown metadata is preserved.",
+  "type": "object",
+  "required": [
+    "format",
+    "schemaVersion",
+    "groups",
+    "levels"
+  ],
+  "properties": {
+    "format": {
+      "const": "little-ledges"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/group"
+      }
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/level"
+      }
+    }
+  },
+  "$defs": {
+    "group": {
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "rangeLabel": {
+          "type": "string"
+        }
+      }
+    },
+    "cell": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        }
+      }
+    },
+    "start": {
+      "type": "object",
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 31
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "z": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        }
+      }
+    },
+    "objectRecord": {
+      "type": "object",
+      "required": [
+        "slot",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "icon": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "attributes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "color": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "inverted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "level": {
+      "type": "object",
+      "required": [
+        "id",
+        "number",
+        "group",
+        "name",
+        "coordinateOrigin",
+        "emptyCell",
+        "width",
+        "height",
+        "palette",
+        "grid",
+        "start",
+        "goal"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$"
+        },
+        "legacyId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "group": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "puzzle",
+            "movement-studio"
+          ]
+        },
+        "knownIssues": {
+          "type": "boolean"
+        },
+        "difficulty": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coordinateOrigin": {
+          "const": "top-left"
+        },
+        "emptyCell": {
+          "const": "."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "palette": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 10,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9]$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        },
+        "grid": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[.A-Za-z0-9]+$"
+          }
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/start"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "goal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/cell"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initialDepths": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          }
+        },
+        "previewMove": {
+          "$ref": "#/$defs/start"
+        },
+        "objects": {
+          "type": "object",
+          "properties": {
+            "switches": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "$ref": "#/$defs/objectRecord"
+              }
+            },
+            "manholes": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "$ref": "#/$defs/objectRecord"
+              }
+            }
+          }
+        },
+        "flags": {
+          "type": "object",
+          "properties": {
+            "raw": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "protected": {
+              "type": "boolean"
+            },
+            "large": {
+              "type": "boolean"
+            },
+            "uses_switches": {
+              "type": "boolean"
+            },
+            "uses_manholes": {
+              "type": "boolean"
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}
