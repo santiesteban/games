@@ -5448,6 +5448,79 @@
         "switches": [],
         "manholes": []
       }
+    },
+    {
+      "id": "design-playground",
+      "number": 75,
+      "group": "others",
+      "kind": "design-playground",
+      "name": "Design Playground",
+      "description": "Explore the Shooting Star with the standard Little Ledges palette. Tune gradients, grid lines, and shadows.",
+      "knownIssues": false,
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 10,
+      "height": 7,
+      "palette": {
+        "A": [
+          255,
+          113,
+          56
+        ],
+        "B": [
+          242,
+          160,
+          90
+        ],
+        "C": [
+          255,
+          223,
+          63
+        ],
+        "D": [
+          121,
+          166,
+          110
+        ],
+        "E": [
+          85,
+          169,
+          174
+        ]
+      },
+      "grid": [
+        "....AA....",
+        "...AAABB..",
+        "..CAABBDD.",
+        "..CABBDDE.",
+        "CCCCCDDEEE",
+        ".CCCDDEE..",
+        ".C.CEEE..."
+      ],
+      "initialDepths": [
+        1,
+        2,
+        3,
+        2,
+        1
+      ],
+      "start": {
+        "x": 0,
+        "y": 4,
+        "z": 2
+      },
+      "goal": {
+        "x": 2,
+        "y": 2
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "source": {
+        "format": "design-playground",
+        "levelId": "mural-shooting-star"
+      }
     }
   ]
 }

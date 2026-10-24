@@ -68,7 +68,7 @@ export function loadLevelCatalog(document){
     check(input.start===null||(object(input.start)&&integer(input.start.x,-1,input.width-1)&&integer(input.start.y,0,input.height)&&integer(input.start.z,0,3)),'start must be a walking position or null');
     check(input.difficulty===undefined||input.difficulty===null||integer(input.difficulty,0,255),'difficulty must be a byte or null');
     check(input.knownIssues===undefined||typeof input.knownIssues==='boolean','knownIssues must be a boolean');
-    check(input.kind===undefined||['puzzle','movement-studio'].includes(input.kind),'unknown level kind');
+    check(input.kind===undefined||['puzzle','movement-studio','design-playground'].includes(input.kind),'unknown level kind');
     check(input.source===undefined||object(input.source),'source must be an object');
     check(input.flags===undefined||object(input.flags),'flags must be an object');
     if(input.flags){

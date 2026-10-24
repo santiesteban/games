@@ -254,6 +254,9 @@
 /* Preferences share one scrolling settings body with progress controls. */
 .settings-content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;width:100%;max-width:640px;align-self:center;padding:30px 24px calc(24px + env(safe-area-inset-bottom,0px))}
 .display-settings h2{margin:0 0 12px;font-size:19px}
+.experimental-controls{margin-top:28px;padding-top:24px;border-top:2px solid var(--ink)}
+.experimental-controls h2{margin:0 0 12px;font-size:19px}
+.experimental-controls .settings-copy{max-width:none;margin-bottom:0}
 #menuScreen.is-settings .settings-content .progress-settings{flex:none;overflow:visible;width:100%;max-width:none;margin:28px 0 0;padding:24px 0 0;border-top:2px solid var(--ink)}
 .setting-toggle{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:78px;padding:14px 0;cursor:pointer;font-size:14px;font-weight:700}
 .setting-toggle>span{min-width:0}.setting-toggle small{display:block;margin-top:6px;color:var(--muted);font-size:12px;font-weight:400;line-height:1.5}
@@ -263,12 +266,50 @@
 .setting-toggle input:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 @media(prefers-reduced-motion:reduce){.setting-toggle input::before{transition:none}}
 
-/* Match Safari's sampled edge, root canvas, and theme on every screen change. */
+/* Safari samples 4–6px inside the edge and reads solid backgrounds above 10px.
+   Keep this real fixed element taller than that even when the safe inset is 0. */
 :root{--screen-top-color:#e8dfc9}
 :root:not([data-screen="home"]){--screen-top-color:var(--paper)}
 html,body{background-color:var(--screen-top-color)}
-.screen-safe-area{position:fixed;inset:0 0 auto;z-index:100;width:100%;height:max(1px,env(safe-area-inset-top,0px));background:var(--screen-top-color);pointer-events:none}
+.screen-safe-area{position:fixed;inset:0 0 auto;z-index:100;width:100%;height:max(12px,env(safe-area-inset-top,0px));background-color:var(--screen-top-color);pointer-events:none}
+@media(max-height:480px){.game-header{--header-top:12px}}
+
+/* The playground keeps its live design controls beside the scene. */
+.design-panel[hidden]{display:none!important}
+.stage.is-design{grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr) auto}
+.stage.is-design>.game-header{grid-column:1/-1;grid-row:1}
+.stage.is-design>.canvas-wrap{grid-column:1;grid-row:2}
+.stage.is-design>.control-deck{grid-column:1;grid-row:3}
+.design-panel{grid-column:2;grid-row:2/4;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#fffaf0;border-left:2px solid var(--ink);border-top:2px solid var(--ink)}
+.design-panel-header{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:2px solid var(--ink);background:var(--paper)}
+.design-panel-header h2{font-size:17px;margin:0}.design-panel-header .btn{min-height:30px;padding:4px 8px;box-shadow:none}
+.design-controls-body{flex:1;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;min-height:0;padding:0 16px 20px;scrollbar-gutter:stable}
+.design-copy,.design-save-status{font-size:12px;line-height:1.5;color:var(--muted)}
+.design-controls-body details{padding:14px 0;border-bottom:2px solid var(--ink)}
+.design-controls-body summary{cursor:pointer;font-weight:800;font-size:15px;user-select:none}
+.design-controls-body fieldset{border:0;padding:10px 0 0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.design-controls-body legend{font-size:12px;font-weight:700;padding-top:14px}
+.design-field{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px 10px;margin-top:12px;font-size:12px}
+.design-field label{cursor:pointer;min-width:0}.design-reset{grid-column:3;grid-row:1;border:0;border-radius:6px;padding:5px 6px;background:var(--paper);font-size:10px;font-weight:700;box-shadow:none}
+.design-reset:active{transform:none;box-shadow:none}.design-reset:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.design-field input[type=color]{width:44px;height:32px;padding:2px;border:2px solid var(--ink);border-radius:8px;background:#fffaf0;cursor:pointer}
+.design-field input[type=range]{grid-column:1/-1;grid-row:2;width:100%;margin:2px 0;accent-color:var(--ink);cursor:pointer}
+.design-field output{grid-column:2;grid-row:1;font:11px 'DM Mono',monospace}
+.design-controls-body fieldset .design-field{display:flex;flex-direction:column;align-items:flex-start;margin-top:0}
+.design-field.setting-toggle{min-height:0;padding:0;font-weight:600}
+.design-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.design-actions .btn{flex:1;min-width:110px}
+.design-panel.is-collapsed .design-controls-body{display:none}
+@media(max-width:760px){
+  .stage.is-design{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}
+  .stage.is-design>.design-panel{grid-column:1;grid-row:3;border-left:0;max-height:min(40dvh,300px)}
+  .stage.is-design>.control-deck{grid-column:1;grid-row:4}
+  .design-panel-header{padding:8px 14px}.design-panel-header h2{font-size:15px}
+  .stage.is-design .toast{max-width:calc(100% - 24px);font-size:10px;padding:7px 10px}
+}
 
 /* Labels and arrows follow the contrast of the selected piece's button color. */
 .block-action{color:var(--block-ink,var(--ink))}
 .block-action:disabled{color:color-mix(in srgb,var(--block-ink,var(--ink)) 60%,var(--block-color))}
+.no-piece-selected .block-action:disabled{opacity:.45}
+.block-action{transition:background-color .22s ease,color .22s ease,border-color .22s ease,opacity .22s ease,box-shadow .22s ease,transform .12s ease}
+@media(prefers-reduced-motion:reduce){.block-action{transition:none}}

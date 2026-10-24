@@ -184,7 +184,8 @@
         "kind": {
           "enum": [
             "puzzle",
-            "movement-studio"
+            "movement-studio",
+            "design-playground"
           ]
         },
         "knownIssues": {

@@ -1,0 +1,43 @@
+{
+  "format": "little-ledges-design",
+  "version": 1,
+  "bands": [
+    {
+      "dark": "#8bb584",
+      "light": "#aacfa3"
+    },
+    {
+      "dark": "#e1c768",
+      "light": "#f7df8b"
+    },
+    {
+      "dark": "#d98b7e",
+      "light": "#efaa9e"
+    }
+  ],
+  "lines": {
+    "horizontal": {
+      "width": 0.045,
+      "color": "#292537",
+      "opacity": 0.04
+    },
+    "vertical": {
+      "width": 0.045,
+      "color": "#292537",
+      "opacity": 0.04
+    }
+  },
+  "studs": {
+    "enabled": false,
+    "width": 2,
+    "color": "#000000",
+    "opacity": 0.1
+  },
+  "shadows": {
+    "enabled": true,
+    "strength": 0.62,
+    "softness": 1.5,
+    "direction": 30,
+    "elevation": 45
+  }
+}
