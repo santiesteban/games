@@ -5,12 +5,13 @@ Open **All levels → Others → Design Playground (75)**.
 The scene uses Shooting Star's geometry with the standard Little Ledges palette.
 Its five pieces start at different pull distances. Pom starts on the left ledge,
 so reachable platform studs are visible immediately. This scene cannot be won and
-does not count toward completion progress or appear as a victory's next level.
+does not count toward completion progress.
 
 The scrollable controls include:
 
 - Dark and light endpoints for all three band gradients.
 - Separate horizontal and vertical grid thickness, color, and opacity.
+- Selection outline visibility, color, and dashed or solid style.
 - Stud visibility and outline thickness, color, and opacity.
 - Real piece shadows, strength, softness, light direction, and light height.
 - A reset beside every individual setting, plus Reset design, Apply to all levels,
@@ -38,3 +39,11 @@ syncs across tabs on the same origin. Later draft changes remain local to the
 playground until applied again. Reset design restores the shipped draft; apply
 it to restore the game defaults everywhere. Download design exports a JSON
 snapshot for sharing.
+
+Selection outlines default to the existing dark dashed line. Older saved designs
+inherit these defaults. All three outline controls have individual resets and are
+included in saved drafts, downloads, and Apply to all levels.
+
+The controls use their own native wheel, touch, and keyboard scrolling, isolated
+from the game's input handlers. On phones the panel has a bounded height with an
+independently scrolling body.

@@ -27,6 +27,11 @@
       "opacity": 0.04
     }
   },
+  "selection": {
+    "enabled": true,
+    "color": "#28251f",
+    "style": "dashed"
+  },
   "studs": {
     "enabled": false,
     "width": 2,

@@ -12,6 +12,10 @@ function normalize(saved){
     line.width=number(input?.width,line.width,0,.12);line.opacity=number(input?.opacity,line.opacity,0,1);
     if(isColor(input?.color))line.color=input.color;
   }
+  const selection=saved?.selection;
+  if(typeof selection?.enabled==='boolean')result.selection.enabled=selection.enabled;
+  if(isColor(selection?.color))result.selection.color=selection.color;
+  if(['dashed','solid'].includes(selection?.style))result.selection.style=selection.style;
   const shadow=saved?.shadows;
   if(typeof shadow?.enabled==='boolean')result.shadows.enabled=shadow.enabled;
   for(const [name,min,max]of [['strength',0,1],['softness',0,4],['direction',-180,180],['elevation',15,85]])result.shadows[name]=number(shadow?.[name],result.shadows[name],min,max);
@@ -23,6 +27,8 @@ function normalize(saved){
 }
 
 export function createDesignPlayground(panel,onChange,onApply){
+  // Let native scrolling and form keys reach the controls, not the game's document handlers.
+  for(const event of ['wheel','touchstart','touchmove','touchend','keydown'])panel.addEventListener(event,event=>event.stopPropagation(),{passive:true});
   let applied;try{applied=normalize(JSON.parse(localStorage.getItem(APPLIED_KEY)||'null'))}catch{applied=structuredClone(DEFAULT_DESIGN)}
   let values;try{values=normalize(JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'))}catch{values=structuredClone(DEFAULT_DESIGN)}
   let frame=0,fieldId=0;
@@ -56,6 +62,12 @@ export function createDesignPlayground(panel,onChange,onApply){
     const row=field(parent,label,input);row.classList.add('setting-toggle');input.onchange=()=>{set(input.checked);changed()};
     resetControl(row,label,()=>{input.checked=defaultValue;set(defaultValue)});
   }
+  function choice(parent,label,value,options,set,defaultValue){
+    const input=document.createElement('select');input.setAttribute('aria-label',label);
+    for(const [value,text]of options){const option=document.createElement('option');option.value=value;option.textContent=text;input.append(option)}
+    input.value=value;input.onchange=()=>{set(input.value);changed()};const row=field(parent,label,input);
+    resetControl(row,label,()=>{input.value=defaultValue;set(defaultValue)});
+  }
   function section(parent,title,open=true){
     const details=document.createElement('details');details.open=open;const summary=document.createElement('summary');summary.textContent=title;details.append(summary);parent.append(details);return details;
   }
@@ -67,7 +79,7 @@ export function createDesignPlayground(panel,onChange,onApply){
     const collapse=document.createElement('button');collapse.type='button';collapse.className='btn';collapse.textContent='Hide';collapse.setAttribute('aria-expanded','true');collapse.setAttribute('aria-controls','designControlsBody');
     collapse.onclick=()=>{const hidden=panel.classList.toggle('is-collapsed');collapse.textContent=hidden?'Show':'Hide';collapse.setAttribute('aria-expanded',String(!hidden))};
     header.append(title,collapse);panel.append(header);
-    const body=document.createElement('div');body.id='designControlsBody';body.className='design-controls-body';panel.append(body);
+    const body=document.createElement('div');body.id='designControlsBody';body.className='design-controls-body';body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','Design settings');panel.append(body);
     const copy=document.createElement('p');copy.className='design-copy';copy.textContent='Shooting Star, in our standard palette. Adjust the scene live, or turn the view cube.';body.append(copy);
     const bands=section(body,'Band gradients');
     for(const [i,name]of ['Green · front','Yellow · middle','Red · back'].entries()){
@@ -81,6 +93,10 @@ export function createDesignPlayground(panel,onChange,onApply){
       color(group,`${title} color`,line.color,n=>line.color=n,DEFAULT_DESIGN.lines[axis].color);
       range(group,`${title} opacity`,line.opacity*100,0,100,.5,n=>line.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.lines[axis].opacity*100);
     }
+    const selection=section(body,'Selection outlines');
+    toggle(selection,'Show selection outlines',values.selection.enabled,n=>values.selection.enabled=n,DEFAULT_DESIGN.selection.enabled);
+    color(selection,'Selection line color',values.selection.color,n=>values.selection.color=n,DEFAULT_DESIGN.selection.color);
+    choice(selection,'Selection line style',values.selection.style,[['dashed','Dashed'],['solid','Solid']],n=>values.selection.style=n,DEFAULT_DESIGN.selection.style);
     const studs=section(body,'Stud outlines');
     toggle(studs,'Show platform studs',values.studs.enabled,n=>values.studs.enabled=n,DEFAULT_DESIGN.studs.enabled);
     range(studs,'Stud line thickness',values.studs.width,0,6,.1,n=>values.studs.width=n,n=>`${n}px`,DEFAULT_DESIGN.studs.width);
