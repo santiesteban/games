@@ -26,7 +26,9 @@ a transparent shadow receiver overlays cast shadows onto the existing meadow
 and grid, without adding a visible floor.
 
 The shipped design in `src/data/design.json` supplies the game defaults and reset
-values. Drafts are saved locally under `little-ledges:v4:design-playground` and
+values. Cast shadows, pull-distance colors, and automatic selection of nearby
+pieces are enabled by default. Existing saved settings remain respected.
+Drafts are saved locally under `little-ledges:v4:design-playground` and
 affect only this scene until **Apply to all levels** is pressed. Applying copies
 the current draft to `little-ledges:v4:applied-design`, refreshes all levels, and
 sets the stud and shadow feature toggles to match the design. Pull-distance
