@@ -1,5 +1,5 @@
 import {
-  engineInit, Render3DPlugin, EngineObject3D, Mesh, Shader, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
+  engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
   Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
 import levelData from './data/levels.json';
@@ -8,8 +8,12 @@ import { createLevelProgress } from './level-progress.js';
 import { createLevelPreferences } from './level-preferences.js';
 import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
+import { puzzleFloorBounds } from './floor-grid.js';
 import { createDesignPlayground } from './design-playground.js';
+import { createBackgroundStudio } from './background-studio.js';
+import { DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import { createVictoryEffects } from './victory-effects.js';
+import { pieceShadowShader, groundShadowShader } from './shadow-materials.js';
 import { createLevelGridObserver } from './level-grid.js';
 import { puzzleThumbnail } from './puzzle-thumbnail.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
@@ -36,9 +40,11 @@ const FLOOR_DEPTH=4,GRID_DEPTH=4,DEPTH_SKEW=.16, ink='#28251f';
 let viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitch,viewHeightStep=0;
 const movementRouteCache=new Map;let movementBoardCache,movementBoardKey,reachableKey,reachableValue;
 const {levels,groups:levelGroups}=loadLevelCatalog(levelData);
-const levelProgress=createLevelProgress(levels.filter(level=>level.kind!=='design-playground'));
+function isPreviewLevel(level){return ['design-playground','background-studio'].includes(level.kind)}
+const levelProgress=createLevelProgress(levels.filter(level=>!isPreviewLevel(level)));
 const levelPreferences=createLevelPreferences();
-function syncHelpVisibility(){document.querySelector('#toast').hidden=levelPreferences.hideHelpText}
+let toastTimer,helpKind=null,openingHelpShown=false,interactionHelpKey=null;
+function syncHelpVisibility(){document.querySelector('#toast').hidden=levelPreferences.hideHelpText;if(levelPreferences.hideHelpText)hideHelp()}
 syncHelpVisibility();
 const controlFeatures=createControlFeatures();
 let movementMarkers;
@@ -51,29 +57,55 @@ const designPlayground=createDesignPlayground(document.querySelector('#designPan
   syncBlocks();syncMovementMarkers();
 },design=>{
   let saved=true;
-  for(const [id,enabled]of [['movementStuds',design.studs.enabled],['pullDepthColors',true],['pieceShadows',design.shadows.enabled]]){
+  for(const [id,enabled]of [['movementStuds',design.studs.enabled],['pullDepthColors',true],['pieceShadows',design.shadows.enabled],['floorGrid',design.floorGrid.enabled]]){
     if(!controlFeatures.set(id,enabled))saved=false;
     document.querySelector(`#${id}`).checked=enabled;
   }
   return saved;
 });
-let shadowFloor;
-// Keep the illustrated material colors; only the shadow map darkens them.
-const pieceShadowShader=new Shader(`
-  void mainImage(out vec4 color, vec2 uv){
-    color=texture(iChannel0,uv);
-    color.rgb*=1.0-sunColor.r*(1.0-shadow());
-  }
-`);
-const groundShadowShader=new Shader(`
-  void mainImage(out vec4 color, vec2 uv){
-    color=vec4(0.0,0.0,0.0,sunColor.r*(1.0-shadow()));
-  }
-`);
+let shadowFloor,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
+const backgroundStudio=createBackgroundStudio(document.querySelector('#backgroundPanel'),()=>{
+  if(!gameReady||!isBackgroundStudio())return;
+  requestLevelEnvironment(true);syncBackground();syncFloorGrid();
+});
 function isDesignPlayground(){return activeLevel.kind==='design-playground'}
+function isBackgroundStudio(){return activeLevel.kind==='background-studio'}
+function requestLevelEnvironment(retry=false){
+  if(!environmentLoader)return;
+  const preview=isBackgroundStudio()?backgroundStudio.values:null;
+  const id=preview?.environment??activeLevel.environment??levelGroups.find(group=>group.id===activeLevel.group)?.environment??DEFAULT_ENVIRONMENT;
+  const source=environmentById(id),width=Math.max(1,wrap.clientWidth),height=Math.max(1,wrap.clientHeight);
+  const selectionKey=`${source.id}:${activeLevel.id}:${width}:${height}:${viewSide}:${viewHeightStep}:${preview?.composition??'auto'}`;
+  if(environmentSelection?.key!==selectionKey){
+    // Use the full-board horizon to choose artwork, so panning/zooming does not
+    // download a different composition. Resizes and camera angles still adapt.
+    const frame=sceneFrame(width,height),groundFraction=.5+(frame.target.y*Math.cos(viewPitch)-frame.target.z*Math.sin(viewPitch))/frame.height;
+    const previous=environmentSelection?.environment.id===source.id?environmentSelection.environment.variant:undefined;
+    environmentSelection={key:selectionKey,environment:selectEnvironmentComposition(source,{width,height,groundFraction,previous,preferred:preview?.composition})};
+  }
+  const environment={...environmentSelection.environment};
+  if(preview){backgroundStudio.setComposition(environment);environment.groundAnchorY=backgroundStudio.anchorFor(environment)}
+  const key=`${environmentCacheKey(environment)}:${environment.groundAnchorY}`;
+  if(key===environmentRequestKey&&!(retry&&failedEnvironmentKey===key))return;
+  environmentRequestKey=key;failedEnvironmentKey=undefined;
+  const request=++environmentRequest;
+  const apply=(textures,art=environment,fallback=false)=>{
+    if(request!==environmentRequest)return;
+    activeEnvironment=art;activeEnvironmentTextures=textures;syncBackground();syncFloorGrid();
+    if(isBackgroundStudio())backgroundStudio.setStatus(fallback?`${art.name}: showing the original artwork because the new composition could not load. Choose the environment again to retry.`:`${art.name}${art.variant?` (${art.variant})`:''} ready. Preview changes stay in this studio.`);
+  };
+  const cached=environmentLoader.cached(environment);if(cached){apply(cached);return}
+  if(isBackgroundStudio())backgroundStudio.setStatus(`Loading ${environment.name}…`);
+  environmentLoader.load(environment).then(textures=>apply(textures)).catch(async()=>{
+    if(request!==environmentRequest)return;failedEnvironmentKey=key;
+    if(environment.variant){try{const textures=await environmentLoader.load(source);apply(textures,source,true);return}catch{}}
+    if(request===environmentRequest&&isBackgroundStudio())backgroundStudio.setStatus('The scenery could not be loaded. Choose the environment again to retry. The previous scenery is still displayed.');
+  });
+}
 function currentDesign(){return isDesignPlayground()?designPlayground.values:designPlayground.appliedValues}
 function movementMarkersEnabled(){return isDesignPlayground()?designPlayground.values.studs.enabled:controlFeatures.enabled('movementStuds')}
 function depthColorsEnabled(){return isDesignPlayground()||controlFeatures.enabled('pullDepthColors')}
+function customFloorGridEnabled(){return isDesignPlayground()?designPlayground.values.floorGrid.enabled:controlFeatures.enabled('floorGrid')}
 let W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
 let palette,topPalette,sidePalette;
 const pullDepthPalette=[new Color(151/255,197/255,143/255),new Color(245/255,216/255,113/255),new Color(236/255,151/255,137/255)];
@@ -94,7 +126,7 @@ function useLevelPalette(level){
   sidePalette=Object.fromEntries(Object.entries(palette).map(([slot,color])=>[slot,shaded(color,.96)]));
 }
 useLevelPalette(activeLevel);
-let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,toastTimer,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
+let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const inkColor=new Color(.157,.145,.122);
 const viewControls=createViewController(document.querySelector('#viewController'),position=>changeView(position.horizontal,position.vertical));
@@ -239,11 +271,10 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth){
   m.doubleSided=true;return m;
 }
 function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),palette[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
-function syncExtrusions(){for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();for(const g of groups)g.frontFaces=[];
+function syncExtrusions(){for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
   for(const g of groups)if(g.depth)for(const c of g.cells){
-    const base=vec3(c.x+.5,H-c.y-.5,0),front=worldPoint(base.x,base.y,g.depth).add(vec3(0,0,.025)),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
+    const base=vec3(c.x+.5,H-c.y-.5,0),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
     extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);
-    const frontFace=makeSurface(front,frontTileMesh(),selectedSurfaceColor(g));extrusionObjects.push(frontFace);g.frontFaces.push(frontFace);sideObjectInfo.set(frontFace,g);
     for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,.003,0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top)}
   }
 }
@@ -344,26 +375,24 @@ function drawHoverSpot(){
 }
 function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(playerObject.mesh,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
 function syncFloorGrid(){
+  const showFloor=!isBackgroundStudio()||backgroundStudio.values.showGuides,custom=customFloorGridEnabled(),floor=currentDesign().floorGrid;
+  wrap.dataset.floorStyle=custom?'custom-grid':'grid';
   const o=backgroundObjects[backgroundObjects.length-1];if(!o)return;
-  const m=new Mesh(),width=wrap.clientWidth,height=wrap.clientHeight,ortho=render3D.camera.orthographic,aspect=width/height,worldWidth=ortho*aspect,line=1.5*ortho/height,gridColor=new Color(1,1,1,.55),floorWash=new Color(1,1,1,.16),size=vec2(width,height);
+  if(!showFloor){o.mesh=undefined;return}
+  const m=new Mesh(),width=wrap.clientWidth,height=wrap.clientHeight,ortho=render3D.camera.orthographic,aspect=width/height,worldWidth=ortho*aspect,line=(custom?floor.gridWidth:1.5)*ortho/height,gridColor=custom?designColor(floor.gridColor):new Color(1,1,1,.55),floorWash=custom?designColor(floor.color):new Color(1,1,1,activeEnvironment.floorWashOpacity),size=vec2(width,height);
+  if(custom){gridColor.a=floor.gridOpacity;floorWash.a=floor.opacity}
   render3D.updateMatrices(aspect);
   const toPlane=p=>{const q=render3D.worldToScreen(p,size);return vec2((q.x/width-.5)*worldWidth,(.5-q.y/height)*ortho)};
   const horizon=render3D.worldToScreen(vec3(4,0,0),size),hy=(.5-horizon.y/height)*ortho;
-  const addLine=(a,b)=>{const p=toPlane(a),q=toPlane(b),dx=q.x-p.x,dy=q.y-p.y,length=Math.hypot(dx,dy)||1,nx=-dy/length*line/2,ny=dx/length*line/2,limit=hy-line/2;let poly=[vec2(p.x+nx,p.y+ny),vec2(q.x+nx,q.y+ny),vec2(q.x-nx,q.y-ny),vec2(p.x-nx,p.y-ny)],clipped=[];for(let i=0;i<poly.length;i++){const cur=poly[i],prev=poly[(i+poly.length-1)%poly.length],ci=cur.y<=limit,pi=prev.y<=limit;if(ci!==pi){const t=(limit-prev.y)/(cur.y-prev.y);clipped.push(vec2(prev.x+(cur.x-prev.x)*t,limit))}if(ci)clipped.push(cur)}if(clipped.length<3)return;const center=vec2(clipped.reduce((sum,v)=>sum+v.x,0)/clipped.length,clipped.reduce((sum,v)=>sum+v.y,0)/clipped.length),vertices=[vec3(center.x,center.y,0),...clipped.map(v=>vec3(v.x,v.y,0))],indices=[];for(let i=1;i<=clipped.length;i++)indices.push(0,i,i===clipped.length?1:i+1);m.addTriangles(vertices,indices,vec3(0,0,1),undefined,gridColor)};
+  const addLine=(a,b)=>{if(line<=0||gridColor.a<=0)return;const p=toPlane(a),q=toPlane(b),dx=q.x-p.x,dy=q.y-p.y,length=Math.hypot(dx,dy)||1,nx=-dy/length*line/2,ny=dx/length*line/2,limit=hy-line/2;let poly=[vec2(p.x+nx,p.y+ny),vec2(q.x+nx,q.y+ny),vec2(q.x-nx,q.y-ny),vec2(p.x-nx,p.y-ny)],clipped=[];for(let i=0;i<poly.length;i++){const cur=poly[i],prev=poly[(i+poly.length-1)%poly.length],ci=cur.y<=limit,pi=prev.y<=limit;if(ci!==pi){const t=(limit-prev.y)/(cur.y-prev.y);clipped.push(vec2(prev.x+(cur.x-prev.x)*t,limit))}if(ci)clipped.push(cur)}if(clipped.length<3)return;const center=vec2(clipped.reduce((sum,v)=>sum+v.x,0)/clipped.length,clipped.reduce((sum,v)=>sum+v.y,0)/clipped.length),vertices=[vec3(center.x,center.y,0),...clipped.map(v=>vec3(v.x,v.y,0))],indices=[];for(let i=1;i<=clipped.length;i++)indices.push(0,i,i===clipped.length?1:i+1);m.addTriangles(vertices,indices,vec3(0,0,1),undefined,gridColor)};
   // Wash the entire scenery below the horizon; the puzzle remains in front
   // because this camera-facing layer sits behind the playfield geometry.
-  m.addQuad(vec3(-worldWidth/2,hy,0),vec3(worldWidth/2,hy,0),vec3(worldWidth/2,-ortho/2,0),vec3(-worldWidth/2,-ortho/2,0),new Color(1,1,1,.30));
-  const side=cameraSlant(viewSide),s=side*DEPTH_SKEW,ground=.035,left=-1,right=W;
-  const wash=[toPlane(vec3(left,ground,.025)),toPlane(vec3(right,ground,.025)),toPlane(vec3(right+s*GRID_DEPTH,ground,GRID_DEPTH+.025)),toPlane(vec3(left+s*GRID_DEPTH,ground,GRID_DEPTH+.025))];m.addQuad(...wash.map(p=>vec3(p.x,p.y,0)),floorWash);
-  for(let x=left;x<right;x++)for(let z=0;z<GRID_DEPTH;z++){
-    const coverable=!!mural[H-1]?.[x]&&mural[H-1][x]!=='.'&&z<3;
-    if(coverable)continue;
-    const tint=new Color(.60,.62,.66,.30),gap=0;
-    const corners=[[x+gap,z+gap],[x+1-gap,z+gap],[x+1-gap,z+1-gap],[x+gap,z+1-gap]].map(([xx,zz])=>{const p=toPlane(vec3(xx+s*zz,ground,zz));return vec3(p.x,Math.min(p.y,hy-line/2),0)});
-    m.addQuad(...corners,tint);
-  }
-  for(let x=left;x<=right;x++)addLine(vec3(x,ground,.025),vec3(x+s*GRID_DEPTH,ground,GRID_DEPTH+.025));
-  for(let z=0;z<=GRID_DEPTH;z++)addLine(vec3(left+s*(z+.025),ground,z+.025),vec3(right+s*(z+.025),ground,z+.025));
+  m.addQuad(vec3(-worldWidth/2,hy,0),vec3(worldWidth/2,hy,0),vec3(worldWidth/2,-ortho/2,0),vec3(-worldWidth/2,-ortho/2,0),new Color(1,1,1,activeEnvironment.groundWashOpacity));
+  const s=cameraSlant(viewSide)*DEPTH_SKEW,ground=0,{left,right,back,front}=puzzleFloorBounds(mural,GRID_DEPTH);
+  const wash=[toPlane(worldPoint(left,ground,back)),toPlane(worldPoint(right,ground,back)),toPlane(worldPoint(right,ground,front)),toPlane(worldPoint(left,ground,front))];m.addQuad(...wash.map(p=>vec3(p.x,p.y,0)),floorWash);
+  for(let x=left;x<=right;x++)addLine(vec3(x+s*back,ground,back),vec3(x+s*front,ground,front));
+  for(let z=back;z<=front;z++)addLine(vec3(left+s*z,ground,z),vec3(right+s*z,ground,z));
+  wrap.dataset.floorBounds=JSON.stringify({left,right,back,front});
   const thickness=2.4*ortho/height;
   m.addQuad(vec3(-worldWidth/2,hy+thickness/2,0),vec3(worldWidth/2,hy+thickness/2,0),vec3(worldWidth/2,hy-thickness/2,0),vec3(-worldWidth/2,hy-thickness/2,0),inkColor);
   m.doubleSided=true;o.setMesh(m);o.pos3D=render3D.camera.pos.add(render3D.camera.getForward().scale(89.4));o.rotation3D=render3D.camera.rotation.copy();o.size3D=vec3(worldWidth,ortho,.1);o.color=new Color(1);o.lighting=false;o.transparent=true;
@@ -371,7 +400,11 @@ function syncFloorGrid(){
 function syncDesignLighting(){
   const enabled=isDesignPlayground()?designPlayground.values.shadows.enabled:controlFeatures.enabled('pieceShadows');
   render3D.shadows=enabled;
-  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=enabled?pieceShadowShader:undefined;object.castShadow=object.receiveShadow=enabled}
+  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=enabled?pieceShadowShader:undefined;object.castShadow=false;object.receiveShadow=enabled}
+  // The solid prisms cast shadows. Decorative top overlays and the offset front
+  // faces only receive them, avoiding multiple almost-coplanar shadow layers.
+  for(const object of extrusionOutlines)object.castShadow=enabled;
+  for(const group of groups)if(!group.depth)for(const object of group.objects)object.castShadow=enabled;
   movementMarkers?.setShadowShader(enabled?pieceShadowShader:undefined);
   for(const part of pomParts){part.emissive=1;part.shader=enabled?pieceShadowShader:undefined;part.castShadow=enabled&&part===playerObject;part.receiveShadow=enabled}
   for(const part of [flagPole,flagCloth,flagVase,flagCap,flagPrint].filter(Boolean)){part.emissive=1;part.shader=enabled?pieceShadowShader:undefined;part.castShadow=enabled&&!!part.mesh&&part!==flagPrint;part.receiveShadow=enabled}
@@ -400,14 +433,28 @@ function selectedSurfaceColor(g,now=performance.now()){
 }
 function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
-function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio,sceneHeight=baseCameraHeight||ortho;
+function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio;
+  if(!activeEnvironmentTextures||backgroundObjects.length<2)return;
+  if(gameReady)requestLevelEnvironment();
   render3D.updateMatrices(ratio);const base=render3D.worldToScreen(vec3(4,0,0),vec2(width,height)),groundQ=base?(height/2-base.y)*ortho/height:-ortho*.28;if(base)wrap.style.setProperty('--horizon-y',`${Math.max(0,Math.min(100,base.y/height*100))}%`);
   const place=(o,distance,x,y,w,h)=>{o.pos3D=cam.pos.add(forward.scale(distance)).add(right.scale(x)).add(up.scale(y));o.scale3D=vec3(w,h,.012);o.rotation3D=cam.rotation.copy()};
-  const sky=backgroundObjects[0],meadow=backgroundObjects[1],skyH=sceneHeight*1.15;place(sky,90,0,-ortho/2+skyH/2,skyH*3,skyH);
-  // The meadow's center ridge starts 60% down its image. Anchor that ridge
-  // to the projected ground, and cover the area below it at every aspect ratio.
-  const ridge=.60,groundToBottom=Math.max(0,ortho/2+groundQ),meadowH=Math.max(sceneHeight*1.15,worldWidth/3,groundToBottom/(1-ridge));
-  place(meadow,89.7,0,groundQ+(ridge-.5)*meadowH,meadowH*3,meadowH);meadow.color=new Color(1,1,1,.8);
+  const frame=environmentFrame(activeEnvironment,{ortho,worldWidth,groundQ}),preview=isBackgroundStudio()?backgroundStudio.values:null;
+  const sky=backgroundObjects[0],ground=backgroundObjects[1];
+  for(const [index,object]of [sky,ground].entries()){const visible=!preview||preview.layers==='both'||preview.layers===(index?'foreground':'background');object.mesh=visible||index===0?box:undefined;object.tileInfo=visible?activeEnvironmentTextures[index]:undefined;if(index===0)object.color=visible?new Color(1):designColor('#eee8fa')}
+  place(sky,90,0,frame.backgroundY,frame.backgroundHeight*activeEnvironment.aspectRatio,frame.backgroundHeight);
+  place(ground,89.7,0,frame.foregroundY,frame.foregroundHeight*activeEnvironment.aspectRatio,frame.foregroundHeight);ground.color=new Color(1,1,1,activeEnvironment.foregroundOpacity);
+  const overlay=backgroundObjects[2],overlayMesh=new Mesh(),horizon=Math.max(-ortho/2,Math.min(ortho/2,groundQ));
+  // The divider is the same projected ground plane used by the floor guide.
+  // Paint behind the puzzle and floor/shadows, independent of image cropping.
+  if(preview)for(const [id,top,bottom]of [['background',ortho/2,horizon],['foreground',horizon,-ortho/2]]){
+    const setting=preview.overlays[id];if(setting.opacity<=0||top<=bottom)continue;
+    const color=designColor(setting.color);color.a=setting.opacity;
+    overlayMesh.addQuad(vec3(-worldWidth/2,top,0),vec3(worldWidth/2,top,0),vec3(worldWidth/2,bottom,0),vec3(-worldWidth/2,bottom,0),color);
+  }
+  overlayMesh.doubleSided=true;overlay.mesh=preview?overlayMesh:undefined;place(overlay,89.55,0,0,1,1);
+  wrap.dataset.environment=activeEnvironment.id;wrap.dataset.environmentVariant=activeEnvironment.variant??'legacy';wrap.dataset.groundAnchor=String(activeEnvironment.groundAnchorY);wrap.dataset.backgroundLayers=preview?.layers??'both';
+  wrap.dataset.sceneryOverlays=JSON.stringify(preview?{...preview.overlays,horizonY:(.5-horizon/ortho)*height}:null);
+  wrap.dataset.backgroundFrame=JSON.stringify({width:frame.backgroundHeight*activeEnvironment.aspectRatio*height/ortho,height:frame.backgroundHeight*height/ortho,left:width/2-frame.backgroundHeight*activeEnvironment.aspectRatio*height/ortho/2,top:height/2-(frame.backgroundY+frame.backgroundHeight/2)*height/ortho});
 }
 function syncPlayer(){resetPomShape();const p=worldPosition(player),jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(celebration?.pomOffset??0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018)}
 function syncFlag(){
@@ -437,7 +484,7 @@ function updateUI(){
   document.querySelector('#studioControls').hidden=!activeLevel.previewMove;document.querySelector('#previewClimb').disabled=busy;document.querySelector('#movementCase').disabled=busy;
   if(activeLevel.studioExample)document.querySelector('#movementCase').value=activeLevel.studioExample.id;
   if(studioTargetObject){studioTargetObject.color=new Color(1,.95,.73,activeLevel.previewMove ? .85 : 0);if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}
-  if(!toastTimer)showHelp(contextHelp());
+  syncInteractionHelp();
   viewControls.update(viewSide,viewHeightStep);viewControls.setDisabled(busy||won);
   const color=selected?palette[selected.color]:null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
   wrap.style.setProperty('--block-ink',color?blockActionText(color):'#292537');
@@ -449,14 +496,30 @@ function syncMovementMarkers(){
   movementMarkers.sync(standableReachable().filter(p=>p.y<H),standingSpotCenter,p=>platformTopColor(byCell[p.y][p.x],p.x,p.z));
 }
 function pickMovementMarker(ray){return movementMarkersEnabled()?movementMarkers?.pick(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines]):null}
-function contextHelp(){if(won)return 'Pom made it to the flag!';if(busy)return 'Pom is on his way…';if(selected){if(!canReach(selected))return 'Move Pom beside this block to push or pull it.';return `Block pulled ${selected.depth} of 3 steps out. ${selected.depth===3?'Push it in to make a different path.':'Use Push in or Pull out to make a path.'}`}if(isDesignPlayground())return 'Adjust the design controls. Pull pieces or turn the view to compare tops, sides, and shadows.';if(activeLevel.studioExample)return activeLevel.studioExample.help;return viewMobile?'Tap a block or walking spot. Drag to pan · pinch to zoom.':'Select a block to pull it. Click a walking spot to move Pom.'}
-function showHelp(text){const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on')}
-function say(text){clearTimeout(toastTimer);showHelp(text);toastTimer=setTimeout(()=>{toastTimer=undefined;showHelp(contextHelp())},3200)}
+function hideHelp(){clearTimeout(toastTimer);toastTimer=undefined;helpKind=null;const el=document.querySelector('#toast');el.classList.remove('on');el.textContent=''}
+function showHelp(text,kind,duration=4800){
+  if(levelPreferences.hideHelpText)return false;
+  hideHelp();helpKind=kind;const el=document.querySelector('#toast');el.textContent=text;el.classList.add('on');
+  toastTimer=setTimeout(()=>{hideHelp();if(kind==='intro')syncInteractionHelp()},duration);return true;
+}
+function syncInteractionHelp(){
+  if(busy||won||document.querySelector('.stage').inert||!document.querySelector('#menuScreen').hidden)return;
+  const pieces=groups.filter(canInteract);
+  if(pieces.length<2){interactionHelpKey=null;if(helpKind==='choices')hideHelp();return}
+  if(helpKind==='intro')return;
+  // Explain a new set of choices once, rather than on every selection or pull.
+  const key=`${activeLevel.id}:${pieces.map(g=>g.id).sort().join(',')}`;
+  if(key!==interactionHelpKey&&showHelp('Pom can push or pull more than one piece here. Choose a piece by tapping its front or side.','choices'))interactionHelpKey=key;
+}
+function showOpeningHelp(){
+  if(!openingHelpShown&&!isPreviewLevel(activeLevel)&&showHelp('Pull the blocks out to make steps, then guide Pom to the flag.','intro',6500))openingHelpShown=true;
+  else syncInteractionHelp();
+}
 function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=false,deferCheck=false}={}){
   if(!preserveVictoryTransition)victoryEffects.reset();
   let cardReady=Promise.resolve(null);
   syncScreenAppearance(panel==='title'?'home':panel);
-  stopIntro();celebration=null;viewControls.close();
+  hideHelp();interactionHelpKey=null;stopIntro();celebration=null;viewControls.close();
   const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
   for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
   document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='';
@@ -506,19 +569,19 @@ function renderLevelList(revealLevelId){
   list.scrollTop=scroll;
 }
 function updateProgressSettings(){
-  document.querySelector('#progressCount').textContent=`${levelProgress.count} of ${levels.filter(level=>level.kind!=='design-playground').length} levels completed`;
+  document.querySelector('#progressCount').textContent=`${levelProgress.count} of ${levels.filter(level=>!isPreviewLevel(level)).length} levels completed`;
   document.querySelector('#clearProgress').disabled=levelProgress.count===0;
   if(!progressSaved)document.querySelector('#progressMessage').textContent='Your browser could not save progress. Check that site storage is allowed.';
 }
 function recordCompletedLevel(){progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
   victoryEffects.reset();
-  activeLevel=level;document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('#designPanel').hidden=!isDesignPlayground();useLevelPalette(level);W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  activeLevel=level;document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();useLevelPalette(level);W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitch;viewControls.close();celebration=null;
-  clearTimeout(toastTimer);toastTimer=undefined;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();startBoardView();
+  hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();startBoardView();requestLevelEnvironment();
 }
-function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false}
+function startLevel(id){if(!gameReady)return;let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');resetLevelState(level);document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;showOpeningHelp()}
 document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
 document.querySelector('#openSettings').addEventListener('click',()=>showMenu('settings'));
 for(const feature of CONTROL_FEATURES){
@@ -561,10 +624,11 @@ window.addEventListener('wheel',e=>{
 renderLevelList();
 function sceneFrame(width,height,side=viewSide){
   const c=Math.cos(viewPitch),s=Math.sin(viewPitch),points=[];
+  const floor=puzzleFloorBounds(mural,GRID_DEPTH);
   // Reserve one fixed frame for all six angles, so rotating never recenters or zooms the wall.
   for(const pitch of CAMERA_PITCHES)for(const slant of [-1,1]){
     const sn=Math.sin(pitch),cs=Math.cos(pitch);
-    for(const x of [-1,W])for(const z of [0,GRID_DEPTH])points.push([x+slant*DEPTH_SKEW*z,-sn*z]);
+    for(const x of [floor.left,floor.right])for(const z of [floor.back,floor.front])points.push([x+slant*DEPTH_SKEW*z,-sn*z]);
     for(const x of [0,W])for(const y of [0,H+.85])for(const z of [0,3])points.push([x+slant*DEPTH_SKEW*z,cs*y-sn*z]);
   }
   const centerX=W/2,halfWidth=Math.max(...points.map(p=>Math.abs(p[0]-centerX))),minX=centerX-halfWidth,maxX=centerX+halfWidth,minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
@@ -597,11 +661,11 @@ function applyBoardView(clamp=true){
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
 }
 function startBoardView(animate=true){
-  stopIntro();viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;showHelp(contextHelp());
+  stopIntro();viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
   const f=sceneFrame(viewWidth,viewHeight);
   if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
   const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
-  if(!viewMobile||fitUnit>=tappingUnit()||activeLevel.name==='Movement Studio'||isDesignPlayground())return;
+  if(!viewMobile||fitUnit>=tappingUnit()||activeLevel.name==='Movement Studio'||isPreviewLevel(activeLevel))return;
   const token=introFrame,from=viewTarget.copy(),unit=tappingUnit(),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
   // Clamp the destination once, then interpolate between two valid camera poses.
   // Clamping on every frame can introduce little snaps as a boundary is crossed.
@@ -679,7 +743,7 @@ function syncVictoryShowcase(now,sequence){
   requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
 function startCelebration(){
-  stopIntro();selected=null;clearBoardHover();
+  hideHelp();stopIntro();selected=null;clearBoardHover();
   const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,baseHeight:render3D.camera.orthographic,baseTarget:viewTarget.copy(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches};
   setUmbrellaVisible(false);victoryEffects.start(activeLevel.name,pomScreenPoint(),wrap.getBoundingClientRect().top+16);requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
@@ -700,7 +764,9 @@ function gameInit(){
   render3D.updateMatrices(bounds.width/bounds.height);
   const makeBackdrop=(texture,color)=>{const o=new EngineObject3D(vec3(),box,texture,color);o.rotation3D=render3D.camera.rotation.copy();o.lighting=false;o.receiveShadow=false;o.castShadow=false;o.emissive=1;o.transparent=texture===textureInfos[1];backgroundObjects.push(o);return o};
   makeBackdrop(textureInfos[0],new Color(1));makeBackdrop(textureInfos[1],new Color(1));
+  const overlays=makeBackdrop(undefined,new Color(1));overlays.transparent=true;overlays.mesh=undefined;
   makeBackdrop(undefined,new Color(1));syncFloorGrid();
+  environmentLoader=createEnvironmentLoader([textureInfos[0],textureInfos[1]]);activeEnvironmentTextures=[textureInfos[0],textureInfos[1]];
   syncBackground();
   makeGroups();rebuildBlockMeshes();
   hoverObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));hoverObject.transparent=true;hoverObject.render3D=()=>{};
@@ -729,12 +795,12 @@ function gameInit(){
 }
 function gameUpdate(){
   movementMarkers?.update(performance.now());
-  if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of [...selected.objects,...(selected.frontFaces??[])])object.color=color}else pulsePiece=null;
+  if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;
 }
 function moveTo(p,pressMarker=false){
-  if(won||busy)return;const path=findPath(p);if(!path||path.length<2){say('That ledge is out of reach. Pull a block out to make a step.');return}
+  if(won||busy||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
   const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
-  save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
+  hideHelp();save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   const readyAt=performance.now()+(pressMarker?(movementMarkers?.press(p)??0):0);
   function tick(now){
     if(now<readyAt){requestAnimationFrame(tick);return}
@@ -744,7 +810,7 @@ function moveTo(p,pressMarker=false){
     while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape()}
     if(index===plans.length){
       falling=false;setUmbrellaVisible(false);busy=false;
-      if(!isDesignPlayground()&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');say('Pom made it to the flag!');startCelebration()}else{autoSelectNearbyPiece();say('Pom made it to that ledge.')}updateUI();return;
+      if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');startCelebration()}else autoSelectNearbyPiece();updateUI();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const motion={pose:plan.stretch?shapePomReach(from,to,t,profile):jumpPose(from,to,t,profile),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
@@ -762,12 +828,15 @@ function clickBoard(e){if(busy||won)return;const point=boardPoint(e),ray=render3
   // Resolve visible, walkable cube tops before wall faces. The wall can be
   // nearer along the ray even when the pointer is visually on a platform top.
   let best=null,bestD=Infinity;for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+cameraSlant(viewSide)*DEPTH_SKEW*(p.z+.5);if(Math.abs(ray.direction.y)<1e-6)continue;const t=(h-ray.origin.y)/ray.direction.y;if(t<0)continue;const q=ray.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best){moveTo(best);return}
-  const hits=engineObjectsRaycast3D(ray),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){selected=g;updateUI();say('Piece selected. Use Push in or Pull out.')}return}}
+  const hits=engineObjectsRaycast3D(ray),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){hideHelp();selected=g;updateUI()}else showHelp('Pom cannot push or pull this piece from here. Move him beside an exposed edge.','wall');return}}
   // Match a visible point on the floor plane to the nearest reachable step.
-  const floor=pointOnFloor(ray);if(floor){selected=null;updateUI();const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15)moveTo(p)}}
+  const floor=pointOnFloor(ray);if(floor){selected=null;updateUI();const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15){moveTo(p);return}}
+    const x=floor.x-cameraSlant(viewSide)*DEPTH_SKEW*floor.z;
+    if(x>=-1&&x<W&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
+  }
 }
-function manipulate(dir){const g=selected;if(busy||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir)){say('Pom has no safe step to move with this piece.');return}save();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI();say(dir>0?'Pulled one step out.':'Pushed one step back.')}
-function restore(s){celebration=null;groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
+function manipulate(dir){const g=selected;if(busy||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
+function restore(s){hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 function changeView(horizontal,vertical=viewHeightStep){
   if(busy||won||!viewReady)return;
   const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;
@@ -787,7 +856,7 @@ const canvasActions=document.querySelector('.canvas-actions');for(const event of
 const studioControls=document.querySelector('#studioControls'),movementCase=document.querySelector('#movementCase');for(const example of movementExamples){const option=document.createElement('option');option.value=example.id;option.textContent=example.label;movementCase.append(option)}movementCase.onchange=()=>{if(!busy)resetLevelState(studioLevel(levels,movementExamples.find(example=>example.id===movementCase.value)))};
 const previewClimb=document.querySelector('#previewClimb');for(const event of ['pointerdown','pointerup','pointermove'])studioControls.addEventListener(event,e=>e.stopPropagation());previewClimb.onclick=()=>{if(busy||!activeLevel.previewMove)return;const side=viewSide,height=viewHeightStep;resetLevelState(activeLevel);changeView(side,height);moveTo(activeLevel.previewMove)};
 document.querySelector('#pull').onclick=()=>manipulate(1);document.querySelector('#push').onclick=()=>manipulate(-1);
-document.querySelector('#undo').onclick=()=>busy?null:history.length?restore(history.pop()):say('Nothing to undo yet.');document.querySelector('#reset').onclick=()=>{if(busy)return;celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;autoSelectNearbyPiece();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView();say('Puzzle reset.')};
+document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(history.pop())};document.querySelector('#reset').onclick=()=>{if(busy)return;hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;autoSelectNearbyPiece();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView()};
 window.addEventListener('keydown',e=>{
   if(!menuScreen.hidden&&menuScreen.classList.contains('is-levels')){
     const step=Math.max(120,levelList.clientHeight*.72);

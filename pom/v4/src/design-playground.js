@@ -23,6 +23,11 @@ function normalize(saved){
   if(typeof studs?.enabled==='boolean')result.studs.enabled=studs.enabled;
   result.studs.width=number(studs?.width,result.studs.width,0,6);result.studs.opacity=number(studs?.opacity,result.studs.opacity,0,1);
   if(isColor(studs?.color))result.studs.color=studs.color;
+  // Adopt the approved floor once, while preserving every other saved design field.
+  const floor=saved?.floorGrid?.revision===DEFAULT_DESIGN.floorGrid.revision?saved.floorGrid:null;
+  if(typeof floor?.enabled==='boolean')result.floorGrid.enabled=floor.enabled;
+  for(const [name,max]of [['opacity',1],['gridOpacity',1],['gridWidth',8]])result.floorGrid[name]=number(floor?.[name],result.floorGrid[name],0,max);
+  for(const name of ['color','gridColor'])if(isColor(floor?.[name]))result.floorGrid[name]=floor[name];
   return result;
 }
 
@@ -102,6 +107,14 @@ export function createDesignPlayground(panel,onChange,onApply){
     range(studs,'Stud line thickness',values.studs.width,0,6,.1,n=>values.studs.width=n,n=>`${n}px`,DEFAULT_DESIGN.studs.width);
     color(studs,'Stud line color',values.studs.color,n=>values.studs.color=n,DEFAULT_DESIGN.studs.color);
     range(studs,'Stud line opacity',values.studs.opacity*100,0,100,1,n=>values.studs.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.studs.opacity*100);
+    const floor=section(body,'Floor grid');
+    const floorCopy=document.createElement('p');floorCopy.className='design-copy';floorCopy.textContent='Enable custom floor styling to adjust the existing flat grid. Line width is measured in screen pixels.';floor.append(floorCopy);
+    toggle(floor,'Customize floor grid',values.floorGrid.enabled,n=>values.floorGrid.enabled=n,DEFAULT_DESIGN.floorGrid.enabled);
+    color(floor,'Floor color',values.floorGrid.color,n=>values.floorGrid.color=n,DEFAULT_DESIGN.floorGrid.color);
+    range(floor,'Floor opacity',values.floorGrid.opacity*100,0,100,1,n=>values.floorGrid.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.floorGrid.opacity*100);
+    color(floor,'Floor grid line color',values.floorGrid.gridColor,n=>values.floorGrid.gridColor=n,DEFAULT_DESIGN.floorGrid.gridColor);
+    range(floor,'Floor grid line opacity',values.floorGrid.gridOpacity*100,0,100,1,n=>values.floorGrid.gridOpacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.floorGrid.gridOpacity*100);
+    range(floor,'Floor grid line width',values.floorGrid.gridWidth,0,8,.1,n=>values.floorGrid.gridWidth=n,n=>`${n}px`,DEFAULT_DESIGN.floorGrid.gridWidth);
     const shadows=section(body,'Piece shadows');
     toggle(shadows,'Pieces cast shadows',values.shadows.enabled,n=>values.shadows.enabled=n,DEFAULT_DESIGN.shadows.enabled);
     range(shadows,'Shadow strength',values.shadows.strength*100,0,100,1,n=>values.shadows.strength=n/100,n=>`${n}%`,DEFAULT_DESIGN.shadows.strength*100);

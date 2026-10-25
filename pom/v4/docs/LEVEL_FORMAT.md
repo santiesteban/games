@@ -47,7 +47,7 @@ by `number`. Empty groups are not rendered. The built-in catalog reserves
 `rangeLabel` optionally replaces the automatically generated number range.
 
 The 18 reconstructed Murals now occupy display numbers 55–72. Others follows
-with Movement Studio (73), Pull out a path (74), and Design Playground (75). The first two retain the original
+with Movement Studio (73), Pull out a path (74), Design Playground (75), and Background Studio (76). The first two retain the original
 `builtin-055` and `builtin-056` values. See [Murals provenance](MURALS.md).
 
 ## Identity and metadata
@@ -60,7 +60,8 @@ with Movement Studio (73), Pull out a path (74), and Design Playground (75). The
 | `group` | ID of a declared catalog group. |
 | `name` | Nonempty display title. |
 | `description` | Optional explanatory text. |
-| `kind` | `puzzle` (default), `movement-studio`, or `design-playground`. The playground is a non-completable design scene with controls scoped to that scene. |
+| `kind` | `puzzle` (default), `movement-studio`, `design-playground`, or `background-studio`. The design/background studios are non-completable scenes with controls scoped to that scene. |
+| `environment` | Optional scenery ID from `src/environments.js`. Overrides the group's optional `environment`; defaults to Meadow. See [Background Studio](BACKGROUND_STUDIO.md). |
 | `knownIssues` | Boolean, default false. Used by the existing hide-known-issues setting. |
 | `difficulty` | Optional byte, 0–255, or null. Values outside the decoder's observed 1–5 range are preserved. Currently not displayed. |
 | `warnings` | Optional array of source observations. These are not proof of incompatibility. |

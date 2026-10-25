@@ -10,8 +10,8 @@
 
 .canvas-actions{gap:10px}.block-action{flex:1;min-width:0;position:relative;justify-content:center}.block-action span{position:absolute;left:14px}#pull span{left:auto;right:14px}
 
-/* A single persistent message floats above the playfield, clear of the controls. */
-.toast{top:12px;bottom:auto;left:50%;max-width:min(560px,calc(100% - 28px));width:max-content;border-radius:12px;padding:10px 16px;background:#24212b;color:#fffaf0;font:500 12px/1.4 'DM Sans',sans-serif;opacity:1;z-index:6;text-wrap:balance}.control-deck{justify-content:space-between}.selected-help{display:none}
+/* Contextual hints appear briefly above the playfield, clear of the controls. */
+.toast{top:12px;bottom:auto;left:50%;max-width:min(560px,calc(100% - 28px));width:max-content;border-radius:12px;padding:10px 16px;background:#24212b;color:#fffaf0;font:500 12px/1.4 'DM Sans',sans-serif;z-index:6;text-wrap:balance}.toast:not(.on){visibility:hidden}.control-deck{justify-content:space-between}.selected-help{display:none}
 @media(max-width:600px){.control-deck{display:flex;gap:8px}.toast{top:10px;padding:8px 12px;font-size:11px}}
 @media(max-height:400px){.toast{top:6px;padding-block:6px;font-size:10px}}
 
@@ -276,10 +276,10 @@ html,body{background-color:var(--screen-top-color)}
 
 /* The playground keeps its live design controls beside the scene. */
 .design-panel[hidden]{display:none!important}
-.stage.is-design{grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr) auto}
-.stage.is-design>.game-header{grid-column:1/-1;grid-row:1}
-.stage.is-design>.canvas-wrap{grid-column:1;grid-row:2}
-.stage.is-design>.control-deck{grid-column:1;grid-row:3}
+.stage.has-studio-panel{grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr) auto}
+.stage.has-studio-panel>.game-header{grid-column:1/-1;grid-row:1}
+.stage.has-studio-panel>.canvas-wrap{grid-column:1;grid-row:2}
+.stage.has-studio-panel>.control-deck{grid-column:1;grid-row:3}
 .design-panel{grid-column:2;grid-row:2/4;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#fffaf0;border-left:2px solid var(--ink);border-top:2px solid var(--ink)}
 .design-panel-header{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:2px solid var(--ink);background:var(--paper)}
 .design-panel-header h2{font-size:17px;margin:0}.design-panel-header .btn{min-height:30px;padding:4px 8px;box-shadow:none}
@@ -301,12 +301,12 @@ html,body{background-color:var(--screen-top-color)}
 .design-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.design-actions .btn{flex:1;min-width:110px}
 .design-panel.is-collapsed .design-controls-body{display:none}
 @media(max-width:760px){
-  .stage.is-design{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}
-  .stage.is-design>.design-panel{grid-column:1;grid-row:3;border-left:0;height:min(40dvh,300px)}
-  .stage.is-design>.design-panel.is-collapsed{height:auto}
-  .stage.is-design>.control-deck{grid-column:1;grid-row:4}
+  .stage.has-studio-panel{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}
+  .stage.has-studio-panel>.design-panel{grid-column:1;grid-row:3;border-left:0;height:min(40dvh,300px)}
+  .stage.has-studio-panel>.design-panel.is-collapsed{height:auto}
+  .stage.has-studio-panel>.control-deck{grid-column:1;grid-row:4}
   .design-panel-header{padding:8px 14px}.design-panel-header h2{font-size:15px}
-  .stage.is-design .toast{max-width:calc(100% - 24px);font-size:10px;padding:7px 10px}
+  .stage.has-studio-panel .toast{max-width:calc(100% - 24px);font-size:10px;padding:7px 10px}
 }
 
 /* Labels and arrows follow the contrast of the selected piece's button color. */
@@ -329,3 +329,8 @@ html,body{background-color:var(--screen-top-color)}
 .victory-transition{position:fixed;inset:0;z-index:120;width:100%;height:100%;pointer-events:auto}
 @keyframes victory-message-appear{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 @media(prefers-reduced-motion:reduce){.victory-message{animation:none}}
+
+/* Loaded scenery is drawn by the engine; hide the original CSS fallback layers. */
+.canvas-wrap[data-environment]{background:#eee8fa}
+.canvas-wrap[data-environment]::before,.canvas-wrap[data-environment]::after{display:none}
+.background-controls-body .design-field select{grid-column:1/-1;width:100%}

@@ -1,0 +1,110 @@
+{
+  "environment": "Little Ledges \u2014 Cobblestone Alley",
+  "id": "cobblestone-alley",
+  "schema": "artwork-delivery-only; proposed variants, not current renderer registry",
+  "colorSpace": "sRGB",
+  "dynamicRange": "SDR",
+  "bitsPerChannel": 8,
+  "variants": {
+    "portrait": {
+      "width": 1024,
+      "height": 1536,
+      "background": "cobblestone-alley-portrait-background.webp",
+      "foreground": "cobblestone-alley-portrait-foreground.webp",
+      "groundAnchorY": 0.66731771,
+      "groundAnchorPixelY": 1025,
+      "anchorMeasurement": "first alpha >=128 at horizontal center; fraction=y/canvasHeight",
+      "edgePixelYRange": [
+        1019,
+        1044
+      ],
+      "central40PercentEdgeYRange": [
+        1019,
+        1033
+      ],
+      "originalPaintingResolution": [
+        1024,
+        1536
+      ],
+      "exportResized": false,
+      "resizeScale": 1,
+      "webpQuality": 95,
+      "pairBytes": 425728,
+      "under1MB": true,
+      "alphaPreservedExactly": true,
+      "foregroundAlphaExtrema": [
+        0,
+        254
+      ],
+      "runtimePreviewMeanAbsoluteChannelError": 1.3651,
+      "safeMargins": {
+        "left": 0.1,
+        "right": 0.1,
+        "top": 0.1,
+        "bottom": 0.1
+      }
+    },
+    "landscape": {
+      "width": 2048,
+      "height": 1024,
+      "background": "cobblestone-alley-landscape-background.webp",
+      "foreground": "cobblestone-alley-landscape-foreground.webp",
+      "groundAnchorY": 0.78808594,
+      "groundAnchorPixelY": 807,
+      "anchorMeasurement": "first alpha >=128 at horizontal center; fraction=y/canvasHeight",
+      "edgePixelYRange": [
+        800,
+        892
+      ],
+      "central40PercentEdgeYRange": [
+        802,
+        824
+      ],
+      "originalPaintingResolution": [
+        1774,
+        887
+      ],
+      "exportResized": true,
+      "resizeScale": 1.1544532130777903,
+      "webpQuality": 95,
+      "pairBytes": 412532,
+      "under1MB": true,
+      "alphaPreservedExactly": true,
+      "foregroundAlphaExtrema": [
+        0,
+        255
+      ],
+      "runtimePreviewMeanAbsoluteChannelError": 1.2069,
+      "safeMargins": {
+        "left": 0.1,
+        "right": 0.1,
+        "top": 0.1,
+        "bottom": 0.1
+      }
+    }
+  },
+  "tools": {
+    "painting": "built-in image_gen",
+    "source_exports_and_landscape_resize": "Adobe plugin",
+    "packaging": "local WebP encoding, metadata and diagnostic previews"
+  },
+  "limitations": [
+    "Landscape native painting and foreground are 1774x887; both Adobe-resized uniformly to 2048x1024 (1.15445x). This adds no painted detail.",
+    "Foregrounds are AI-derived matching artwork, not pixel-identical extracts of backgrounds; inspect overlay before integration.",
+    "No layered PSD supplied; separate full-canvas PNG layers and original generation PNGs serve as lossless sources.",
+    "No renderer integration or physical iPhone review performed. Static canvas framing previews are not gameplay validation.",
+    "Landscape groundAnchorY 0.78808594 departs from near-0.70 target to preserve natural terrain and architecture. Central 40% edge varies by 22 runtime pixels."
+  ],
+  "reviewStatus": "artwork review candidate; renderer and physical-device validation outstanding",
+  "verification": {
+    "exactRuntimeDimensions": true,
+    "opaqueBackgrounds": true,
+    "webpAlphaMatchesPNGs": true,
+    "sRGBProfilesEmbedded": true,
+    "pairBudgetsBelow1000000Bytes": true,
+    "combinedPreviewsInspected": true,
+    "lightDarkEdgePreviewsInspected": true,
+    "gameplayIntegrationTested": false,
+    "physicalIPhoneTested": false
+  }
+}

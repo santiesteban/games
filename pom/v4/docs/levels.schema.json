@@ -49,6 +49,10 @@
         },
         "rangeLabel": {
           "type": "string"
+        },
+        "environment": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$"
         }
       }
     },
@@ -185,7 +189,8 @@
           "enum": [
             "puzzle",
             "movement-studio",
-            "design-playground"
+            "design-playground",
+            "background-studio"
           ]
         },
         "knownIssues": {
@@ -328,6 +333,10 @@
         },
         "source": {
           "type": "object"
+        },
+        "environment": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]*$"
         }
       }
     }

@@ -38,6 +38,15 @@
     "color": "#000000",
     "opacity": 0.1
   },
+  "floorGrid": {
+    "revision": 1,
+    "enabled": true,
+    "color": "#ffffff",
+    "opacity": 0.30,
+    "gridColor": "#000000",
+    "gridOpacity": 0.07,
+    "gridWidth": 2
+  },
   "shadows": {
     "enabled": true,
     "strength": 0.62,

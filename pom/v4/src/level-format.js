@@ -37,6 +37,7 @@ export function loadLevelCatalog(document){
   const groups=catalog.groups.map(group=>{
     requireValue(object(group)&&identifier(group.id)&&typeof group.name==='string'&&group.name.trim(),'each group needs an ID and name');
     requireValue(!groupIds.has(group.id),`duplicate group ID ${group.id}`);groupIds.add(group.id);
+    requireValue(group.environment===undefined||identifier(group.environment),`${group.id}: environment must be an identifier`);
     requireValue(group.rangeLabel===undefined||typeof group.rangeLabel==='string',`${group.id}: rangeLabel must be text`);
     return{...group};
   });
@@ -68,7 +69,8 @@ export function loadLevelCatalog(document){
     check(input.start===null||(object(input.start)&&integer(input.start.x,-1,input.width-1)&&integer(input.start.y,0,input.height)&&integer(input.start.z,0,3)),'start must be a walking position or null');
     check(input.difficulty===undefined||input.difficulty===null||integer(input.difficulty,0,255),'difficulty must be a byte or null');
     check(input.knownIssues===undefined||typeof input.knownIssues==='boolean','knownIssues must be a boolean');
-    check(input.kind===undefined||['puzzle','movement-studio','design-playground'].includes(input.kind),'unknown level kind');
+    check(input.kind===undefined||['puzzle','movement-studio','design-playground','background-studio'].includes(input.kind),'unknown level kind');
+    check(input.environment===undefined||identifier(input.environment),'environment must be an identifier');
     check(input.source===undefined||object(input.source),'source must be an object');
     check(input.flags===undefined||object(input.flags),'flags must be an object');
     if(input.flags){
