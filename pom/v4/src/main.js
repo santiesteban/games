@@ -31,7 +31,7 @@ const boardPointers=new Map();let boardGesture=null;
 const pageUrl=new URL(location.href);if(pageUrl.searchParams.has('style')){pageUrl.searchParams.delete('style');window.history.replaceState(null,'',pageUrl)}
 function syncScreenAppearance(screen){
   document.documentElement.dataset.screen=screen;
-  document.querySelector('meta[name="theme-color"]').content=screen==='home'?'#e8dfc9':'#eee8fa';
+  document.querySelector('meta[name="theme-color"]').content=screen==='home'?'#b4f5de':'#eee8fa';
 }
 window.addEventListener('pageshow',()=>syncScreenAppearance(document.documentElement.dataset.screen));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncScreenAppearance(document.documentElement.dataset.screen)});
@@ -791,7 +791,7 @@ function gameInit(){
   flagCloth=new EngineObject3D(vec3(),flagMesh,undefined,new Color(1,.443,.22));flagCloth.lighting=false;
   flagVase=new EngineObject3D(vec3(),vase,undefined,new Color(.56,.33,.20));
   flagCap=new EngineObject3D(vec3(),flagMeshes.cap,undefined,new Color(.72,.51,.28));
-  autoSelectNearbyPiece();updateUI();startBoardView();gameReady=true;document.querySelector('.stage').classList.add('is-ready');document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Choose a level';
+  autoSelectNearbyPiece();updateUI();startBoardView();gameReady=true;document.querySelector('.stage').classList.add('is-ready');document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Start playing';
 }
 function gameUpdate(){
   movementMarkers?.update(performance.now());

@@ -2,7 +2,7 @@
 <html lang="en" data-screen="home">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#e8dfc9"><title>Little Ledges</title>
+  <meta name="theme-color" content="#b4f5de"><title>Little Ledges</title>
 
 </head>
 <body>
@@ -22,8 +22,27 @@
     </div></footer>
   </section>
   <div class="menu-screen" id="menuScreen" role="dialog" aria-modal="true" aria-label="Little Ledges menu" tabindex="0">
-    <section class="menu-panel title-panel" id="titlePanel"><span class="menu-mark home-brandmark" aria-hidden="true">L</span><h1>little ledges</h1><p class="menu-kicker">A little world of pull and climb puzzles</p><div class="home-actions"><button class="menu-primary" id="openLevels" disabled>Loading your puzzles…</button><button class="btn home-settings" id="openSettings" type="button">Settings</button></div></section>
-    <section class="menu-panel levels-panel" id="levelsPanel" hidden><header class="levels-topbar"><button class="brandmark menu-home" id="backTitle" aria-label="Back to home"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><path d="M30 21H14m6-6-6 6 6 6" stroke="#292537" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button><div class="levels-brand"><span class="brandmark levels-brandmark" aria-hidden="true">L</span><span>little ledges</span></div></header><div class="level-list" id="levelList" aria-label="All levels" tabindex="0"></div></section>
+    <section class="title-panel home-screen" id="titlePanel" aria-labelledby="homeTitle">
+      <img class="home-paper" src="./src/assets/home/paper.svg" alt="" aria-hidden="true" draggable="false">
+        <div class="home-pieces" aria-hidden="true">
+          <img class="home-piece home-piece-yellow-corner" src="./src/assets/home/yellow-corner.svg" alt="" draggable="false">
+          <img class="home-piece home-piece-column" src="./src/assets/home/coral-yellow-column.svg" alt="" draggable="false">
+          <img class="home-piece home-piece-sage" src="./src/assets/home/sage-step.svg" alt="" draggable="false">
+          <img class="home-piece home-piece-cream" src="./src/assets/home/cream-step.svg" alt="" draggable="false">
+          <img class="home-piece home-piece-coral-step" src="./src/assets/home/coral-step.svg" alt="" draggable="false">
+          <img class="home-piece home-piece-yellow-step" src="./src/assets/home/yellow-step.svg" alt="" draggable="false">
+          <img class="home-piece home-piece-perch" src="./src/assets/home/pom-perch.svg" alt="" draggable="false">
+        </div>
+      <div class="home-canvas">
+        <div class="home-center">
+          <img class="home-logo" src="./src/assets/home/logo.svg" alt="" aria-hidden="true" draggable="false">
+          <h1 class="home-wordmark" id="homeTitle"><span>little</span> <span>ledges</span></h1>
+          <button class="home-start" id="openLevels" type="button" disabled>Loading puzzles…</button>
+        </div>
+      </div>
+      <button class="home-settings" id="openSettings" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="19.69,9.79 22.34,10.18 22.34,13.82 19.69,14.21 19.00,15.88 20.60,18.02 18.02,20.60 15.88,19.00 14.21,19.69 13.82,22.34 10.18,22.34 9.79,19.69 8.12,19.00 5.98,20.60 3.40,18.02 5.00,15.88 4.31,14.21 1.66,13.82 1.66,10.18 4.31,9.79 5.00,8.12 3.40,5.98 5.98,3.40 8.12,5.00 9.79,4.31 10.18,1.66 13.82,1.66 14.21,4.31 15.88,5.00 18.02,3.40 20.60,5.98 19.00,8.12"/><circle cx="12" cy="12" r="3.4"/></svg></button>
+    </section>
+    <section class="menu-panel levels-panel" id="levelsPanel" hidden><header class="levels-topbar"><button class="brandmark menu-home" id="backTitle" aria-label="Back to home"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><path d="M30 21H14m6-6-6 6 6 6" stroke="#292537" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button><div class="levels-brand"><img class="levels-logo" src="./src/assets/home/header-logo.svg" alt="" aria-hidden="true" draggable="false"><span>little ledges</span></div></header><div class="level-list" id="levelList" aria-label="All levels" tabindex="0"></div></section>
     <section class="menu-panel settings-panel" id="settingsPanel" aria-labelledby="settingsTitle" hidden>
       <header class="settings-header screen-topbar"><button class="brandmark menu-home" id="settingsHome" type="button" aria-label="Back to home"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><path d="M30 21H14m6-6-6 6 6 6" stroke="#292537" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button><h1 id="settingsTitle">Settings</h1></header>
       <div class="settings-content"><section class="display-settings" aria-labelledby="displayTitle"><h2 id="displayTitle">Level list</h2>
