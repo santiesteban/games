@@ -1,0 +1,119 @@
+{
+  "id": "ink-earth",
+  "name": "Ink Earth",
+  "colorSpace": "sRGB",
+  "bitsPerChannel": 8,
+  "dynamicRange": "SDR",
+  "variants": {
+    "portrait": {
+      "width": 1024,
+      "height": 1536,
+      "background": "ink-earth-portrait-background.webp",
+      "foreground": "ink-earth-portrait-foreground.webp",
+      "groundAnchorY": 0.71484375,
+      "groundAnchorPixelY": 1098,
+      "anchorMeasurement": "first alpha >=128 at horizontal center, divided by canvas height",
+      "edgeYRange": [
+        1094,
+        1100
+      ],
+      "central40PercentEdgeYRange": [
+        1095,
+        1099
+      ],
+      "pairBytes": 3280,
+      "under1MB": true,
+      "webpEncoding": "lossless",
+      "backgroundQuality": null,
+      "foregroundLossless": true,
+      "foregroundRGBAExact": true,
+      "foregroundColor": "#c19d89",
+      "originalPaintingResolution": [
+        1024,
+        1536
+      ],
+      "exportResized": false,
+      "foregroundSource": "native SVG silhouette at runtime canvas dimensions",
+      "recommendedRendererGroundAnchorY": 0.7,
+      "foregroundEdgeOffsetFromRendererHorizon": 0.01484375,
+      "minimumBlackGapPixels": 18.8,
+      "maximumBlackGapPixels": 24.8,
+      "horizonOffsetRequiresIntegration": true
+    },
+    "landscape": {
+      "width": 2048,
+      "height": 1024,
+      "background": "ink-earth-landscape-background.webp",
+      "foreground": "ink-earth-landscape-foreground.webp",
+      "groundAnchorY": 0.71289062,
+      "groundAnchorPixelY": 730,
+      "anchorMeasurement": "first alpha >=128 at horizontal center, divided by canvas height",
+      "edgeYRange": [
+        728,
+        734
+      ],
+      "central40PercentEdgeYRange": [
+        728,
+        734
+      ],
+      "pairBytes": 4212,
+      "under1MB": true,
+      "webpEncoding": "lossless",
+      "backgroundQuality": null,
+      "foregroundLossless": true,
+      "foregroundRGBAExact": true,
+      "foregroundColor": "#c19d89",
+      "originalPaintingResolution": [
+        2048,
+        1024
+      ],
+      "exportResized": false,
+      "foregroundSource": "native SVG silhouette at runtime canvas dimensions",
+      "recommendedRendererGroundAnchorY": 0.7,
+      "foregroundEdgeOffsetFromRendererHorizon": 0.01289063,
+      "minimumBlackGapPixels": 11.2,
+      "maximumBlackGapPixels": 17.2,
+      "horizonOffsetRequiresIntegration": true
+    }
+  },
+  "verification": {
+    "gameplayTested": false,
+    "physicalIPhoneTested": false,
+    "backgroundsOpaque": true,
+    "pairedCanvasDimensionsExact": true,
+    "foregroundAlphaPreserved": true,
+    "staticCanvasTargetsReviewed": [
+      [
+        360,
+        560
+      ],
+      [
+        390,
+        650
+      ],
+      [
+        430,
+        740
+      ],
+      [
+        768,
+        700
+      ],
+      [
+        1280,
+        600
+      ],
+      [
+        740,
+        360
+      ]
+    ],
+    "foregroundColorsChecked": true,
+    "runtimeWebPRGBAExactForForeground": true
+  },
+  "notes": [
+    "Entire opaque background is #000000. Foreground is sampled muted brown #c19d89 with an independently drawn low-amplitude irregular boundary.",
+    "User confirmed a narrow black gap between game horizon and brown edge. Actual art boundary and recommended renderer horizon are intentionally different. Use recommendedRendererGroundAnchorY=0.70 for this environment to preserve the gap; aligning the measured art edge directly to the game horizon would remove it. No line is baked into runtime art.",
+    "Native SVGs retain editable boundary, exact flat colors and antialiasing at runtime size."
+  ]
+}

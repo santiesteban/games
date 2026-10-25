@@ -2,10 +2,12 @@ const STORAGE_KEY='little-ledges:v4:design-playground';
 const APPLIED_KEY='little-ledges:v4:applied-design';
 export { DEFAULT_DESIGN } from './design-style.js';
 import { DEFAULT_DESIGN } from './design-style.js';
+import { TOP_FACE_STYLES } from './control-features.js';
 const isColor=value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);
 const number=(value,fallback,min,max)=>typeof value==='number'&&Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 function normalize(saved){
   const result=structuredClone(DEFAULT_DESIGN);
+  if(TOP_FACE_STYLES.some(([id])=>id===saved?.topFaces))result.topFaces=saved.topFaces;
   for(let i=0;i<3;i++)for(const tone of ['dark','light'])if(isColor(saved?.bands?.[i]?.[tone]))result.bands[i][tone]=saved.bands[i][tone];
   for(const axis of ['horizontal','vertical']){
     const input=saved?.lines?.[axis],line=result.lines[axis];
@@ -24,10 +26,11 @@ function normalize(saved){
   result.studs.width=number(studs?.width,result.studs.width,0,6);result.studs.opacity=number(studs?.opacity,result.studs.opacity,0,1);
   if(isColor(studs?.color))result.studs.color=studs.color;
   // Adopt the approved floor once, while preserving every other saved design field.
-  const floor=saved?.floorGrid?.revision===DEFAULT_DESIGN.floorGrid.revision?saved.floorGrid:null;
+  const floor=saved?.floorGrid?.revision>=1?saved.floorGrid:null;
   if(typeof floor?.enabled==='boolean')result.floorGrid.enabled=floor.enabled;
-  for(const [name,max]of [['opacity',1],['gridOpacity',1],['gridWidth',8]])result.floorGrid[name]=number(floor?.[name],result.floorGrid[name],0,max);
-  for(const name of ['color','gridColor'])if(isColor(floor?.[name]))result.floorGrid[name]=floor[name];
+  for(const [name,max]of [['gridOpacity',1],['gridWidth',8]])result.floorGrid[name]=number(floor?.[name],result.floorGrid[name],0,max);
+  if(floor?.revision===DEFAULT_DESIGN.floorGrid.revision)for(const name of ['opacity','foregroundOpacity'])result.floorGrid[name]=number(floor[name],result.floorGrid[name],0,1);
+  for(const name of ['color','gridColor','foregroundColor'])if(isColor(floor?.[name]))result.floorGrid[name]=floor[name];
   return result;
 }
 
@@ -86,6 +89,8 @@ export function createDesignPlayground(panel,onChange,onApply){
     header.append(title,collapse);panel.append(header);
     const body=document.createElement('div');body.id='designControlsBody';body.className='design-controls-body';body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','Design settings');panel.append(body);
     const copy=document.createElement('p');copy.className='design-copy';copy.textContent='Shooting Star, in our standard palette. Adjust the scene live, or turn the view cube.';body.append(copy);
+    const surfaces=section(body,'Top faces');
+    choice(surfaces,'Top-face appearance',values.topFaces,TOP_FACE_STYLES,n=>values.topFaces=n,DEFAULT_DESIGN.topFaces);
     const bands=section(body,'Band gradients');
     for(const [i,name]of ['Green · front','Yellow · middle','Red · back'].entries()){
       const group=document.createElement('fieldset'),legend=document.createElement('legend');legend.textContent=name;group.append(legend);
@@ -108,10 +113,12 @@ export function createDesignPlayground(panel,onChange,onApply){
     color(studs,'Stud line color',values.studs.color,n=>values.studs.color=n,DEFAULT_DESIGN.studs.color);
     range(studs,'Stud line opacity',values.studs.opacity*100,0,100,1,n=>values.studs.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.studs.opacity*100);
     const floor=section(body,'Floor grid');
-    const floorCopy=document.createElement('p');floorCopy.className='design-copy';floorCopy.textContent='Enable custom floor styling to adjust the existing flat grid. Line width is measured in screen pixels.';floor.append(floorCopy);
+    const floorCopy=document.createElement('p');floorCopy.className='design-copy';floorCopy.textContent='Grid squares mark reachable floor; diagonals mark the rest. Fill and foreground wash start transparent. Line width is measured in screen pixels.';floor.append(floorCopy);
     toggle(floor,'Customize floor grid',values.floorGrid.enabled,n=>values.floorGrid.enabled=n,DEFAULT_DESIGN.floorGrid.enabled);
-    color(floor,'Floor color',values.floorGrid.color,n=>values.floorGrid.color=n,DEFAULT_DESIGN.floorGrid.color);
-    range(floor,'Floor opacity',values.floorGrid.opacity*100,0,100,1,n=>values.floorGrid.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.floorGrid.opacity*100);
+    color(floor,'Foreground wash color',values.floorGrid.foregroundColor,n=>values.floorGrid.foregroundColor=n,DEFAULT_DESIGN.floorGrid.foregroundColor);
+    range(floor,'Foreground wash opacity',values.floorGrid.foregroundOpacity*100,0,100,1,n=>values.floorGrid.foregroundOpacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.floorGrid.foregroundOpacity*100);
+    color(floor,'Walkable grid fill color',values.floorGrid.color,n=>values.floorGrid.color=n,DEFAULT_DESIGN.floorGrid.color);
+    range(floor,'Walkable grid fill opacity',values.floorGrid.opacity*100,0,100,1,n=>values.floorGrid.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.floorGrid.opacity*100);
     color(floor,'Floor grid line color',values.floorGrid.gridColor,n=>values.floorGrid.gridColor=n,DEFAULT_DESIGN.floorGrid.gridColor);
     range(floor,'Floor grid line opacity',values.floorGrid.gridOpacity*100,0,100,1,n=>values.floorGrid.gridOpacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.floorGrid.gridOpacity*100);
     range(floor,'Floor grid line width',values.floorGrid.gridWidth,0,8,.1,n=>values.floorGrid.gridWidth=n,n=>`${n}px`,DEFAULT_DESIGN.floorGrid.gridWidth);

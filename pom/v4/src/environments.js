@@ -9,6 +9,14 @@ import alleyPortraitBackground from './assets/environments/cobblestone-alley/cob
 import alleyPortraitForeground from './assets/environments/cobblestone-alley/cobblestone-alley-portrait-foreground.webp';
 import alleyLandscapeBackground from './assets/environments/cobblestone-alley/cobblestone-alley-landscape-background.webp';
 import alleyLandscapeForeground from './assets/environments/cobblestone-alley/cobblestone-alley-landscape-foreground.webp';
+import tropicalPortraitBackground from './assets/environments/tropical-shore/tropical-shore-portrait-background.webp';
+import tropicalPortraitForeground from './assets/environments/tropical-shore/tropical-shore-portrait-foreground.webp';
+import tropicalLandscapeBackground from './assets/environments/tropical-shore/tropical-shore-landscape-background.webp';
+import tropicalLandscapeForeground from './assets/environments/tropical-shore/tropical-shore-landscape-foreground.webp';
+import inkEarthPortraitBackground from './assets/environments/ink-earth/ink-earth-portrait-background.webp';
+import inkEarthPortraitForeground from './assets/environments/ink-earth/ink-earth-portrait-foreground.webp';
+import inkEarthLandscapeBackground from './assets/environments/ink-earth/ink-earth-landscape-background.webp';
+import inkEarthLandscapeForeground from './assets/environments/ink-earth/ink-earth-landscape-foreground.webp';
 import { createEnvironmentTextureLoader } from './environment-loader.js';
 export { environmentFrame, environmentComposition, environmentCacheKey, selectEnvironmentComposition } from './environment-layout.js';
 
@@ -19,6 +27,14 @@ export const ENVIRONMENTS=[
   {id:'cobblestone-alley',name:'Cobblestone Alley',background:alleyBackground,foreground:alleyForeground,width:3072,height:1024,backgroundSize:[3072,1023],aspectRatio:3,groundAnchorY:.82,registeredLayers:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0,variants:{
     portrait:{background:alleyPortraitBackground,foreground:alleyPortraitForeground,width:1024,height:1536,groundAnchorY:.66731771},
     landscape:{background:alleyLandscapeBackground,foreground:alleyLandscapeForeground,width:2048,height:1024,groundAnchorY:.78808594},
+  }},
+  {id:'tropical-shore',name:'Tropical Shore',background:tropicalLandscapeBackground,foreground:tropicalLandscapeForeground,width:2048,height:1024,groundAnchorY:0.70019531,aspectRatio:2,fallbackName:'Landscape fallback',registeredLayers:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0,variants:{
+    portrait:{background:tropicalPortraitBackground,foreground:tropicalPortraitForeground,width:1024,height:1536,groundAnchorY:0.69986979},
+    landscape:{background:tropicalLandscapeBackground,foreground:tropicalLandscapeForeground,width:2048,height:1024,groundAnchorY:0.70019531},
+  }},
+  {id:'ink-earth',name:'Ink Earth',background:inkEarthLandscapeBackground,foreground:inkEarthLandscapeForeground,width:2048,height:1024,groundAnchorY:0.7,measuredArtBoundaryY:0.71289062,aspectRatio:2,fallbackName:'Landscape fallback',registeredLayers:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0,variants:{
+    portrait:{background:inkEarthPortraitBackground,foreground:inkEarthPortraitForeground,width:1024,height:1536,groundAnchorY:0.7,measuredArtBoundaryY:0.71484375},
+    landscape:{background:inkEarthLandscapeBackground,foreground:inkEarthLandscapeForeground,width:2048,height:1024,groundAnchorY:0.7,measuredArtBoundaryY:0.71289062},
   }},
 ];
 export function environmentById(id){return ENVIRONMENTS.find(environment=>environment.id===id)??ENVIRONMENTS[0]}

@@ -1,0 +1,112 @@
+{
+  "id": "tropical-shore",
+  "name": "Tropical Shore",
+  "colorSpace": "sRGB",
+  "bitsPerChannel": 8,
+  "dynamicRange": "SDR",
+  "variants": {
+    "portrait": {
+      "width": 1024,
+      "height": 1536,
+      "background": "tropical-shore-portrait-background.webp",
+      "foreground": "tropical-shore-portrait-foreground.webp",
+      "groundAnchorY": 0.69986979,
+      "groundAnchorPixelY": 1075,
+      "anchorMeasurement": "first alpha >=128 at horizontal center, divided by canvas height",
+      "edgeYRange": [
+        959,
+        1077
+      ],
+      "central40PercentEdgeYRange": [
+        1023,
+        1077
+      ],
+      "pairBytes": 119294,
+      "under1MB": true,
+      "webpEncoding": "lossy RGB background; lossless RGBA foreground",
+      "backgroundQuality": 96,
+      "foregroundLossless": true,
+      "foregroundRGBAExact": true,
+      "foregroundColor": "#171046",
+      "originalPaintingResolution": [
+        1024,
+        1536
+      ],
+      "exportResized": false,
+      "foregroundSource": "native SVG silhouette at runtime canvas dimensions",
+      "recommendedRendererGroundAnchorY": 0.69986979
+    },
+    "landscape": {
+      "width": 2048,
+      "height": 1024,
+      "background": "tropical-shore-landscape-background.webp",
+      "foreground": "tropical-shore-landscape-foreground.webp",
+      "groundAnchorY": 0.70019531,
+      "groundAnchorPixelY": 717,
+      "anchorMeasurement": "first alpha >=128 at horizontal center, divided by canvas height",
+      "edgeYRange": [
+        623,
+        719
+      ],
+      "central40PercentEdgeYRange": [
+        675,
+        718
+      ],
+      "pairBytes": 124310,
+      "under1MB": true,
+      "webpEncoding": "lossy RGB background; lossless RGBA foreground",
+      "backgroundQuality": 96,
+      "foregroundLossless": true,
+      "foregroundRGBAExact": true,
+      "foregroundColor": "#171046",
+      "originalPaintingResolution": [
+        1774,
+        887
+      ],
+      "exportResized": true,
+      "foregroundSource": "native SVG silhouette at runtime canvas dimensions",
+      "recommendedRendererGroundAnchorY": 0.70019531
+    }
+  },
+  "verification": {
+    "gameplayTested": false,
+    "physicalIPhoneTested": false,
+    "backgroundsOpaque": true,
+    "pairedCanvasDimensionsExact": true,
+    "foregroundAlphaPreserved": true,
+    "staticCanvasTargetsReviewed": [
+      [
+        360,
+        560
+      ],
+      [
+        390,
+        650
+      ],
+      [
+        430,
+        740
+      ],
+      [
+        768,
+        700
+      ],
+      [
+        1280,
+        600
+      ],
+      [
+        740,
+        360
+      ]
+    ],
+    "foregroundColorsChecked": true,
+    "runtimeWebPRGBAExactForForeground": true
+  },
+  "notes": [
+    "Portrait painting generated independently at 1024x1536. Landscape native painting 1774x887 resized through Adobe to 2048x1024; this adds no detail.",
+    "Foreground silhouettes are graphic-native SVG artwork, composed at exact runtime dimensions in one uniform sampled navy #171046. Generated faded foreground attempts were rejected.",
+    "Palm crown extends into expendable outer margin; main trunk/crown remain recognizable within central composition. Review cropping with game controls.",
+    "Near-square 768x700 static cover framing crops the palm crown substantially; integration should adjust framing or consider a future tablet composition."
+  ]
+}

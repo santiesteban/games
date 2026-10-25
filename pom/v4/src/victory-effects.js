@@ -2,6 +2,17 @@ const SVG_NS='http://www.w3.org/2000/svg';
 const COLORS=['#ff7138','#f2a05a','#79a66e','#55a9ae','#ffdf3f','#c9e9d5'];
 const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t)};
 
+// The flag remains fixed at the center of its landing square. Pom finishes on
+// the approach side; the flag cloth needs a little more clearance on the right.
+export function victoryLandingOffset(from,goal,width){
+  const direction=from.x<goal.x?-1:from.x>goal.x?1:goal.x<width/2?1:-1;
+  return direction<0?-.60:.80;
+}
+export function victoryArrival(t,offset,reducedMotion=false){
+  const progress=ease((t-.10)/.70);
+  return{x:offset*progress,y:reducedMotion?0:.18*Math.sin(Math.PI*progress)};
+}
+
 export function createVictoryEffects(app){
   const message=document.createElement('div');message.className='victory-message';message.hidden=true;message.setAttribute('role','status');message.setAttribute('aria-live','polite');
   const title=document.createElement('strong'),caption=document.createElement('span');title.textContent='Congratulations!';message.append(title,caption);

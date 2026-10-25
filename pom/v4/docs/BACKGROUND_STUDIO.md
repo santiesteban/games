@@ -7,15 +7,15 @@ to this studio and reset when the page is reloaded.
 
 ## Controls
 
-- **Environment:** Highway Desert, Cobblestone Alley, or the original Meadow.
+- **Environment:** Highway Desert, Cobblestone Alley, Tropical Shore, Ink Earth, or the original Meadow.
 - **Composition:** Automatic, Portrait, Landscape, or Original panorama for
   environments with responsive artwork. Automatic follows the actual canvas,
   including studio-panel layout changes; manual choices are studio-only.
 - **Show:** both layers, background only, or foreground only. Foreground-only
   previews use a neutral lavender backing to reveal transparent areas.
 - **Ground anchor:** the vertical fraction of the source image that meets the
-  projected ground horizon. Reset restores the current composition's measured
-  default. Preview adjustments are retained separately per composition until
+  projected ground horizon. Reset restores the current composition's framing
+  default (Ink Earth deliberately frames above its painted edge). Preview adjustments are retained separately per composition until
   reload; a portrait adjustment does not overwrite the landscape anchor.
 - **Show floor guide:** toggles the black horizon, ground grid, and floor washes.
 - **Background overlay / Foreground overlay:** independent color and 0–100%
@@ -199,3 +199,44 @@ provides a direct comparison with the previous artwork.
   straight black horizon guide, especially near the expendable sides.
 - Physical iPhone review is still outstanding. Browser viewport checks do not
   establish final device approval.
+
+
+## Tropical Shore and Ink Earth — October 25
+
+Both environments are available in Background Studio, with independent portrait
+1024 × 1536 and landscape 2048 × 1024 compositions. The delivered WebPs are copied
+unchanged into their named asset directories. Each directory retains the original
+`artwork-metadata.json`; source PNGs, SVGs, painting files and previews remain in
+the supplied artwork kits. Catalog assignments and the default Meadow are unchanged.
+
+| Environment | Composition | Renderer ground anchor | Measured art boundary | Pair bytes |
+| --- | --- | ---: | ---: | ---: |
+| Tropical Shore | Portrait | 0.69986979 | 0.69986979 | 119294 |
+| Tropical Shore | Landscape | 0.70019531 | 0.70019531 | 124310 |
+| Ink Earth | Portrait | 0.70 | 0.71484375 | 3280 |
+| Ink Earth | Landscape | 0.70 | 0.71289062 | 4212 |
+
+Ink Earth's black gap below the game's horizon is intentional. Its registered
+pair uses 0.70 for framing, preserving the brown silhouette below that point.
+`measuredArtBoundaryY` records the separate alpha edge; it must not replace the
+renderer anchor. Reset ground anchor restores 0.70 for both compositions.
+
+These environments have no older panorama: the fallback uses their landscape
+pair, labeled **Landscape fallback** in the composition selector. Automatic
+selection, lazy decoding, shared layer framing, and per-composition studio
+anchor adjustments use the existing responsive environment implementation.
+No additional tint or scenery wash is introduced. The game's optional floor grid,
+overlays, and cast shadows can still affect the preview.
+
+Tropical Shore's landscape painting was resized from 1774 × 887 and gains no
+new detail. Intermediate near-square canvases can substantially crop its palm
+crown; the supplied two compositions do not guarantee retention of that landmark.
+Physical iPhone review remains outstanding for both environments.
+
+
+Initial in-game review: both environments loaded in phone (390 × 844 viewport,
+collapsed controls) and wide (1280 × 800 viewport, expanded controls) layouts.
+Portrait and landscape compositions switched automatically, Ink Earth's 70%
+anchor retained its visible black gap, and its landscape fallback loaded.
+The production build succeeded and the browser reported no errors. This is an
+initial framing review, not approval of every camera/zoom or physical device.
