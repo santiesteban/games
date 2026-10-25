@@ -56,5 +56,7 @@
     "direction": 30,
     "elevation": 45
   },
-  "topFaces": "checkerboard"
+  "topFaces": "checkerboard",
+  "cellSquareness": 1,
+  "showReferenceSquares": false
 }

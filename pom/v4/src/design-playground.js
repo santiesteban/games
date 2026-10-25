@@ -7,6 +7,8 @@ const isColor=value=>typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value);
 const number=(value,fallback,min,max)=>typeof value==='number'&&Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 function normalize(saved){
   const result=structuredClone(DEFAULT_DESIGN);
+  result.cellSquareness=number(saved?.cellSquareness,result.cellSquareness,0,1);
+  if(typeof saved?.showReferenceSquares==='boolean')result.showReferenceSquares=saved.showReferenceSquares;
   if(TOP_FACE_STYLES.some(([id])=>id===saved?.topFaces))result.topFaces=saved.topFaces;
   for(let i=0;i<3;i++)for(const tone of ['dark','light'])if(isColor(saved?.bands?.[i]?.[tone]))result.bands[i][tone]=saved.bands[i][tone];
   for(const axis of ['horizontal','vertical']){
@@ -64,6 +66,7 @@ export function createDesignPlayground(panel,onChange,onApply){
     const output=document.createElement('output');output.value=format(value);const row=field(parent,label,input);row.append(output);
     input.addEventListener('input',()=>{const n=Number(input.value);output.value=format(n);set(n);changed()});
     resetControl(row,label,()=>{input.value=defaultValue;output.value=format(defaultValue);set(defaultValue)});
+    return {input,output};
   }
   function toggle(parent,label,value,set,defaultValue){
     const input=document.createElement('input');input.type='checkbox';input.checked=value;input.setAttribute('role','switch');input.setAttribute('aria-label',label);
@@ -89,6 +92,16 @@ export function createDesignPlayground(panel,onChange,onApply){
     header.append(title,collapse);panel.append(header);
     const body=document.createElement('div');body.id='designControlsBody';body.className='design-controls-body';body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','Design settings');panel.append(body);
     const copy=document.createElement('p');copy.className='design-copy';copy.textContent='Shooting Star, in our standard palette. Adjust the scene live, or turn the view cube.';body.append(copy);
+    const geometry=section(body,'Cell geometry');
+    const squareness=range(geometry,'Cell squareness',values.cellSquareness,0,1,.05,n=>values.cellSquareness=n,n=>n.toFixed(2),DEFAULT_DESIGN.cellSquareness);
+    const presets=document.createElement('div');presets.className='design-actions';
+    for(const [label,value]of [['Camera (0)',0],['Halfway (0.5)',.5],['Square (1)',1]]){
+      const button=document.createElement('button');button.type='button';button.className='design-reset';button.textContent=label;
+      button.onclick=()=>{squareness.input.value=value;squareness.input.dispatchEvent(new Event('input',{bubbles:true}))};presets.append(button);
+    }
+    geometry.append(presets);
+    toggle(geometry,'Show reference squares',values.showReferenceSquares,n=>values.showReferenceSquares=n,DEFAULT_DESIGN.showReferenceSquares);
+    const measurement=document.createElement('p');measurement.className='design-copy';measurement.dataset.cellMeasurement='';measurement.setAttribute('aria-live','off');geometry.append(measurement);
     const surfaces=section(body,'Top faces');
     choice(surfaces,'Top-face appearance',values.topFaces,TOP_FACE_STYLES,n=>values.topFaces=n,DEFAULT_DESIGN.topFaces);
     const bands=section(body,'Band gradients');
@@ -152,5 +165,5 @@ export function createDesignPlayground(panel,onChange,onApply){
     render();panel.classList.toggle('is-collapsed',collapsed);panel.querySelector('.design-controls-body').scrollTop=scroll;
     const button=panel.querySelector('.design-panel-header button');button.textContent=collapsed?'Show':'Hide';button.setAttribute('aria-expanded',String(!collapsed));onChange();
   });
-  render();return{get values(){return values},get appliedValues(){return applied}};
+  render();return{updateCellMeasurement({pitch,stretch,ratio}){const output=panel.querySelector('[data-cell-measurement]');if(output){const text=`Pitch ${(pitch*180/Math.PI).toFixed(3)}° · yStretch ${stretch.toFixed(5)} · Measured cell H/W ${ratio.toFixed(5)}`;if(output.textContent!==text)output.textContent=text}},get values(){return values},get appliedValues(){return applied}};
 }

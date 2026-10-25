@@ -17,8 +17,34 @@ import inkEarthPortraitBackground from './assets/environments/ink-earth/ink-eart
 import inkEarthPortraitForeground from './assets/environments/ink-earth/ink-earth-portrait-foreground.webp';
 import inkEarthLandscapeBackground from './assets/environments/ink-earth/ink-earth-landscape-background.webp';
 import inkEarthLandscapeForeground from './assets/environments/ink-earth/ink-earth-landscape-foreground.webp';
+import curvedColorsPortraitBackground from './assets/environments/curved-colors/curved-colors-portrait-background.webp';
+import curvedColorsPortraitForeground from './assets/environments/curved-colors/curved-colors-portrait-foreground.webp';
+import curvedColorsLandscapeBackground from './assets/environments/curved-colors/curved-colors-landscape-background.webp';
+import curvedColorsLandscapeForeground from './assets/environments/curved-colors/curved-colors-landscape-foreground.webp';
+import curvedColorsMetadata from './assets/environments/curved-colors/artwork-metadata.json';
+import starryMoundsPortraitBackground from './assets/environments/starry-mounds/starry-mounds-portrait-background.webp';
+import starryMoundsPortraitForeground from './assets/environments/starry-mounds/starry-mounds-portrait-foreground.webp';
+import starryMoundsLandscapeBackground from './assets/environments/starry-mounds/starry-mounds-landscape-background.webp';
+import starryMoundsLandscapeForeground from './assets/environments/starry-mounds/starry-mounds-landscape-foreground.webp';
+import starryMoundsMetadata from './assets/environments/starry-mounds/artwork-metadata.json';
+import softAlleyPortraitBackground from './assets/environments/cobblestone-alley-soft/cobblestone-alley-soft-portrait-background.webp';
+import softAlleyPortraitForeground from './assets/environments/cobblestone-alley-soft/cobblestone-alley-soft-portrait-foreground.webp';
+import softAlleyLandscapeBackground from './assets/environments/cobblestone-alley-soft/cobblestone-alley-soft-landscape-background.webp';
+import softAlleyLandscapeForeground from './assets/environments/cobblestone-alley-soft/cobblestone-alley-soft-landscape-foreground.webp';
+import softAlleyMetadata from './assets/environments/cobblestone-alley-soft/artwork-metadata.json';
 import { createEnvironmentTextureLoader } from './environment-loader.js';
 export { environmentFrame, environmentComposition, environmentCacheKey, selectEnvironmentComposition } from './environment-layout.js';
+
+// Keep each supplied pair registered to its exact authored canvas and measured
+// anchor. Asset URLs are Vite imports; the image loader still decodes lazily.
+function registeredArtwork(id,name,metadata,images){
+  const variants=Object.fromEntries(Object.entries(images).map(([variant,layers])=>{
+    const {width,height,groundAnchorY}=metadata.variants[variant];
+    return [variant,{...layers,width,height,groundAnchorY}];
+  }));
+  const landscape=variants.landscape;
+  return {id,name,...landscape,aspectRatio:landscape.width/landscape.height,fallbackName:'Landscape fallback',registeredLayers:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0,variants};
+}
 
 export const DEFAULT_ENVIRONMENT='meadow';
 export const ENVIRONMENTS=[
@@ -36,6 +62,18 @@ export const ENVIRONMENTS=[
     portrait:{background:inkEarthPortraitBackground,foreground:inkEarthPortraitForeground,width:1024,height:1536,groundAnchorY:0.7,measuredArtBoundaryY:0.71484375},
     landscape:{background:inkEarthLandscapeBackground,foreground:inkEarthLandscapeForeground,width:2048,height:1024,groundAnchorY:0.7,measuredArtBoundaryY:0.71289062},
   }},
+  registeredArtwork('curved-colors','Curved Colors',curvedColorsMetadata,{
+    portrait:{background:curvedColorsPortraitBackground,foreground:curvedColorsPortraitForeground},
+    landscape:{background:curvedColorsLandscapeBackground,foreground:curvedColorsLandscapeForeground},
+  }),
+  registeredArtwork('starry-mounds','Starry Mounds',starryMoundsMetadata,{
+    portrait:{background:starryMoundsPortraitBackground,foreground:starryMoundsPortraitForeground},
+    landscape:{background:starryMoundsLandscapeBackground,foreground:starryMoundsLandscapeForeground},
+  }),
+  registeredArtwork('cobblestone-alley-soft','Cobblestone Alley — Soft',softAlleyMetadata,{
+    portrait:{background:softAlleyPortraitBackground,foreground:softAlleyPortraitForeground},
+    landscape:{background:softAlleyLandscapeBackground,foreground:softAlleyLandscapeForeground},
+  }),
 ];
 export function environmentById(id){return ENVIRONMENTS.find(environment=>environment.id===id)??ENVIRONMENTS[0]}
 

@@ -1,0 +1,84 @@
+{
+  "id": "curved-colors",
+  "name": "Curved Colors",
+  "colorSpace": "sRGB",
+  "bitsPerChannel": 8,
+  "dynamicRange": "SDR",
+  "variants": {
+    "portrait": {
+      "width": 1024,
+      "height": 1536,
+      "background": "curved-colors-portrait-background.webp",
+      "foreground": "curved-colors-portrait-foreground.webp",
+      "groundAnchorY": 0.69986979,
+      "groundAnchorPixelY": 1075,
+      "anchorMeasurement": "first alpha >=128 at horizontal center, divided by canvas height",
+      "edgeYRange": [
+        1067,
+        1078
+      ],
+      "central40PercentEdgeYRange": [
+        1074,
+        1077
+      ],
+      "pairBytes": 17850,
+      "under1MB": true,
+      "webpEncoding": "lossless",
+      "backgroundQuality": null,
+      "foregroundLossless": true,
+      "foregroundRGBAExact": true,
+      "foregroundColor": "#dfcd56",
+      "originalPaintingResolution": [
+        1024,
+        1536
+      ],
+      "exportResized": false,
+      "foregroundSource": "native SVG silhouette at runtime canvas dimensions",
+      "recommendedRendererGroundAnchorY": 0.69986979
+    },
+    "landscape": {
+      "width": 2048,
+      "height": 1024,
+      "background": "curved-colors-landscape-background.webp",
+      "foreground": "curved-colors-landscape-foreground.webp",
+      "groundAnchorY": 0.70019531,
+      "groundAnchorPixelY": 717,
+      "anchorMeasurement": "first alpha >=128 at horizontal center, divided by canvas height",
+      "edgeYRange": [
+        713,
+        719
+      ],
+      "central40PercentEdgeYRange": [
+        717,
+        719
+      ],
+      "pairBytes": 18852,
+      "under1MB": true,
+      "webpEncoding": "lossless",
+      "backgroundQuality": null,
+      "foregroundLossless": true,
+      "foregroundRGBAExact": true,
+      "foregroundColor": "#dfcd56",
+      "originalPaintingResolution": [
+        2048,
+        1024
+      ],
+      "exportResized": false,
+      "foregroundSource": "native SVG silhouette at runtime canvas dimensions",
+      "recommendedRendererGroundAnchorY": 0.70019531
+    }
+  },
+  "verification": {
+    "gameplayTested": false,
+    "physicalIPhoneTested": false,
+    "backgroundsOpaque": true,
+    "pairedCanvasDimensionsExact": true,
+    "foregroundAlphaPreserved": true
+  },
+  "notes": [
+    "Independently composed native SVG color fields with baked static shadows, not generated bitmap art. No exports resized.",
+    "Three large fields: purple upper background, pink lower background, yellow only for the floor. Broad asymmetric scallops with long shelves and rounded returning curves inspired by the annotated reference.",
+    "Static cast shadows use upper-right screen-space light: offset -12,+16 pixels, Gaussian sigma 3 pixels, black opacity 0.24. The game source darkens receiver colors and default light is vec3(-.45,.8,.5); this is visual consistency, not a simulation of each gameplay camera.",
+    "No character, source lettering, interface, floor grid, renderer horizon or piece shadows included."
+  ]
+}

@@ -9,9 +9,10 @@ export function createMovementMarkers(){
   const mesh=buildCylinder(1,1,SIDES,false,true,.045,2);
   mesh.colors=mesh.normals.map(normal=>{const shade=normal.y>.5?1:.93;return new Color(shade,shade,shade)});
   mesh.dirty=true;
-  let hovered=null,pressed=null,shadowShader;
+  let hovered=null,pressed=null,shadowShader,stretchY=y=>y;
   function dispose(){for(const entry of entries.values())entry.object.destroy();entries.clear();objects.clear();hovered=null;pressed=null}
-  function sync(targets,positionFor,colorFor){
+  function sync(targets,positionFor,colorFor,stretch=y=>y){
+    stretchY=stretch;
     const wanted=new Set(targets.map(keyOf));
     for(const [key,entry]of entries)if(!wanted.has(key)){entry.object.destroy();objects.delete(entry.object);entries.delete(key)}
     if(pressed&&!wanted.has(pressed.key))pressed=null;
@@ -37,8 +38,8 @@ export function createMovementMarkers(){
         else pressed=null;
       }
       entry.height=height;
-      entry.object.pos3D=entry.base.add(vec3(0,height/2+.005,0));
-      entry.object.scale3D=vec3(DIAMETER,height,DIAMETER);
+      entry.object.pos3D=entry.base.add(vec3(0,stretchY(height/2+.005),0));
+      entry.object.scale3D=vec3(DIAMETER,stretchY(height),DIAMETER);
       entry.object.color=entry.color;
     }
   }
@@ -62,7 +63,7 @@ export function createMovementMarkers(){
     render3D.shader=shadowShader;render3D.receiveShadow=!!shadowShader;
     for(const entry of entries.values()){
       const opacity=Math.min(1,(style?.opacity??.16)+(keyOf(entry.node)===hovered ? .12 : 0)),color=style?.color??new Color(0,0,0);
-      const ink=new Color(entry.color.r+(color.r-entry.color.r)*opacity,entry.color.g+(color.g-entry.color.g)*opacity,entry.color.b+(color.b-entry.color.b)*opacity),top=entry.base.y+entry.height+.006;
+      const ink=new Color(entry.color.r+(color.r-entry.color.r)*opacity,entry.color.g+(color.g-entry.color.g)*opacity,entry.color.b+(color.b-entry.color.b)*opacity),top=entry.base.y+stretchY(entry.height+.006);
       for(let i=0;i<SIDES;i++){
         const a=i*Math.PI*2/SIDES,b=(i+1)*Math.PI*2/SIDES,r=DIAMETER*.455;
         render3D.drawLine(vec3(entry.base.x+Math.cos(a)*r,top,entry.base.z+Math.sin(a)*r),vec3(entry.base.x+Math.cos(b)*r,top,entry.base.z+Math.sin(b)*r),width,ink);

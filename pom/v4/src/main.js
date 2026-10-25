@@ -1,5 +1,5 @@
 import {
-  engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
+  timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
   Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
 import levelData from './data/levels.json';
@@ -10,6 +10,8 @@ import { CONTROL_FEATURES, TOP_FACE_STYLES, createControlFeatures } from './cont
 import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds } from './floor-grid.js';
 import { outsidePolygonSegments } from './surface-patterns.js';
+import { sampleCameraIntro } from './camera-intro.js';
+import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
@@ -28,7 +30,7 @@ import './style.css';
 const wrap = document.querySelector('#canvasWrap');
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let viewUnit=0,viewTarget,viewReady=false,viewMobile=false,viewTouched=false,introFrame=0,introPlaying=false,settingsReturnToLevel=false,viewWidth=0,viewHeight=0;
-const boardPointers=new Map();let boardGesture=null;
+const boardPointers=new Map();let boardGesture=null,introTick=null,keepInterruptedView=false;
 const pageUrl=new URL(location.href);if(pageUrl.searchParams.has('style')){pageUrl.searchParams.delete('style');window.history.replaceState(null,'',pageUrl)}
 function syncScreenAppearance(screen){
   document.documentElement.dataset.screen=screen;
@@ -55,7 +57,7 @@ let activeLevel=levels.find(level=>level.compatibility.playable);
 if(!activeLevel)throw new Error('The level catalog has no playable puzzles.');
 const designPlayground=createDesignPlayground(document.querySelector('#designPanel'),()=>{
   if(!gameReady)return;
-  syncBlocks();syncMovementMarkers();
+  refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();if(!busy)syncPlayer();syncMovementMarkers();
 },design=>{
   let saved=true;
   if(!controlFeatures.setTopFaceStyle(design.topFaces))saved=false;
@@ -68,14 +70,15 @@ const designPlayground=createDesignPlayground(document.querySelector('#designPan
 });
 let shadowFloor,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
 const backgroundStudio=createBackgroundStudio(document.querySelector('#backgroundPanel'),()=>{
-  if(!gameReady||!isBackgroundStudio())return;
+  if(!gameReady)return;
   requestLevelEnvironment(true);syncBackground();syncFloorGrid();
 });
 function isDesignPlayground(){return activeLevel.kind==='design-playground'}
 function isBackgroundStudio(){return activeLevel.kind==='background-studio'}
+function currentBackgroundConfiguration(){return isBackgroundStudio()?backgroundStudio.values:backgroundStudio.appliedValues}
 function requestLevelEnvironment(retry=false){
   if(!environmentLoader)return;
-  const preview=isBackgroundStudio()?backgroundStudio.values:null;
+  const preview=currentBackgroundConfiguration();
   const id=preview?.environment??activeLevel.environment??levelGroups.find(group=>group.id===activeLevel.group)?.environment??DEFAULT_ENVIRONMENT;
   const source=environmentById(id),width=Math.max(1,wrap.clientWidth),height=Math.max(1,wrap.clientHeight);
   const selectionKey=`${source.id}:${activeLevel.id}:${width}:${height}:${viewSide}:${viewHeightStep}:${preview?.composition??'auto'}`;
@@ -87,7 +90,7 @@ function requestLevelEnvironment(retry=false){
     environmentSelection={key:selectionKey,environment:selectEnvironmentComposition(source,{width,height,groundFraction,previous,preferred:preview?.composition})};
   }
   const environment={...environmentSelection.environment};
-  if(preview){backgroundStudio.setComposition(environment);environment.groundAnchorY=backgroundStudio.anchorFor(environment)}
+  if(preview){if(isBackgroundStudio())backgroundStudio.setComposition(environment);environment.groundAnchorY=backgroundStudio.anchorFor(environment,preview)}
   const key=`${environmentCacheKey(environment)}:${environment.groundAnchorY}`;
   if(key===environmentRequestKey&&!(retry&&failedEnvironmentKey===key))return;
   environmentRequestKey=key;failedEnvironmentKey=undefined;
@@ -95,7 +98,7 @@ function requestLevelEnvironment(retry=false){
   const apply=(textures,art=environment,fallback=false)=>{
     if(request!==environmentRequest)return;
     activeEnvironment=art;activeEnvironmentTextures=textures;syncBackground();syncFloorGrid();
-    if(isBackgroundStudio())backgroundStudio.setStatus(fallback?`${art.name}: showing the original artwork because the new composition could not load. Choose the environment again to retry.`:`${art.name}${art.variant?` (${art.variant})`:''} ready. Preview changes stay in this studio.`);
+    if(isBackgroundStudio())backgroundStudio.setStatus(fallback?`${art.name}: showing the original artwork because the new composition could not load. Choose the environment again to retry.`:`${art.name}${art.variant?` (${art.variant})`:''} ready. Use Apply to all levels to save the current configuration.`);
   };
   const cached=environmentLoader.cached(environment);if(cached){apply(cached);return}
   if(isBackgroundStudio())backgroundStudio.setStatus(`Loading ${environment.name}…`);
@@ -184,7 +187,8 @@ function shapePomReach(from,to,t,profile){
   const head=jumpPose(from,to,timing.head,profile);
   if(timing.head-timing.tail<.00001){resetPomShape();return head}
   const right=render3D.camera.getRight(),up=render3D.camera.getUp(),back=right.cross(up);
-  const tailDelta=jumpPose(from,to,tailTime,profile).subtract(head),span=Math.hypot(tailDelta.dot(right)/.72,tailDelta.dot(up)/.56),amount=Math.min(1,.45/Math.max(.001,span));
+  const tailDelta=jumpPose(from,to,tailTime,profile).subtract(head);tailDelta.y=unStretchY(tailDelta.y);
+  const span=Math.hypot(tailDelta.dot(right)/.72,tailDelta.dot(up)/.56),amount=Math.min(1,.45/Math.max(.001,span));
   // Allow a visible stretch, capped at 45% of Pom's width on steeper climbs.
   const centers=[{x:tailDelta.dot(right)/.72*amount,y:tailDelta.dot(up)/.56*amount,z:tailDelta.dot(back)/.018*amount},{x:0,y:0,z:0}];
   const outline=reachOutline(centers,pomContour),fill=reachOutline(centers,pomContour,.055);
@@ -215,7 +219,39 @@ function autoSelectNearbyPiece(){
 }
 
 function extrusion(depth){return{x:cameraSlant(viewSide)*depth*DEPTH_SKEW,z:depth}}
-function worldPoint(x,y,z){return vec3(x+cameraSlant(viewSide)*DEPTH_SKEW*z,y,z)}
+let yStretch=1,liveCellPitch=0;
+function stretchY(y){return stretchBoardY(y,yStretch)}
+function unStretchY(y){return unStretchBoardY(y,yStretch)}
+function worldPoint(x,y,z){return vec3(x+cameraSlant(viewSide)*DEPTH_SKEW*z,stretchY(y),z)}
+function boardRay(ray){
+  // Keep the ray parameter and X/Z unchanged; invert only board geometry's Y.
+  const origin=vec3(ray.origin.x,unStretchY(ray.origin.y),ray.origin.z),direction=vec3(ray.direction.x,ray.direction.y/yStretch,ray.direction.z);
+  return {origin,direction,getPosition:t=>origin.add(direction.scale(t))};
+}
+function refreshCellSquareness(){
+  liveCellPitch=Math.asin(Math.min(1,Math.abs(render3D.camera.getForward().y)));
+  const next=cellYStretch(currentDesign().cellSquareness,liveCellPitch),changed=next!==yStretch;
+  yStretch=next;return changed;
+}
+function syncCellGeometry(){
+  if(!refreshCellSquareness()||!blockObjects.length)return;
+  syncBlocks();syncFlag();syncHoverSpot();syncMovementMarkers();if(!busy)syncPlayer();
+}
+function syncPomMatrix(){
+  if(!playerObject)return;
+  if(yStretch===1){playerObject.localMatrix=undefined;return}
+  // Billboard rotation mixes local Y/Z. Scale world Y of its basis, once;
+  // the anchor has already passed through stretchY. Children inherit this matrix.
+  const matrix=buildMatrix(playerObject.pos3D,playerObject.rotation3D,playerObject.scale3D);
+  for(const i of [1,5,9])matrix.m[i]=stretchY(matrix.m[i]);
+  playerObject.localMatrix=matrix;
+}
+function cellMeasurement(){
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),matrix=blockObjects[0]?.getMatrix();
+  if(!matrix)return {pitch:liveCellPitch,stretch:yStretch,ratio:Math.cos(liveCellPitch)*yStretch};
+  const origin=render3D.worldToScreen(matrix.transformPoint(vec3(-.5,-.5,0)),size),x=render3D.worldToScreen(matrix.transformPoint(vec3(.5,-.5,0)),size),y=render3D.worldToScreen(matrix.transformPoint(vec3(-.5,.5,0)),size);
+  return {pitch:liveCellPitch,stretch:yStretch,ratio:Math.hypot(y.x-origin.x,y.y-origin.y)/Math.hypot(x.x-origin.x,x.y-origin.y)};
+}
 function blockPose(c,depth){return{pos:worldPoint(c.x+.5,H-c.y-.5,depth)}}
 function tinted(color,amount){return new Color(color.r+(1-color.r)*amount,color.g+(1-color.g)*amount,color.b+(1-color.b)*amount)}
 function shaded(color,amount){return new Color(color.r*amount,color.g*amount,color.b*amount)}
@@ -258,7 +294,7 @@ function walkabilityFace(mesh,map,bounds,walkable){
 function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,walkable=true){
   side=cameraSlant(side);
   const pigment=palette[color],m=new Mesh(),s=side*DEPTH_SKEW,lo=-.5,hi=.5,defaultFace=top?new Color(1):shaded(pigment,.72);
-  const P=(x,y,z)=>vec3(x+s*z,y,z);
+  const P=(x,y,z)=>vec3(x+s*z,stretchY(y),z);
   const quad=(a,b,c,d,face=defaultFace)=>m.addQuad(P(...a),P(...b),P(...c),P(...d),face);
   if(top){
     if(walkabilityFacesEnabled())walkabilityFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+1],walkable);
@@ -291,9 +327,9 @@ function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjec
 function syncExtrusions(){for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
   const reachable=walkabilityFacesEnabled()?reachableSurfaceKeys():null;
   for(const g of groups)if(g.depth)for(const c of g.cells){
-    const base=vec3(c.x+.5,H-c.y-.5,0),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
+    const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
     extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);
-    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,.003,0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth,reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top)}
+    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,stretchY(.003),0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth,reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top)}
   }
 }
 function drawMapOutlines(){
@@ -305,12 +341,12 @@ function drawMapOutlines(){
   for(const g of groups){for(const c of g.cells){
     const x0=c.x,x1=c.x+1,y1=H-c.y,y0=y1-1,d=g.depth;
     if(!d){const z=.028;
-      if(!sameBlock(g,c.x,c.y+1))edge(vec3(x0,y0,z),vec3(x1,y0,z));
-      if(!sameBlock(g,c.x+1,c.y))edge(vec3(x1,y0,z),vec3(x1,y1,z));
-      if(!sameBlock(g,c.x,c.y-1))edge(vec3(x1,y1,z),vec3(x0,y1,z));
-      if(!sameBlock(g,c.x-1,c.y))edge(vec3(x0,y1,z),vec3(x0,y0,z));
+      if(!sameBlock(g,c.x,c.y+1))edge(vec3(x0,stretchY(y0),z),vec3(x1,stretchY(y0),z));
+      if(!sameBlock(g,c.x+1,c.y))edge(vec3(x1,stretchY(y0),z),vec3(x1,stretchY(y1),z));
+      if(!sameBlock(g,c.x,c.y-1))edge(vec3(x1,stretchY(y1),z),vec3(x0,stretchY(y1),z));
+      if(!sameBlock(g,c.x-1,c.y))edge(vec3(x0,stretchY(y1),z),vec3(x0,stretchY(y0),z));
       continue}
-    const side=cameraSlant(viewSide),skew=side*DEPTH_SKEW,P=(x,y,z)=>vec3(x+skew*z,y,z),frontZ=d+.04;
+    const side=cameraSlant(viewSide),skew=side*DEPTH_SKEW,P=(x,y,z)=>vec3(x+skew*z,stretchY(y),z),frontZ=d+.04;
     if(!sameBlock(g,c.x,c.y+1))edge(P(x0,y0,frontZ),P(x1,y0,frontZ));
     if(!sameBlock(g,c.x+1,c.y))edge(P(x1,y0,frontZ),P(x1,y1,frontZ));
     if(!sameBlock(g,c.x,c.y-1))edge(P(x1,y1,frontZ),P(x0,y1,frontZ));
@@ -320,7 +356,7 @@ function drawMapOutlines(){
   for(const point of joins.values())render3D.drawSphere(point,stroke,inkColor);
   const studs=currentDesign().studs;
   movementMarkers?.drawOutlines(studs.width*render3D.camera.orthographic/height,{color:designColor(studs.color),opacity:studs.opacity});
-  drawSelectedOutline();drawHoverSpot();drawPomOcclusionShadow();
+  drawSelectedOutline();drawReferenceSquares();drawHoverSpot();drawPomOcclusionShadow();
   render3D.flush();Object.assign(render3D,material);
 }
 // Boundary edges keep the selected material on their screen-right side, including holes.
@@ -348,7 +384,7 @@ function drawSelectedOutline(){
     }
     if(key(loop.at(-1))===key(loop[0])){
       loop.pop();
-      const screen=loop.map(([x,y])=>render3D.worldToScreen(vec3(x+cameraSlant(viewSide)*DEPTH_SKEW*z,y,z),size));
+      const screen=loop.map(([x,y])=>render3D.worldToScreen(worldPoint(x,y,z),size));
       loops.push(roundedInsetLoop(screen,offset,radius));
     }
   }
@@ -374,6 +410,15 @@ function drawSelectedOutline(){
     }
   }
 }
+function drawReferenceSquares(){
+  if(!isDesignPlayground()||!currentDesign().showReferenceSquares)return;
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),z=3.09;
+  // Construct in screen space then unproject to a fixed front plane. The
+  // reference must remain a true screen square, independent of board stretch.
+  for(const g of groups){const c=g.cells[0],a=render3D.worldToScreen(worldPoint(c.x,H-c.y-1,g.depth+.05),size),b=render3D.worldToScreen(worldPoint(c.x+1,H-c.y-1,g.depth+.05),size),width=Math.hypot(b.x-a.x,b.y-a.y),corners=[[a.x,a.y],[a.x+width,a.y],[a.x+width,a.y-width],[a.x,a.y-width]].map(([x,y])=>{const ray=render3D.screenToRay(vec2(x,y),size);return ray.getPosition((z-ray.origin.z)/ray.direction.z)});
+    for(let i=0;i<4;i++)render3D.drawLine(corners[i],corners[(i+1)%4],1.5*render3D.camera.orthographic/size.y,new Color(.15,.25,.85));
+  }
+}
 function drawHoverSpot(){
   if(!hoverObject||won)return;
   render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthTest:render3D.depthTest,depthWrite:render3D.depthWrite,lighting:render3D.lighting};
@@ -381,9 +426,9 @@ function drawHoverSpot(){
   for(const spot of [hoverObject,studioTargetObject])if(spot&&spot.color.a>0&&!(spot===studioTargetObject&&movementMarkersEnabled()))render3D.drawMesh(spot.mesh,spot.getMatrix(),undefined,spot.color);render3D.flush();
   render3D.blend=state.blend;render3D.depthTest=state.depthTest;render3D.depthWrite=state.depthWrite;render3D.lighting=state.lighting;
 }
-function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(playerObject.mesh,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
+function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;syncPomMatrix();render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(playerObject.mesh,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));syncPomMatrix();playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;syncPomMatrix();playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
 function syncFloorGrid(){
-  const showFloor=!isBackgroundStudio()||backgroundStudio.values.showGuides,custom=customFloorGridEnabled(),floor=currentDesign().floorGrid;
+  const showFloor=currentBackgroundConfiguration()?.showGuides??true,custom=customFloorGridEnabled(),floor=currentDesign().floorGrid;
   wrap.dataset.floorStyle=custom?'walkability-custom-grid':'walkability-grid';
   const o=backgroundObjects[backgroundObjects.length-1];if(!o)return;
   if(!showFloor){o.mesh=undefined;return}
@@ -404,9 +449,10 @@ function syncFloorGrid(){
     walkable.push({x,z,polygon:[[x,z],[x+1,z],[x+1,z+1],[x,z+1]].map(([xx,zz])=>toPlane(worldPoint(xx,ground,zz)))});
   }
   // Diagonals cover non-walkable ground; cut them at exact walking-cell edges.
+  const walkingPolygons=walkable.map(cell=>cell.polygon);
   const low=-ortho/2,high=Math.min(hy,ortho/2),rise=high-low,spacing=10*ortho/height;
   if(rise>0)for(let x=-worldWidth/2-rise;x<=worldWidth/2;x+=spacing){
-    for(const [a,b]of outsidePolygonSegments({x,y:low},{x:x+rise,y:high},walkable.map(cell=>cell.polygon)))addPlaneLine(a,b);
+    for(const [a,b]of outsidePolygonSegments({x,y:low},{x:x+rise,y:high},walkingPolygons))addPlaneLine(a,b);
   }
   const seen=new Set();
   for(const {x,z,polygon}of walkable){
@@ -456,14 +502,14 @@ function selectedSurfaceColor(g,now=performance.now()){
   const phase=(1-Math.cos((now-pulseStart)*Math.PI*2/1400))/2;
   return tinted(color,reducedSelectionMotion.matches?.12:.26*phase);
 }
-function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting()}
+function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
 function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio;
   if(!activeEnvironmentTextures||backgroundObjects.length<2)return;
   if(gameReady)requestLevelEnvironment();
   render3D.updateMatrices(ratio);const base=render3D.worldToScreen(vec3(4,0,0),vec2(width,height)),groundQ=base?(height/2-base.y)*ortho/height:-ortho*.28;if(base)wrap.style.setProperty('--horizon-y',`${Math.max(0,Math.min(100,base.y/height*100))}%`);
   const place=(o,distance,x,y,w,h)=>{o.pos3D=cam.pos.add(forward.scale(distance)).add(right.scale(x)).add(up.scale(y));o.scale3D=vec3(w,h,.012);o.rotation3D=cam.rotation.copy()};
-  const frame=environmentFrame(activeEnvironment,{ortho,worldWidth,groundQ}),preview=isBackgroundStudio()?backgroundStudio.values:null;
+  const frame=environmentFrame(activeEnvironment,{ortho,worldWidth,groundQ}),preview=currentBackgroundConfiguration();
   const sky=backgroundObjects[0],ground=backgroundObjects[1];
   for(const [index,object]of [sky,ground].entries()){const visible=!preview||preview.layers==='both'||preview.layers===(index?'foreground':'background');object.mesh=visible||index===0?box:undefined;object.tileInfo=visible?activeEnvironmentTextures[index]:undefined;if(index===0)object.color=visible?new Color(1):designColor('#eee8fa')}
   place(sky,90,0,frame.backgroundY,frame.backgroundHeight*activeEnvironment.aspectRatio,frame.backgroundHeight);
@@ -481,22 +527,22 @@ function syncBackground(){const width=wrap.clientWidth,height=wrap.clientHeight,
   wrap.dataset.sceneryOverlays=JSON.stringify(preview?{...preview.overlays,horizonY:(.5-horizon/ortho)*height}:null);
   wrap.dataset.backgroundFrame=JSON.stringify({width:frame.backgroundHeight*activeEnvironment.aspectRatio*height/ortho,height:frame.backgroundHeight*height/ortho,left:width/2-frame.backgroundHeight*activeEnvironment.aspectRatio*height/ortho/2,top:height/2-(frame.backgroundY+frame.backgroundHeight/2)*height/ortho});
 }
-function syncPlayer(){resetPomShape();const p=worldPosition(player),jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(celebration?.pomOffset??0,jump,0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018)}
+function syncPlayer(){resetPomShape();const p=worldPosition(player),jump=celebration?.jump??0;playerObject.pos3D=p.add(vec3(celebration?.pomOffset??0,stretchY(jump),0)).add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);syncPomMatrix()}
 function syncFlag(){
   const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;
   const raised=g.depth>0,cx=goalCell.x+.5,cy=H-goalCell.y-.5;
   // One coplanar print has no thickness and never casts its own shadow.
-  flagPrint.mesh=raised?undefined:flagMeshes.print;flagPrint.pos3D=vec3(cx,cy,.032);
+  flagPrint.mesh=raised?undefined:flagMeshes.print;flagPrint.pos3D=vec3(cx,stretchY(cy),.032);flagPrint.scale3D=vec3(1,stretchY(1),1);
   for(const [part,mesh]of [[flagPole,flagMeshes.pole],[flagCloth,flagMesh],[flagVase,flagMeshes.vase],[flagCap,flagMeshes.cap]]){
-    part.mesh=raised?mesh:undefined;part.rotation3D=vec3();part.castShadow=raised&&render3D.shadows;
+    part.mesh=raised?mesh:undefined;part.rotation3D=vec3();part.scale3D=vec3(1,stretchY(1),1);part.castShadow=raised&&render3D.shadows;
   }
   if(!raised)return;
   // Center the flag in the landing square. Pom's final hop makes room for it.
   const base=worldPoint(cx,H-goalCell.y,g.depth-.5);
-  flagVase.pos3D=base.add(vec3(0,.005,0));
-  flagPole.pos3D=base.add(vec3(0,.43,0));flagPole.scale3D=vec3(1);
-  flagCloth.pos3D=base.add(vec3(.19,.65,.006));flagCloth.scale3D=vec3(.38,.24,1);
-  flagCap.pos3D=base.add(vec3(0,.78,0));
+  flagVase.pos3D=base.add(vec3(0,stretchY(.005),0));
+  flagPole.pos3D=base.add(vec3(0,stretchY(.43),0));flagPole.scale3D=vec3(1,stretchY(1),1);
+  flagCloth.pos3D=base.add(vec3(.19,stretchY(.65),.006));flagCloth.scale3D=vec3(.38,stretchY(.24),1);
+  flagCap.pos3D=base.add(vec3(0,stretchY(.78),0));
 }
 function updateUI(){
   wrap.classList.toggle('no-piece-selected',!selected);
@@ -519,7 +565,7 @@ function updateUI(){
 function syncMovementMarkers(){
   if(!movementMarkers)return;
   if(!movementMarkersEnabled()||won||introPlaying){movementMarkers.dispose();return}
-  movementMarkers.sync(standableReachable().filter(p=>p.y<H),standingSpotCenter,p=>platformTopColor(byCell[p.y][p.x],p.x,p.z));
+  movementMarkers.sync(standableReachable().filter(p=>p.y<H),standingSpotCenter,p=>platformTopColor(byCell[p.y][p.x],p.x,p.z),stretchY);
 }
 function pickMovementMarker(ray){return movementMarkersEnabled()?movementMarkers?.pick(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines]):null}
 function hideHelp(){clearTimeout(toastTimer);toastTimer=undefined;helpKind=null;const el=document.querySelector('#toast');el.classList.remove('on');el.textContent=''}
@@ -687,11 +733,18 @@ function fitCamera(width,height){return sceneFrame(width,height).height}
 function positionCameraForView(side,targetOverride){render3D.camera.orbit(targetOverride||sceneFrame(wrap.clientWidth,wrap.clientHeight,side).target,15,0,viewPitch)}
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
 const tappingUnit=()=>32/Math.max(.18,Math.sin(viewPitch));
-function stopIntro(){introFrame++;introPlaying=false;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
-function finishIntro(){introPlaying=false;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
+function stopIntro(){introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
+function finishIntro(){introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
+function enterPlayFromIntro(){
+  if(!introPlaying)return;
+  stopIntro();viewTouched=true;keepInterruptedView=true;finishIntro();
+}
 function clampBoardView(){
   const width=wrap.clientWidth,height=wrap.clientHeight,f=sceneFrame(width,height),fitUnit=height/f.height;
   viewUnit=Math.max(fitUnit,Math.min(Math.max(tappingUnit(),fitUnit),viewUnit));
+  // An interrupted intro can be between the normal framing bounds. Keep that
+  // exact view and allow the player's gesture to continue without a camera snap.
+  if(keepInterruptedView)return;
   if(viewUnit<=fitUnit*1.001){viewTarget=f.target;return}
   const halfX=(width/2-f.margin)/viewUnit,loX=f.minX+halfX,hiX=f.maxX-halfX;
   viewTarget.x=loX<=hiX?Math.max(loX,Math.min(hiX,viewTarget.x)):(f.minX+f.maxX)/2;
@@ -702,12 +755,12 @@ function clampBoardView(){
 function applyBoardView(clamp=true){
   if(!viewReady||celebration)return;if(clamp)clampBoardView();
   render3D.camera.orthographic=wrap.clientHeight/viewUnit;positionCameraForView(viewSide,viewTarget);render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);
-  syncBackground();syncFloorGrid();syncHoverSpot();if(playerObject&&!busy)syncPlayer();
+  syncCellGeometry();syncBackground();syncFloorGrid();syncHoverSpot();if(playerObject&&!busy)syncPlayer();
   // Readable, projected dimensions also make responsive checks independent of device pixels.
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
 }
 function startBoardView(animate=true){
-  stopIntro();viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
+  stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
   const f=sceneFrame(viewWidth,viewHeight);
   if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
   const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
@@ -716,21 +769,23 @@ function startBoardView(animate=true){
   const token=introFrame,from=viewTarget.copy(),unit=viewMobile?Math.max(fitUnit,tappingUnit()):fitUnit,pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
   const needsZoom=unit>fitUnit*1.01;
   viewUnit=unit;viewTarget=needsZoom?pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0)):from.copy();clampBoardView();
-  const target=viewTarget.copy(),endHeight=viewHeight/viewUnit,startHeight=f.height;
+  const target=viewTarget.copy(),endUnit=viewUnit;
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
-  if(!animate||reduced){viewUnit=unit;viewTarget=target;applyBoardView(false);finishIntro();return}
+  if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
   introPlaying=true;selected=null;document.querySelector('.stage').classList.add('is-introducing');wrap.dataset.introPhase='overview';updateUI();
-  const hold=1600,pan=needsZoom?700:0,zoom=needsZoom?650:0;let start;
-  function tick(now){
+  let start,lastFrame;
+  introTick=now=>{
     if(token!==introFrame||celebration)return;
-    start??=now;const elapsed=now-start;
-    if(elapsed<hold){wrap.dataset.introPhase='overview'}
-    else if(elapsed<hold+pan){wrap.dataset.introPhase='pan';viewUnit=fitUnit;viewTarget=from.lerp(target,ease((elapsed-hold)/pan));applyBoardView(false)}
-    else if(elapsed<hold+pan+zoom){wrap.dataset.introPhase='zoom';const t=ease((elapsed-hold-pan)/zoom);viewUnit=viewHeight/(startHeight+(endHeight-startHeight)*t);viewTarget=target;applyBoardView(false)}
-    else{viewUnit=unit;viewTarget=target;applyBoardView(false);finishIntro();return}
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
+    // The engine may do several simulation ticks before one render. Move the
+    // camera once per rendered frame, before its matrices and scene are drawn.
+    if(now===lastFrame)return;lastFrame=now;start??=now;
+    const pose=sampleCameraIntro(now-start,fitUnit,endUnit);
+    wrap.dataset.introPhase=pose.phase;
+    if(pose.phase!=='overview'){
+      viewUnit=pose.unit;viewTarget=from.lerp(target,pose.pan);applyBoardView(false);
+    }
+    if(pose.done)finishIntro();
+  };
 }
 
 function panBoard(dx,dy){viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
@@ -741,7 +796,7 @@ function zoomBoard(unit,x,y){
 function clearBoardHover(){hovered=null;movementMarkers?.setHovered(null);if(hoverObject)hoverObject.color=new Color(1,1,1,0)}
 function boardPoint(e){const r=wrap.getBoundingClientRect();return {x:e.clientX-r.left-wrap.clientLeft,y:e.clientY-r.top-wrap.clientTop}}
 function boardDown(e){
-  if(won||introPlaying||!viewReady||e.button>0)return;stopIntro();const p=boardPoint(e);boardPointers.set(e.pointerId,p);wrap.setPointerCapture(e.pointerId);
+  if(won||!viewReady||e.button>0)return;enterPlayFromIntro();stopIntro();const p=boardPoint(e);boardPointers.set(e.pointerId,p);wrap.setPointerCapture(e.pointerId);
   if(boardPointers.size===1)boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};else{boardGesture.multi=true;clearBoardHover()}
 }
 function boardMove(e){
@@ -772,12 +827,13 @@ function syncVictoryShowcase(now,sequence){
   const yaw=Math.atan(cameraSlant(viewSide)*DEPTH_SKEW)*turn,pitch=sequence.pitch*(1-turn);
   const top=Math.min(victoryEffects.messageHeight+32,height*.42),bottom=24;
   const unit=Math.max(1,Math.min((width-32)/(W+.8),(height-top-bottom)/(H+1.15)));
-  const finalHeight=height/unit,target=worldPoint(W/2,(H+.85)/2+(top-bottom)/(2*unit),1.5);
+  // This is the camera endpoint at zero pitch, where yStretch is exactly 1.
+  const finalHeight=height/unit,target=vec3(W/2+extrusion(1.5).x,(H+.85)/2+(top-bottom)/(2*unit),1.5);
   render3D.camera.orthographic=sequence.baseHeight+(finalHeight-sequence.baseHeight)*turn;
   render3D.camera.orbit(sequence.baseTarget.lerp(target,turn),15,yaw,pitch);
   // Four hops, then settle beside the flag before the circle closes.
   sequence.jump=!sequence.reducedMotion&&elapsed<2320?.32*Math.sin(Math.PI*(elapsed%580)/580):0;
-  render3D.updateMatrices(width/height);syncBackground();syncFloorGrid();syncPlayer();
+  render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();
   victoryEffects.update(elapsed,wrap.getBoundingClientRect().top+16);
   const fade=ease((elapsed-250)/2000),strength=currentDesign().shadows.strength*(1-fade);
   render3D.sunColor=new Color(strength,strength,strength);
@@ -842,6 +898,9 @@ function gameInit(){
   autoSelectNearbyPiece();updateUI();startBoardView();gameReady=true;document.querySelector('.stage').classList.add('is-ready');document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Start playing';
 }
 function gameUpdate(){
+  introTick?.(timeReal*1000);
+  syncCellGeometry();syncPomMatrix();
+  designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;
 }
@@ -865,20 +924,20 @@ function moveTo(p,pressMarker=false){
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const motion={pose:plan.stretch?shapePomReach(from,to,t,profile):jumpPose(from,to,t,profile),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
-    if(winningArrival&&index===plans.length-1){const offset=victoryArrival(t,landingOffset,reducedSelectionMotion.matches);motion.pose=motion.pose.add(vec3(offset.x,offset.y,0))}
+    if(winningArrival&&index===plans.length-1){const offset=victoryArrival(t,landingOffset,reducedSelectionMotion.matches);motion.pose=motion.pose.add(vec3(offset.x,stretchY(offset.y),0))}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
 }
 function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return ray.getPosition(t)}
-function standableAt(ray){let best=null,bestD=Infinity;if(Math.abs(ray.direction.y)>1e-6)for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+cameraSlant(viewSide)*DEPTH_SKEW*(p.z+.5),t=(h-ray.origin.y)/ray.direction.y;if(t<0)continue;const q=ray.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best)return best;const floor=pointOnFloor(ray);if(floor){const p=standableReachable().filter(n=>n.y===H).sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<.9)return p}}return null}
+function standableAt(ray){ray=boardRay(ray);let best=null,bestD=Infinity;if(Math.abs(ray.direction.y)>1e-6)for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+cameraSlant(viewSide)*DEPTH_SKEW*(p.z+.5),t=(h-ray.origin.y)/ray.direction.y;if(t<0)continue;const q=ray.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best)return best;const floor=pointOnFloor(ray);if(floor){const p=standableReachable().filter(n=>n.y===H).sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<.9)return p}}return null}
 function updateHover(e){if(!hoverObject)return;if(introPlaying){clearBoardHover();return}const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight)),p=standableAt(ray);hovered=p;movementMarkers?.setHovered(!busy&&!won?pickMovementMarker(ray):null);if(!p||(movementMarkersEnabled()&&p.y<H)){hoverObject.color=new Color(1,1,1,0);return}hoverObject.pos3D=standingSpotCenter(p);hoverObject.color=new Color(1,1,1,.33)}
-function clickBoard(e){if(busy||won)return;const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
+function clickBoard(e){if(busy||won)return;enterPlayFromIntro();const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
   const stud=pickMovementMarker(ray);if(stud){moveTo(stud,true);return}
   // Resolve visible, walkable cube tops before wall faces. The wall can be
   // nearer along the ray even when the pointer is visually on a platform top.
-  let best=null,bestD=Infinity;for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+cameraSlant(viewSide)*DEPTH_SKEW*(p.z+.5);if(Math.abs(ray.direction.y)<1e-6)continue;const t=(h-ray.origin.y)/ray.direction.y;if(t<0)continue;const q=ray.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best){moveTo(best);return}
+  const logicalRay=boardRay(ray);let best=null,bestD=Infinity;for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+cameraSlant(viewSide)*DEPTH_SKEW*(p.z+.5);if(Math.abs(logicalRay.direction.y)<1e-6)continue;const t=(h-logicalRay.origin.y)/logicalRay.direction.y;if(t<0)continue;const q=logicalRay.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best){moveTo(best);return}
   const hits=engineObjectsRaycast3D(ray),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(walkabilityFacesEnabled()?top:reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){hideHelp();selected=g;updateUI()}else showHelp('Pom cannot push or pull this piece from here. Move him beside an exposed edge.','wall');return}}
   // Match a visible point on the floor plane to the nearest reachable step.
   const floor=pointOnFloor(ray);if(floor){selected=null;updateUI();const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15){moveTo(p);return}}
@@ -889,7 +948,7 @@ function clickBoard(e){if(busy||won)return;const point=boardPoint(e),ray=render3
 function manipulate(dir){const g=selected;if(busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
 function restore(s){hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 function changeView(horizontal,vertical=viewHeightStep){
-  if(busy||won||introPlaying||!viewReady)return;
+  if(busy||won||!viewReady)return;enterPlayFromIntro();
   const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;
   stopIntro();clearBoardHover();
   // Keep the wall plane in the same screen position, rather than following Pom's sheared depth.
@@ -901,7 +960,7 @@ function changeView(horizontal,vertical=viewHeightStep){
 }
 
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>boardUp(e,true));wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
-wrap.addEventListener('wheel',e=>{if(won||introPlaying||!viewReady)return;e.preventDefault();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView()},{passive:false});
+wrap.addEventListener('wheel',e=>{if(won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView()},{passive:false});
 // Overlay controls must never select or move a ground spot underneath them.
 const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',clearBoardHover);
 const studioControls=document.querySelector('#studioControls'),movementCase=document.querySelector('#movementCase');for(const example of movementExamples){const option=document.createElement('option');option.value=example.id;option.textContent=example.label;movementCase.append(option)}movementCase.onchange=()=>{if(!busy)resetLevelState(studioLevel(levels,movementExamples.find(example=>example.id===movementCase.value)))};
@@ -917,7 +976,8 @@ window.addEventListener('keydown',e=>{
     else if(e.key==='End'){levelList.scrollTop=levelList.scrollHeight;e.preventDefault()}
     return;
   }
-  if(document.querySelector('.stage').inert||busy||won||introPlaying||e.target.closest('#viewController')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(document.querySelector('.stage').inert||busy||won||e.target.closest('#viewController')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','z','Z','r','R'].includes(e.key))enterPlayFromIntro();
   if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click();const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(delta){e.preventDefault();changeView(viewSide+delta[0],viewHeightStep+delta[1])}
 });
 setCanvasPixelRatio(Math.min(window.devicePixelRatio||1,2));

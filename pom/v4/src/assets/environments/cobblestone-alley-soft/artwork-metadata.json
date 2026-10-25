@@ -1,0 +1,48 @@
+{
+  "name": "Cobblestone Alley — Soft",
+  "colorSpace": "sRGB",
+  "variants": {
+    "portrait": {
+      "width": 1024,
+      "height": 1536,
+      "groundAnchorY": 0.6998697916666666,
+      "groundAnchorPixelY": 1075,
+      "background": "cobblestone-alley-soft-portrait-background.webp",
+      "foreground": "cobblestone-alley-soft-portrait-foreground.webp",
+      "pairBytes": 362290,
+      "foregroundBottomOpaque": true,
+      "foregroundEncoding": "lossless",
+      "backgroundEncoding": "quality92",
+      "sourceSize": [
+        1024,
+        1536
+      ]
+    },
+    "landscape": {
+      "width": 2048,
+      "height": 1024,
+      "groundAnchorY": 0.7001953125,
+      "groundAnchorPixelY": 717,
+      "background": "cobblestone-alley-soft-landscape-background.webp",
+      "foreground": "cobblestone-alley-soft-landscape-foreground.webp",
+      "pairBytes": 370890,
+      "foregroundBottomOpaque": true,
+      "foregroundEncoding": "lossless",
+      "backgroundEncoding": "quality92",
+      "sourceSize": [
+        1774,
+        887
+      ]
+    }
+  },
+  "verification": {
+    "gameplayTested": false,
+    "physicalIPhoneTested": false
+  },
+  "notes": [
+    "Separately composed portrait and landscape pastel alley using built-in image editing.",
+    "Foreground mechanically separated from identical painting with native SVG alpha mask.",
+    "Landscape source 1774x887 uniformly resized to 2048x1024; portrait native1024x1536.",
+    "Pale peach, buttercream, mint and ivory facades; reduced contrast and detail; tenuous colored outlines. No characters."
+  ]
+}
