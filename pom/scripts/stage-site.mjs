@@ -1,4 +1,4 @@
-import {access,cp,mkdir,rm,writeFile} from 'node:fs/promises';
+import {access,cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
 
 const repository=new URL('../../',import.meta.url),pom=new URL('../',import.meta.url);
 const site=new URL('_site/',repository);
@@ -23,7 +23,6 @@ for(const [old,target,label]of [
   ['v1','../v0.01/','Little Ledges v0.01'],
   ['v2','../v0.02/','Little Ledges v0.02'],
   ['v3','../v0.03/','Little Ledges v0.03'],
-  ['v4','../','Little Ledges'],
 ]){
   const directory=new URL(`pom/${old}/`,site);
   await mkdir(directory,{recursive:true});
@@ -33,5 +32,12 @@ for(const [old,target,label]of [
 <script>const destination=new URL(${JSON.stringify(target)},location.href);destination.search=location.search;destination.hash=location.hash;location.replace(destination.href);</script>
 </head><body><a href="${target}">Open ${label}</a></body></html>\n`);
 }
+// Existing iPhone Home Screen clips can retain /pom/v4/ as their app scope.
+// Serve the current game there without navigating outside that scope. Only the
+// entry HTML is duplicated; assets, manifest, saves and game code stay shared.
+const legacyGame=new URL('pom/v4/',site);
+await mkdir(legacyGame,{recursive:true});
+const currentHtml=await readFile(new URL('dist/index.html',pom),'utf8');
+await writeFile(new URL('index.html',legacyGame),currentHtml.replace('<head>','<head>\n  <base href="../">\n  <link rel="canonical" href="./">'));
 await writeFile(new URL('.nojekyll',site),'');
 console.log('Staged Little Ledges, Puzzle Creator, restricted player and archives in _site/.');

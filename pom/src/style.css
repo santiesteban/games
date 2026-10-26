@@ -135,14 +135,6 @@
 .view-cube:hover:not(:disabled) .cube-front,.view-controller.is-active .cube-front{fill:#e8a56b}
 .view-cube:hover:not(:disabled) .cube-top,.view-controller.is-active .cube-top{fill:#f4c093}
 .view-cube:hover:not(:disabled) .cube-side,.view-controller.is-active .cube-side{fill:#c8874f}
-.view-drag-arrows{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .12s;color:color-mix(in srgb,var(--ink) 48%,transparent);font:400 14px/1 sans-serif}
-.view-controller.is-active .view-drag-arrows{opacity:1}
-.view-drag-arrows span{position:absolute;display:grid;place-items:center;width:16px;height:16px}
-.view-drag-arrows [data-drag-direction=up]{left:calc(50% - 8px);top:-3px}
-.view-drag-arrows [data-drag-direction=down]{left:calc(50% - 8px);bottom:-3px}
-.view-drag-arrows [data-drag-direction=left]{left:-1px;top:calc(50% - 8px)}
-.view-drag-arrows [data-drag-direction=right]{right:-1px;top:calc(50% - 8px)}
-.view-drag-arrows .is-disabled{opacity:.22}
 .cube-eye path{fill:#fff;stroke-width:1.6}.cube-eye circle{fill:var(--ink)}.cube-eye .eye-glint{fill:#fff}
 .view-cube:active:not(:disabled){box-shadow:none;transform:none}.view-cube.is-dragging{cursor:grabbing}.view-cube:disabled{opacity:.45;cursor:default}
 .view-cube:focus-visible{outline:2px solid #6651a4;outline-offset:3px}
@@ -205,7 +197,8 @@
 .game-header{contain:layout paint;transform:none;will-change:auto}
 .game-header .level-number{display:block;flex:none;width:38px;height:38px;padding:0;border:0;border-radius:0;background:none;transform:none;overflow:visible}.game-header .level-number text{font:800 14px 'DM Mono',monospace}
 @media(max-width:600px){.game-header .level-number{width:32px;height:32px}}
-#exitLevel,#backTitle,#settingsHome{display:grid;place-items:center;width:42px;height:42px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;transform:none;translate:none;filter:none;-webkit-tap-highlight-color:transparent;transition:translate .1s ease}
+:root{--navigation-icon-width:42px;--navigation-icon-height:42px}
+#exitLevel,#backTitle,#settingsHome{display:grid;place-items:center;width:var(--navigation-icon-width);height:var(--navigation-icon-height);padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;transform:none;translate:none;filter:none;-webkit-tap-highlight-color:transparent;transition:translate .1s ease}
 #exitLevel svg,#backTitle svg,#settingsHome svg{display:block;width:100%;height:100%;pointer-events:none}
 #exitLevel:active:not(:disabled),#backTitle:active:not(:disabled),#settingsHome:active:not(:disabled){transform:none;translate:2px 2px;box-shadow:none}
 /* Settings and levels use the same full-width, safe-area-aware header. */
@@ -220,7 +213,7 @@
 .stage.is-won .control-deck{isolation:isolate}
 .stage>.victory-iris{inset:auto 0 0;z-index:7;overflow:hidden}
 #victoryActions{bottom:24px;z-index:10}
-@media(max-width:600px){#exitLevel,#backTitle,#settingsHome{width:34px;height:36px}#menuScreen.is-levels .levels-topbar,.settings-header.screen-topbar{--topbar-height:60px;grid-template-columns:34px minmax(0,1fr) 34px;padding-left:14px;padding-right:14px;gap:8px}#menuScreen.is-levels .levels-brand,.settings-header #settingsTitle{font-size:clamp(18px,5vw,22px)}}
+@media(max-width:600px){:root{--navigation-icon-width:34px;--navigation-icon-height:36px}#menuScreen.is-levels .levels-topbar,.settings-header.screen-topbar{--topbar-height:60px;grid-template-columns:34px minmax(0,1fr) 34px;padding-left:14px;padding-right:14px;gap:8px}#menuScreen.is-levels .levels-brand,.settings-header #settingsTitle{font-size:clamp(18px,5vw,22px)}}
 @media(prefers-reduced-motion:reduce){#exitLevel,#backTitle,#settingsHome{transition:none}}
 
 /* Floating section titles above a single rounded grid for each level group. */
@@ -386,6 +379,6 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
 .stage.is-introducing .canvas-actions,.stage.is-introducing .compact-actions,.stage.is-introducing .view-controller{visibility:hidden;pointer-events:none}
 
 /* One SVG button frame for back and settings, including the same six-degree tilt. */
-#levelSettings,.home-settings{width:42px;height:42px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;transform:none;translate:none;filter:none;transition:translate .1s ease}
+#levelSettings,.home-settings{width:var(--navigation-icon-width);height:var(--navigation-icon-height);padding:0;border:0;border-radius:0;background:none;box-shadow:none;transform:none;translate:none;filter:none;transition:translate .1s ease}
 #levelSettings svg,.home-settings svg{display:block;width:100%;height:100%;pointer-events:none}
 #levelSettings:active:not(:disabled),.home-settings:active{transform:none;translate:2px 2px;box-shadow:none}

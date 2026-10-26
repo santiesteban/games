@@ -18,7 +18,7 @@ function roundedCubeContour(points,radius=5){
 }
 
 export function createViewController(root,onChange){
-  const cube=root.querySelector('.view-cube'),svg=cube.querySelector('svg'),arrows=[...root.querySelectorAll('[data-drag-direction]')];
+  const cube=root.querySelector('.view-cube'),svg=cube.querySelector('svg');
   let position=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical),disabled=false,gesture;
   const directions={left:[-1,0],right:[1,0],up:[0,1],down:[0,-1]};
   function update(horizontal,vertical){
@@ -40,7 +40,6 @@ export function createViewController(root,onChange){
     svg.querySelector('.cube-clip').setAttribute('d',contour);svg.querySelector('.cube-outline').setAttribute('d',contour);
     svg.querySelector('.cube-seams').setAttribute('d',`${position.vertical?'':`M${x} ${y}H${x+w}`}${position.horizontal?`M${edge} ${y}V${y+h}`:''}`);
     svg.querySelector('.cube-eye').setAttribute('transform',`translate(${x+w/2} ${y+h/2})`);
-    for(const arrow of arrows){const [dx,dy]=directions[arrow.dataset.dragDirection],next=cameraPosition(position.horizontal+dx,position.vertical+dy),unavailable=disabled||(next.horizontal===position.horizontal&&next.vertical===position.vertical);arrow.classList.toggle('is-disabled',unavailable);arrow.setAttribute('aria-disabled',String(unavailable))}
   }
   function choose(horizontal,vertical){if(!disabled)onChange(cameraPosition(horizontal,vertical))}
   const activate=()=>{if(!disabled)root.classList.add('is-active')};

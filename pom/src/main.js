@@ -551,7 +551,7 @@ function syncPlayer(){resetPomShape();const p=worldPosition(player),jump=celebra
 function syncFlag(){
   const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;
   const raised=g.depth>0,cx=goalCell.x+.5,cy=H-goalCell.y-.5;
-  // One coplanar print has no thickness and never casts its own shadow.
+  // The front-face badge disappears together with its flag when the piece rises.
   flagPrint.mesh=raised?undefined:flagMeshes.print;flagPrint.pos3D=vec3(cx,stretchY(cy),.032);flagPrint.scale3D=vec3(1,stretchY(1),1);
   for(const [part,mesh]of [[flagPole,flagMeshes.pole],[flagCloth,flagMesh],[flagVase,flagMeshes.vase],[flagCap,flagMeshes.cap]]){
     part.mesh=raised?mesh:undefined;part.rotation3D=vec3();part.scale3D=vec3(1,stretchY(1),1);part.castShadow=raised&&render3D.shadows;
@@ -920,8 +920,17 @@ function gameInit(){
   for(let panel=0;panel<4;panel++){const start=-Math.PI/2+panel*Math.PI/4,end=start+Math.PI/4,arc=Array.from({length:9},(_,i)=>{const a=start+(end-start)*i/8;return[.5*Math.sin(a),.52*Math.cos(a)]}),piece=new EngineObject3D(vec3(0,.84,3.035),makeSectorMesh(umbrellaCenter,arc),undefined,new Color(1));piece.scale3D=vec3(.76,.56,1);piece.lighting=false;piece.transparent=true;playerObject.addChild(piece);umbrellaPanels.push(piece)}
   umbrellaHandle=new EngineObject3D(vec3(0,.84,2.96),makeFanMesh([[-.035,-.02],[.035,-.02],[.035,-.6],[-.035,-.6]]),undefined,new Color(.15,.2,.27,0));umbrellaHandle.lighting=false;umbrellaHandle.transparent=true;playerObject.addChild(umbrellaHandle);setUmbrellaVisible(false);
   const print=new Mesh();
-  print.addQuad(vec3(-.02,-.05,0),vec3(.02,-.05,0),vec3(.02,.23,0),vec3(-.02,.23,0),inkColor);
-  print.addStrip([vec3(.02,.23,0),vec3(.02,.10,0),vec3(.225,.165,0)],vec3(0,0,1),undefined,new Color(1,.443,.22));print.doubleSided=true;
+  const badge=(half,radius,color,z)=>{
+    const corners=[[half-radius,half-radius,0],[-half+radius,half-radius,Math.PI/2],[-half+radius,-half+radius,Math.PI],[half-radius,-half+radius,Math.PI*1.5]];
+    const perimeter=corners.flatMap(([x,y,angle])=>Array.from({length:7},(_,i)=>vec3(x+radius*Math.cos(angle+i*Math.PI/12),y+radius*Math.sin(angle+i*Math.PI/12),z)));
+    const vertices=[vec3(0,0,z),...perimeter],indices=[];
+    for(let i=1;i<vertices.length;i++)indices.push(0,i,i===vertices.length-1?1:i+1);
+    print.addTriangles(vertices,indices,vec3(0,0,1),undefined,color);
+  };
+  // Tiny depth offsets keep the frame, cream fill and glyph free of z-fighting.
+  badge(.26,.075,inkColor,0);badge(.245,.065,new Color(1,250/255,240/255),.001);
+  print.addQuad(vec3(-.12,-.14,.002),vec3(-.08,-.14,.002),vec3(-.08,.14,.002),vec3(-.12,.14,.002),inkColor);
+  print.addStrip([vec3(-.08,.14,.002),vec3(-.08,.01,.002),vec3(.125,.075,.002)],vec3(0,0,1),undefined,new Color(1,.443,.22));print.doubleSided=true;
   const vase=buildLathe([[.075,0],[.09,.015],[.115,.12],[.135,.13],[.135,.17],[.105,.17],[.095,.14],[0,.14]],20,true,true);
   vase.colors=vase.normals.map(n=>{const shade=n.y>.4?1:n.y<-.4?.64:.82+.1*(n.x*.6+n.z*.8);return new Color(shade,shade,shade)});vase.dirty=true;
   flagMeshes={print,pole:buildCapsule(.045,.68,12,4,true),vase,cap:buildSphere(.085,12,6,true)};

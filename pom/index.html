@@ -3,6 +3,12 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#b4f5de"><title>Little Ledges</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Little Ledges">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
   <!-- Load layout before the first paint, including while the game module loads. -->
   <link rel="stylesheet" href="./src/style.css">
 </head>
@@ -15,7 +21,6 @@
     <aside class="design-panel" id="designPanel" aria-label="Design Playground controls" hidden></aside>
     <aside class="design-panel" id="backgroundPanel" aria-label="Background Studio controls" hidden></aside>
     <footer class="control-deck"><div class="compact-actions"><button class="btn" id="undo" disabled>↻ Undo</button><button class="btn" id="reset" disabled>Start over</button></div><div class="view-controller" id="viewController" role="group" aria-label="View angle">
-      <span class="view-drag-arrows" aria-hidden="true"><span data-drag-direction="up">↑</span><span data-drag-direction="left">←</span><span data-drag-direction="right">→</span><span data-drag-direction="down">↓</span></span>
       <button class="view-cube" id="toggleView" type="button" aria-label="View: left and down. Drag to turn" aria-describedby="viewDragHelp" title="Drag to turn · arrow keys to adjust">
         <svg viewBox="0 0 76 58" fill="none" aria-hidden="true" focusable="false"><defs><clipPath id="viewCubeClip"><path class="cube-clip"/></clipPath></defs><g class="cube-faces" clip-path="url(#viewCubeClip)"><path class="cube-top"/><path class="cube-side"/><path class="cube-front"/><path class="cube-seams"/></g><path class="cube-outline"/><g class="cube-eye"><path d="M-11 0Q0-12 11 0Q0 12-11 0Z"/><circle r="4"/><circle class="eye-glint" cx="-1" cy="-1" r="1"/></g></svg>
       </button>

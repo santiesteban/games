@@ -99,7 +99,15 @@ At packaging time, configure store IDs, persistent storage, signed releases, OS 
 
 ## Versioning
 
-The current game has no version directory: source `pom/`, public URL `/games/pom/`. The former v1 and v2 sources and public paths are now `pom/v0.01` and `pom/v0.02`. The former v3 archive is now `pom/v0.03`, served at `/games/pom/v0.03/`. Pages generates redirects for `/pom/v1/`, `/pom/v2/`, `/pom/v3/` and `/pom/v4/`, preserving both query parameters and fragments, so previously exported QR cards still open. Installed import handling also recognizes the former `/pom/v4/` route on configured game origins.
+The current game has no version directory: source `pom/`, public URL `/games/pom/`. The former v1 and v2 sources and public paths are now `pom/v0.01` and `pom/v0.02`. The former v3 archive is now `pom/v0.03`, served at `/games/pom/v0.03/`. Pages generates redirects for `/pom/v1/`, `/pom/v2/` and `/pom/v3/`, preserving both query parameters and fragments. Installed import handling also recognizes the former `/pom/v4/` route on configured game origins.
+
+### Home Screen shortcuts
+
+The full game declares a web app manifest with `display: standalone`, explicit root scope/start URL, PNG icons and iOS standalone metadata. Its identity defaults to that root start URL. These files are served from `/pom/` and are prefix-safe for Pages project sites. This does not add a service worker or offline caching.
+
+Pages serves the current built HTML at `/pom/v4/` with a base URL pointing to the root game assets. It deliberately does not navigate to `/pom/`: an existing iOS Home Screen clip may retain `/pom/v4/` as its app scope, and navigating to its parent can open Safari View Controller with browser controls. The compatibility page uses the same JavaScript, styles, manifest and origin storage as the root entry. No versioned source app is reintroduced. Normal menu/level navigation stays within the page; old puzzle links still open their import preview.
+
+Scope behavior is documented in [Apple’s web apps presentation](https://developer.apple.com/videos/play/wwdc2023/10120/) and standalone metadata in [Safari Web Content Guide](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html). Browser reviews can confirm the compatibility URL stays unchanged and its assets load. Actual Home Screen chrome behavior still needs a physical iPhone check; do not equate a desktop narrow viewport with an installed web app.
 
 Progress, preferences, designer drafts and control flags keep their historical `little-ledges:v4:*` keys. IndexedDB names and formats stay the same. Moving the URL within the same Pages origin does not require copying or clearing saves.
 

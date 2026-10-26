@@ -42,4 +42,4 @@ See [web and installed-app architecture](docs/distribution.md). The web game, pu
 | v0.02 (formerly v2) | `pom/v0.02` | `/games/pom/v0.02/` |
 | v0.03 (formerly v3) | `pom/v0.03` | `/games/pom/v0.03/` |
 
-The previous `/pom/v1/`, `/pom/v2/`, `/pom/v3/` and `/pom/v4/` addresses redirect to their current locations while retaining query strings and puzzle fragments. The historical `little-ledges:v4:*` storage keys remain unchanged to preserve progress and settings.
+The previous `/pom/v1/`, `/pom/v2/` and `/pom/v3/` addresses redirect to their current archive locations while retaining query strings and puzzle fragments. `/pom/v4/` serves the current game through a compatibility entry with shared assets, without redirecting existing Home Screen shortcuts out of their saved app scope. The historical `little-ledges:v4:*` storage keys remain unchanged to preserve progress and settings.
