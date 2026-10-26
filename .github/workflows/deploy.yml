@@ -31,6 +31,11 @@ jobs:
             pom/v2/package-lock.json
             pom/v3/package-lock.json
             pom/v4/package-lock.json
+            pom/creator/package-lock.json
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v6
 
       - name: Install Pom dependencies
         run: npm ci
@@ -57,20 +62,37 @@ jobs:
         working-directory: pom/v4
 
       - name: Build Pom v4
+        env:
+          VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: npm run build
         working-directory: pom/v4
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
+      - name: Build isolated puzzle playtest
+        env:
+          VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: npm run build:playtest
+        working-directory: pom/v4
+
+      - name: Install Puzzle Maker dependencies
+        run: npm ci
+        working-directory: pom/creator
+
+      - name: Build Puzzle Maker
+        env:
+          VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: npm run build
+        working-directory: pom/creator
 
       - name: Stage the site
         run: |
-          mkdir -p _site/pom/v1 _site/pom/v2 _site/pom/v3 _site/pom/v4
+          mkdir -p _site/pom/v1 _site/pom/v2 _site/pom/v3 _site/pom/v4 _site/pom/creator _site/pom/playtest
           cp pom/index.html pom/meadow-foreground.png pom/sky-background.png _site/pom/
           cp -a pom/v1/. _site/pom/v1/
           cp -a pom/v2/dist/. _site/pom/v2/
           cp -a pom/v3/dist/. _site/pom/v3/
           cp -a pom/v4/dist/. _site/pom/v4/
+          cp -a pom/creator/dist/. _site/pom/creator/
+          cp -a pom/v4/dist-playtest/. _site/pom/playtest/
           touch _site/.nojekyll
 
       - name: Upload site artifact

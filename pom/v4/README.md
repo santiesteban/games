@@ -28,3 +28,7 @@ See [the level-format guide](docs/LEVEL_FORMAT.md) and
 displayed after More Challenges, with 18 reconstructions in their original colors;
 see [Murals references and numbering](docs/MURALS.md).
 The JSON import interface is still deferred.
+
+## Distribution and companion website
+
+See [web and installed-app architecture](../docs/distribution.md). The web game, public creator and restricted player remain hosted together on GitHub Pages during development. The restricted player uses `npm run build:playtest` and excludes the built-in catalog. Native packaging can reuse the normal game build through the versioned platform adapter; Electron/Capacitor shells and store submissions are not included yet.

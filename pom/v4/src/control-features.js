@@ -11,9 +11,10 @@ export const CONTROL_FEATURES=[
 export const TOP_FACE_STYLES=[['checkerboard','Checkerboard'],['pull-depth','Pull-distance colors'],['walkability','Walkability grid']];
 const STORAGE_KEY='little-ledges:v4:control-features';
 
-export function createControlFeatures(){
+export function createControlFeatures({persistent=true}={}){
   const defaults=Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.id,feature.defaultEnabled===true]));
   function read(){
+    if(!persistent)return {...defaults};
     try{
       const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'),flags=saved?.version===2?saved.flags:saved;
       return Object.fromEntries(CONTROL_FEATURES.map(feature=>{
@@ -25,7 +26,7 @@ export function createControlFeatures(){
     }catch{return null}
   }
   let value=read()??{...defaults};
-  function persist(){localStorage.setItem(STORAGE_KEY,JSON.stringify({version:2,floorGridRevision:DEFAULT_DESIGN.floorGrid.revision,flags:value}))}
+  function persist(){if(persistent)localStorage.setItem(STORAGE_KEY,JSON.stringify({version:2,floorGridRevision:DEFAULT_DESIGN.floorGrid.revision,flags:value}))}
   try{persist()}catch{}
   return{
     key:STORAGE_KEY,
