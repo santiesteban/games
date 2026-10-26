@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fff0d8" />
+    <title>Little Ledges v0.02 — Pull, climb, discover</title>
+  </head>
+  <body>
+    <main class="app">
+      <section class="stage">
+        <header class="topline">
+          <div class="brand"><span class="brandmark" aria-hidden="true">L</span><span>LITTLE LEDGES</span></div>
+          <label class="level-picker">Level <select id="levelSelect" aria-label="Choose a level"></select></label>
+        </header>
+
+        <div class="heading">
+          <h1><span class="level-number" id="levelNumber">01</span><span id="levelTitle">Pull out a path</span></h1>
+          <p id="levelInstructions">Bring the blocks toward you, then climb your way to the flag.</p>
+        </div>
+
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="board" tabindex="0" aria-label="Interactive three-dimensional block puzzle. Use the view controls to rotate the perspective, arrow keys to move Pom, and E to select a reachable block."></canvas>
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <div class="view-status" id="viewStatus" aria-live="polite"></div>
+        </div>
+
+        <div class="block-panel">
+          <div class="pullrow">
+            <button class="btn" id="push" type="button">← Push in</button>
+            <button class="btn pull" id="pull" type="button">Pull out →</button>
+          </div>
+        </div>
+
+        <footer class="below">
+          <div class="compact-actions">
+            <button class="btn" id="undo" type="button">↶ Undo</button>
+            <button class="btn" id="reset" type="button">Start over ↻</button>
+          </div>
+          <span class="help">Select a block to pull it. Choose a glowing ledge or use arrow keys to move Pom; press E to select a reachable block.</span>
+          <div class="rotation-controls" aria-label="Rotate the view">
+            <button class="btn rotate-button" id="turnLeft" type="button" title="Rotate view left" aria-label="Rotate view left"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 0v10m9-5-9 5-9-5m9 5v10"/></svg> Rotate left</button>
+            <button class="btn rotate-button" id="turnRight" type="button" title="Rotate view right" aria-label="Rotate view right"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 0v10m9-5-9 5-9-5m9 5v10"/></svg> Rotate right</button>
+          </div>
+        </footer>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

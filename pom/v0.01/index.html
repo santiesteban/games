@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Little Ledges v0.01 — Pull, climb, discover</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
+:root{--paper:#fff0d8;--pale:#f8e4be;--ink:#28251f;--orange:#ff7138;--yellow:#ffdf3f;--green:#76956a;--muted:#7c7365;--line:2px solid var(--ink)}*{box-sizing:border-box}body{margin:0;padding:20px;background:#d8c6a4;color:var(--ink);font:13px 'DM Mono','Courier New',monospace}.app{max-width:1200px;min-height:730px;margin:auto;border:2px solid var(--ink);background:var(--paper);box-shadow:8px 8px 0 var(--ink);display:grid;grid-template-columns:minmax(0,1fr)}.stage{padding:22px;min-width:0;display:flex;flex-direction:column}.topline{display:flex;align-items:center;padding-bottom:14px;border-bottom:var(--line)}.brand{display:flex;align-items:center;gap:10px;font:700 18px 'Space Grotesk',sans-serif}.brandmark{width:30px;height:30px;border:2px solid var(--ink);border-radius:50%;background:var(--orange);display:grid;place-items:center}.heading{margin:18px 0 12px}.heading h1{font:700 23px 'Space Grotesk',sans-serif;letter-spacing:-.7px;margin:0}.level-number{display:inline-grid;place-items:center;min-width:1.65em;margin-right:.25em;padding:0 .12em;border:1.5px solid var(--ink);background:var(--yellow);font:500 .62em 'DM Mono',monospace;letter-spacing:0;vertical-align:.18em}.heading p{color:var(--muted);font-size:11px;margin:4px 0 0}.canvas-wrap{height:520px;min-height:360px;position:relative;isolation:isolate;border:var(--line);background-color:#91ad78;background-image:linear-gradient(to bottom,transparent var(--ground-line-y,78%),#bfd09a var(--ground-line-y,78%),#91ad78 100%),url('sky-background.png');background-position:center,center bottom;background-size:100% 100%,auto 115%;background-repeat:no-repeat,no-repeat;overflow:hidden}.canvas-wrap:before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(to bottom,rgba(255,255,255,.035),transparent var(--ground-line-y,78%))}.canvas-wrap:after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:url('meadow-foreground.png') center bottom/100% auto no-repeat;opacity:1;filter:brightness(.82) saturate(.86);mask-image:linear-gradient(to bottom,#000 0,#000 var(--ground-line-y,78%),rgba(0,0,0,.42) 100%);-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 var(--ground-line-y,78%),rgba(0,0,0,.42) 100%)}canvas{position:relative;z-index:2;width:100%;height:100%;display:block;touch-action:none}.toast{position:absolute;z-index:3;left:50%;bottom:13px;transform:translateX(-50%);padding:8px 12px;background:var(--ink);color:var(--paper);font-size:10px;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none}.toast.on{opacity:1}.below{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px;color:var(--muted);font-size:10px}.view-controls{display:flex;align-items:center;gap:6px;color:var(--muted);white-space:nowrap}.view-btn{min-width:108px;height:34px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--ink);background:#fff8ea;color:var(--ink);padding:4px 8px;font:500 10px 'DM Mono';cursor:pointer}.view-btn svg{width:22px;height:22px;flex:none;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.view-btn:hover,.view-btn[aria-pressed="true"]{background:var(--yellow)}.view-btn[aria-pressed="true"]{box-shadow:inset 0 0 0 1px var(--ink)}.view-btn span{white-space:nowrap}.view-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.compact-actions{display:flex;gap:6px}.compact-actions .btn{padding:5px 7px;font-size:9px;min-height:28px}.compact-actions .btn:last-child{background:var(--yellow)}.block-panel{border-top:1px solid #28251f55;margin-top:8px;padding-top:8px}.pullrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-width:0;max-width:100%}.pullrow>.btn{width:100%;min-width:0;max-width:100%;min-height:38px;white-space:normal;overflow-wrap:anywhere;padding-left:4px;padding-right:4px}.btn{font:500 10px 'DM Mono';padding:9px 8px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);box-shadow:2px 2px 0 var(--ink);cursor:pointer}.btn:hover{filter:brightness(.97);transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}.btn:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}.btn.pull,#push{background:var(--orange)}.win{color:#3d6841;font-weight:bold}
+@media(max-width:780px){body{padding:8px;overflow-x:hidden}.app{width:100%;min-height:0;box-shadow:4px 4px 0 var(--ink)}.stage{padding:13px}.canvas-wrap{height:min(68vw,490px);min-height:330px}.heading h1{font-size:20px}.below{align-items:flex-start}.compact-actions{order:1}.view-controls{order:2;margin-left:auto}}
+</style><style>.block-panel{min-width:0;max-width:100%;border-top:1px solid #28251f55;margin-top:8px;padding-top:8px}.selected-help{min-height:0;margin-bottom:8px}.pullrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-width:0;max-width:100%}.pullrow>.btn{width:100%;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;padding-left:4px;padding-right:4px}.app,.stage,.canvas-wrap{min-width:0;max-width:100%}body{overflow-x:hidden}@media(max-width:780px){.app{width:100%;grid-template-columns:minmax(0,1fr)}.pullrow{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head><body>
+<main class="app"><section class="stage"><div class="topline"><div class="brand"><span class="brandmark">L</span> LITTLE LEDGES</div></div><div class="heading"><h1><span class="level-number">01</span> Pull out a path</h1><p>Bring the blocks toward you, then climb your way to the flag.</p></div><div class="canvas-wrap"><canvas id="board" aria-label="Interactive pull-and-climb block puzzle"></canvas><div class="toast" id="toast"></div></div><div class="block-panel"><div class="pullrow"><button class="btn" id="push">← Push in</button><button class="btn pull" id="pull">Pull out →</button></div></div><div class="below"><div class="compact-actions"><button class="btn" id="undo">↶ Undo</button><button class="btn" id="reset">Start over ↻</button></div><div class="view-controls"><button class="view-btn" id="turnLeft" aria-label="Rotate puzzle left" title="Rotate puzzle left" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 7 9 5-9 5-9-5 9-5Zm-9 5v10l9 5 9-5V12M16 17v10"/><path d="M6 8C1.8 11.5 1.3 17.8 4.8 22M4.8 22l-.8-4m.8 4 4-1"/></svg><span>Rotate left</span></button><button class="view-btn" id="turnRight" aria-label="Rotate puzzle right" title="Rotate puzzle right" aria-pressed="true"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 7 9 5-9 5-9-5 9-5Zm-9 5v10l9 5 9-5V12M16 17v10"/><path d="M26 8c4.2 3.5 4.7 9.8 1.2 14M27.2 22l.8-4m-.8 4-4-1"/></svg><span>Rotate right</span></button><span id="viewName" class="view-status" aria-live="polite">Viewing right side</span></div></div></section></main>
+<script>
+const canvas=document.querySelector('#board'),ctx=canvas.getContext('2d');
+// Pixel mural: each connected color region is one movable block piece.
+const mural=[['.','.','.','Y','Y','.','.','.'],['.','B','B','B','Y','Y','.','.'],['O','O','B','B','B','O','O','.'],['O','G','G','G','G','O','O','.'],['R','R','G','G','R','R','R','.'],['R','R','R','R','R','R','R','.']];
+const palette={R:'#ff7138',O:'#f2a05a',G:'#79a66e',B:'#55a9ae',Y:'#ffdf3f'};const ink='#28251f';const W=mural[0].length,H=mural.length,FLOOR_DEPTH=4;let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:0,y:H,z:0},selected=null,history=[],won=false,hover=null,hoverNode=null,viewSide=1,timer,busy=false,motion=null,celebration=null;
+function makeGroups(){let seen=new Set(),id=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){let c=mural[y][x],key=x+','+y;if(c==='.'||seen.has(key))continue;let cells=[],q=[[x,y]];seen.add(key);while(q.length){let [a,b]=q.pop();cells.push({x:a,y:b});for(let [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){let nx=a+dx,ny=b+dy,k=nx+','+ny;if(nx>=0&&nx<W&&ny>=0&&ny<H&&mural[ny][nx]===c&&!seen.has(k)){seen.add(k);q.push([nx,ny])}}}let g={id:id++,color:c,cells,depth:0};groups.push(g);for(let p of cells)byCell[p.y][p.x]=g;}}
+makeGroups();
+function cellDepth(x,y){if(y===H)return 0;return byCell[y]?.[x]?.depth??-1}
+function nodeZ(p){return p.z}
+function key(p){return p.x+','+p.y+','+p.z}
+function nodesAt(x,y){if(x<0||x>=W||y<0||y>H)return[];if(y===H){let frontDepth=Math.max(0,cellDepth(x,H-1));return Array.from({length:Math.max(0,FLOOR_DEPTH-frontDepth)},(_,i)=>({x,y,z:frontDepth+i}))}let depth=cellDepth(x,y),above=cellDepth(x,y-1);if(depth<=0)return[];let nodes=[];for(let z=Math.max(0,above);z<depth;z++)nodes.push({x,y,z});return nodes}
+function validNode(x,y,z){return nodesAt(x,y).some(p=>p.z===z)}
+function goalNode(){const g=byCell[0][4];return{x:4,y:0,z:Math.max(0,(g?.depth??0)-1)}}
+function isGoal(p){const g=goalNode();return p.x===g.x&&p.y===g.y&&p.z===g.z}
+function neighbors(p){let out=[],pz=nodeZ(p);for(let dx=-2;dx<=2;dx++)for(let dy=-1;dy<=1;dy++){
+ if(Math.abs(dx)+Math.abs(dy)>2)continue;
+ let x=p.x+dx,y=p.y+dy;
+ for(let n of nodesAt(x,y)){
+  let dz=nodeZ(n)-pz;if(Math.abs(dx)+Math.abs(dy)+Math.abs(dz)>2)continue;
+  // A two-cell jump is only allowed over a gap at this depth and height.
+  if(Math.abs(dx)===2&&nodesAt(p.x+Math.sign(dx),p.y).some(mid=>nodeZ(mid)===pz))continue;
+  if(key(n)!==key(p))out.push(n)
+ }
+}return out}
+function findPath(target){let q=[[player]],seen=new Set([key(player)]);while(q.length){let route=q.shift(),p=route.at(-1);if(key(p)===key(target))return route;for(let n of neighbors(p)){let k=key(n);if(!seen.has(k)){seen.add(k);q.push([...route,n])}}}return null}
+function reachable(){let out=[],q=[player],seen=new Set([key(player)]);while(q.length){let p=q.shift();for(let n of neighbors(p)){let k=key(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}return out}
+function standableReachable(){return reachable().filter(p=>validNode(p.x,p.y,p.z))}
+function canReachBlock(g){
+ const pz=nodeZ(player);
+ // A piece cannot be pulled or pushed while it is supporting Pom.
+ if(player.y<H&&byCell[player.y]?.[player.x]===g&&pz<g.depth)return false;
+ return g.cells.some(c=>{
+  // Front access requires standing at the block's front edge, at its height.
+  if(player.x===c.x&&player.y===c.y+1&&pz===g.depth)return true;
+  // A side grab is possible only where that side face is actually exposed.
+  const dx=player.x-c.x;
+  if(Math.abs(dx)===1&&player.y===c.y+1){
+   const neighborDepth=cellDepth(player.x,c.y);
+   const faceStart=Math.max(0,neighborDepth);
+   // Side faces occupy [neighborDepth, g.depth). At the outermost edge
+   // (pz === g.depth) Pom is in front of the face, not beside it.
+   if(neighborDepth<g.depth&&pz>=faceStart&&pz<g.depth)return true;
+  }
+  return false;
+ });
+}
+function manipulationLanding(g,nextDepth,dir){
+ // Pom travels one depth step with every pull or push. Only allow the move
+ // when the corresponding standing spot exists after the block moves.
+ const destination={...player,z:player.z+dir};
+ const oldDepth=g.depth;g.depth=nextDepth;
+ const safe=destination.z>=0&&destination.z<FLOOR_DEPTH&&validNode(destination.x,destination.y,destination.z);
+ g.depth=oldDepth;
+ return{safe,destination};
+}
+function rgba(c,a){return c+a}
+function fit(){let r=canvas.getBoundingClientRect(),d=window.devicePixelRatio||1;canvas.width=Math.max(1,Math.round(r.width*d));canvas.height=Math.max(1,Math.round(r.height*d));ctx.setTransform(d,0,0,d,0,0);render()}
+function metrics(){let cw=canvas.clientWidth,ch=canvas.clientHeight;let unit=Math.min((cw-80)/(W+1.5),(ch-80)/(H+1.8));unit=Math.max(28,Math.min(62,unit));let dep=unit*.42,wallW=W*unit+4*dep,wallH=H*unit+4*dep;return{cw,ch,u:unit,d:dep,side:viewSide,x:(cw-wallW)/2+(viewSide<0?3*dep:dep)+5,y:(ch-wallH)/2+dep+4}}
+function project(x,y,z,m){return{x:m.x+x*m.u+m.side*z*m.d,y:m.y+y*m.u+z*m.d}}
+function poly(pts,fill,stroke=ink,lw=1.5){ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let p of pts.slice(1))ctx.lineTo(p[0],p[1]);ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=lw;ctx.strokeStyle=stroke;ctx.stroke()}
+function solidFaceOps(g,c,m){
+ const {u}=m,cx=c.x,cy=c.y,back=0,front=g.depth,ops=[];
+ const shade=g.color==='Y'?'#d4b834':g.color==='B'?'#3e8084':g.color==='G'?'#587f50':g.color==='O'?'#bb7644':'#c85632';
+ const light=g.color==='Y'?'#fff09b':g.color==='B'?'#82c9ca':g.color==='G'?'#a8ca8f':g.color==='O'?'#ffc078':'#ff9a69';
+ const surface=(points,color,kind)=>{
+  const pts=points.map(([px,py,pz])=>{const q=project(px,py,pz,m);return[q.x,q.y]});
+  // Recover camera-space depth from this oblique projection. Screen-row
+  // sorting is not a depth test and makes unrelated fronts cross box tops.
+  const k=m.d/m.u,sort=points.reduce((sum,p)=>sum+p[2]-m.side*k*p[0]-k*p[1],0)/points.length;
+  ops.push({sort,layer:0,kind,block:g,world:points,draw:()=>poly(pts,color,ink,1.15)});
+ };
+ // Model the tile as one prism: its body begins just behind the wall and
+ // ends at the current pull depth. Each exposed edge is a single continuous face.
+ const topDepth=cellDepth(cx,cy-1),leftDepth=cellDepth(cx-1,cy),rightDepth=cellDepth(cx+1,cy);
+ // At depth zero the piece is flush with the wall: show only its flat front
+ // tile. The top and side faces appear only after it is pulled out.
+ if(front>0&&topDepth<front){const start=Math.max(back,topDepth);surface([[cx,cy,start],[cx+1,cy,start],[cx+1,cy,front],[cx,cy,front]],light,'top')}
+ // This view looks down onto the top and toward the front. Only one x-side
+ // faces the camera; drawing the opposite side or underside creates wedges
+ // that incorrectly cover visible top/front faces.
+ if(front>0&&m.side>0&&leftDepth<front){const start=Math.max(back,leftDepth);surface([[cx,cy,start],[cx,cy+1,start],[cx,cy+1,front],[cx,cy,front]],shade,'side')}
+ if(front>0&&m.side<0&&rightDepth<front){const start=Math.max(back,rightDepth);surface([[cx+1,cy,start],[cx+1,cy+1,start],[cx+1,cy+1,front],[cx+1,cy,front]],shade,'side')}
+ const k=m.d/m.u,frontSort=front-m.side*k*(cx+.5)-k*(cy+.5);
+ ops.push({sort:frontSort,layer:1,kind:'front',block:g,world:[[cx,cy,front],[cx+1,cy,front],[cx+1,cy+1,front],[cx,cy+1,front]],draw:()=>drawFront(g,c,m)});
+ return ops;
+}
+function drawFront(g,c,m){
+ const {u}=m,{x:fx,y:fy}=project(c.x,c.y,g.depth,m);
+ const highlighted=g===selected||canReachBlock(g);
+ if(highlighted){ctx.save();ctx.shadowColor='#ff7138';ctx.shadowBlur=5}
+ const faceColor=canReachBlock(g)?mixColor(palette[g.color],'#fff0a6',.14):palette[g.color];
+ poly([[fx,fy],[fx+u,fy],[fx+u,fy+u],[fx,fy+u]],faceColor,ink,highlighted?2:1.5);
+ if(highlighted){ctx.restore();ctx.save();ctx.setLineDash([4,3]);ctx.lineWidth=g===selected?1.6:1.35;ctx.strokeStyle=g===selected?ink:'#fff0d8';ctx.strokeRect(fx+3,fy+3,u-6,u-6);ctx.restore()}
+ ctx.fillStyle='#28251f35';ctx.beginPath();ctx.arc(fx+u*.82,fy+u*.18,1.15,0,Math.PI*2);ctx.fill();
+}
+function mixColor(a,b,t){const hex=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16));const aa=hex(a),bb=hex(b);return'#'+aa.map((v,i)=>Math.round(v*(1-t)+bb[i]*t).toString(16).padStart(2,'0')).join('')}
+function point(p,m){
+ // z identifies a specific one-block landing cell along a platform's depth.
+ const z=p.z;
+ const offset=z+.5;
+ return{x:m.x+p.x*m.u+m.u/2+m.side*offset*m.d,y:m.y+p.y*m.u+offset*m.d}
+}
+function drawMascot(pt,u,shadow=false){let x=pt.x,y=pt.y,s=u*.32;ctx.save();if(shadow){ctx.globalAlpha=.3;ctx.lineWidth=Math.max(1,u*.022);ctx.strokeStyle='#514b41';ctx.fillStyle='#514b41'}else{ctx.lineWidth=Math.max(1.5,u*.035);ctx.strokeStyle=ink;ctx.fillStyle='#ef5941'}ctx.beginPath();ctx.moveTo(x-s,y-s*.28);ctx.quadraticCurveTo(x-s*1.02,y-s*1.15,x,y-s*1.22);ctx.quadraticCurveTo(x+s*1.02,y-s*1.15,x+s,y-s*.28);ctx.quadraticCurveTo(x+s*.84,y+s*.12,x,y+s*.12);ctx.quadraticCurveTo(x-s*.84,y+s*.12,x-s,y-s*.28);ctx.fill();ctx.stroke();if(!shadow){ctx.fillStyle='#fff0d8';ctx.beginPath();ctx.arc(x-s*.34,y-s*.68,s*.19,0,Math.PI*2);ctx.arc(x+s*.34,y-s*.68,s*.19,0,Math.PI*2);ctx.fill();ctx.fillStyle=ink;ctx.beginPath();ctx.arc(x-s*.34,y-s*.68,s*.09,0,Math.PI*2);ctx.arc(x+s*.34,y-s*.68,s*.09,0,Math.PI*2);ctx.fill()}ctx.restore()}
+function cameraDepth(x,y,z,m){const k=m.d/m.u;return z-m.side*k*x-k*y}
+function faceDepthAt(px,py,world,m){
+ const v=world.map(([x,y,z])=>{const p=project(x,y,z,m);return{x:p.x,y:p.y,d:cameraDepth(x,y,z,m)}});
+ const tri=(a,b,c)=>{const den=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);if(Math.abs(den)<1e-7)return null;const w0=((b.y-c.y)*(px-c.x)+(c.x-b.x)*(py-c.y))/den,w1=((c.y-a.y)*(px-c.x)+(a.x-c.x)*(py-c.y))/den,w2=1-w0-w1;if(w0<-.001||w1<-.001||w2<-.001)return null;return w0*a.d+w1*b.d+w2*c.d};
+ return tri(v[0],v[1],v[2])??tri(v[0],v[2],v[3]);
+}
+function isOccluded(p,px,py,m,faces){const support=p.y<H?byCell[p.y]?.[p.x]:null,rx=m.u*.09,ry=m.u*.045,samples=[];for(const ax of [-.95,-.5,0,.5,.95])for(const ay of [-.95,-.5,0,.5,.95])if(ax*ax+ay*ay<=1)samples.push([px+ax*rx,py+ay*ry]);for(const [sx,sy]of samples){const d=cameraDepth(p.x+.5+(sx-px)/m.u,p.y-(py-sy)/m.u,p.z+.5,m);for(const f of faces){if(!f.world||(f.kind==='top'&&f.block===support))continue;const fd=faceDepthAt(sx,sy,f.world,m);if(fd!==null&&fd>d+.025)return true}}return false}
+function visibleStandableReachable(m,faces){const drawnFaces=faces||buildBoxOps(m);return standableReachable().filter(p=>{const pt=point(p,m);return!isOccluded(p,pt.x,pt.y,m,drawnFaces)})}
+function occludingFaceFragments(p,pt,u,m,faces){
+ const s=u*.32,step=1.2,mask=[],occluders=[],support=p.y<H?byCell[p.y]?.[p.x]:null;
+ // Test the actual depth at each point on Pom, not a face's average depth.
+ // This handles faces that cross his silhouette and changes correctly when
+ // the view rotates. Supporting tops are excluded, but their vertical faces
+ // remain valid occluders even when they belong to the same connected piece.
+ const rectsByFace=new Map();
+ for(let py=pt.y-s*1.22;py<pt.y+s*.12;py+=step)for(let px=pt.x-s;px<pt.x+s;px+=step){
+  const sx=px+step*.5,sy=py+step*.5;
+  // Treat Pom as an upright billboard: each pixel maps back to its own
+  // world x/y at the character's standing depth. This keeps the depth test
+  // accurate across both his width and height as the view rotates.
+  const actorDepth=cameraDepth(p.x+.5+(sx-pt.x)/u,p.y-(pt.y-sy)/u,p.z+.5,m),rect=[px,py,step,step];
+  for(const f of faces){if(!f.world||(f.kind==='top'&&f.block===support))continue;const d=faceDepthAt(sx,sy,f.world,m);if(d!==null&&d>actorDepth+.015){mask.push(rect);if(!rectsByFace.has(f))rectsByFace.set(f,[]);rectsByFace.get(f).push(rect)}}
+ }
+ for(const [face,rects]of rectsByFace)occluders.push({face,rects});
+ return{mask,occluders};
+}
+function goalFlagAnchor(m){const spot=point(goalNode(),m);return{x:spot.x,y:spot.y}}
+function drawFlagAt(px,py,u,scale=1,alpha=1){if(alpha<=0)return;ctx.save();ctx.globalAlpha=alpha;ctx.lineWidth=Math.max(1.4,u*.035);ctx.strokeStyle=ink;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,py-u*.66*scale);ctx.stroke();poly([[px+1,py-u*.63*scale],[px+u*.38*scale,py-u*.52*scale],[px+1,py-u*.41*scale]],'#ff7138',ink,1.1);ctx.restore()}
+function drawFlag(m,alpha=1){const g=byCell[0][4];if(!g)return;const spot=goalFlagAnchor(m);if(g.depth===0){const {x:fx,y:fy}=project(4,0,0,m);drawFlagAt(fx+m.u*.5,fy+m.u*.68,m.u,.42,alpha);return}drawFlagAt(spot.x,spot.y,m.u,1,alpha)}
+function drawCarriedFlag(pp,u,from,blend,alpha){const s=u*.32,to={x:pp.x+s*.72,y:pp.y-s*.25},px=from.x+(to.x-from.x)*blend,py=from.y+(to.y-from.y)*blend;drawFlagAt(px,py,u,.72,alpha)}
+function drawVictoryIris(cw,ch,center,radius){ctx.save();ctx.beginPath();ctx.rect(0,0,cw,ch);ctx.moveTo(center.x+radius,center.y);ctx.arc(center.x,center.y,radius,0,Math.PI*2);ctx.fillStyle='rgba(40,37,31,.92)';ctx.fill('evenodd');ctx.beginPath();ctx.arc(center.x,center.y,radius,0,Math.PI*2);ctx.strokeStyle='#fff0d8';ctx.lineWidth=3;ctx.stroke();ctx.restore()}
+function startCelebration(){celebration={start:performance.now(),t:0};function frame(now){if(!celebration)return;celebration.t=Math.min(1,(now-celebration.start)/2800);render();if(celebration.t<1)requestAnimationFrame(frame)}requestAnimationFrame(frame)}
+function buildBoxOps(m){const ops=[];for(let g of groups)for(let c of g.cells)ops.push(...solidFaceOps(g,c,m));ops.sort((a,b)=>a.sort-b.sort||a.layer-b.layer);return ops}
+function render(){let {cw,ch}=metrics();ctx.clearRect(0,0,cw,ch);let m=metrics();let {u,d,x,y}=m;canvas.parentElement.style.setProperty('--ground-line-y',`${(y+H*u)/ch*100}%`);const focus=point(motion?motion.to:player,m),vt=celebration?.t??0,smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)},zoom=celebration?1+1.2*smooth((vt-.2)/.8):1;ctx.save();if(celebration){ctx.translate(cw/2,ch/2);ctx.scale(zoom,zoom);ctx.translate(-focus.x,-focus.y)}
+// The wall's quiet grid gives the mural a clear face; only colored pieces can move.
+ctx.strokeStyle='#28251f22';ctx.lineWidth=1;for(let xx=0;xx<=W;xx++){ctx.beginPath();ctx.moveTo(x+xx*u,y);ctx.lineTo(x+xx*u,y+H*u);ctx.stroke()}for(let yy=0;yy<=H;yy++){ctx.beginPath();ctx.moveTo(x,y+yy*u);ctx.lineTo(x+W*u,y+yy*u);ctx.stroke()}
+// Horizon/ground line sits behind the wall and runs across the full playfield.
+ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,y+H*u);ctx.lineTo(cw,y+H*u);ctx.stroke();
+// Draw one continuous prism per tile. Painter order uses camera-space depth
+// derived from the oblique projection, rather than screen row or pull depth.
+const boxOps=buildBoxOps(m);for(const op of boxOps)op.draw();
+const flagFade=celebration?1-smooth((vt-.1)/.2):1;drawFlag(m,flagFade);
+for(let p of visibleStandableReachable(m,boxOps)){
+ const pt=point(p,m),active=hoverNode===key(p);
+ ctx.beginPath();ctx.ellipse(pt.x,pt.y+u*.025,u*(active?.17:.105),u*(active?.085:.053),0,0,Math.PI*2);
+ ctx.fillStyle=active?'#fff0a6':'rgba(255,240,190,.58)';ctx.fill();ctx.lineWidth=active?1.7:1.15;ctx.strokeStyle=active?ink:'rgba(40,37,31,.72)';ctx.stroke();
+}
+let pp=point(player,m);if(motion){let a=point(motion.from,m),b=point(motion.to,m),t=motion.t*(2-motion.t);pp={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t-(motion.jump?Math.sin(Math.PI*motion.t)*u*.45:0)};}const jumpT=smooth((vt-.28)/.34),jumpHeight=celebration?Math.sin(Math.PI*jumpT)*u*.9:0;pp.y-=jumpHeight;
+ctx.save();ctx.beginPath();ctx.ellipse(pp.x,pp.y+u*.075,u*.23,u*.055,0,0,Math.PI*2);ctx.fillStyle='rgba(52,45,34,.16)';ctx.shadowColor='rgba(52,45,34,.18)';ctx.shadowBlur=u*.045;ctx.fill();ctx.restore();drawMascot(pp,u);
+const occlusion=occludingFaceFragments(motion?motion.to:player,pp,u,m,boxOps);if(occlusion.mask.length){
+ // Repaint the covering parts of each solid face over Pom, then leave a
+ // subdued silhouette only in those exact covered regions.
+ for(const {face,rects}of occlusion.occluders){ctx.save();ctx.beginPath();for(const [sx,sy,sw,sh]of rects)ctx.rect(sx,sy,sw,sh);ctx.clip();face.draw();ctx.restore()}
+ ctx.save();ctx.beginPath();for(const [sx,sy,sw,sh]of occlusion.mask)ctx.rect(sx,sy,sw,sh);ctx.clip();drawMascot(pp,u,true);ctx.restore()
+}
+if(celebration){const take=smooth((vt-.08)/.24),carryAlpha=smooth((vt-.08)/.16),anchor=goalFlagAnchor(m);drawCarriedFlag(pp,u,anchor,take,carryAlpha)}
+ctx.restore();
+if(celebration){const close=smooth((vt-.2)/.8),radius=Math.hypot(cw,ch)*(1-close)+Math.max(58,u*1.9)*close,center={x:cw/2+(pp.x-focus.x)*zoom,y:ch/2+(pp.y-focus.y)*zoom};drawVictoryIris(cw,ch,center,radius)}
+}
+function say(s){let el=document.querySelector('#toast');el.textContent=s;el.classList.add('on');clearTimeout(timer);timer=setTimeout(()=>el.classList.remove('on'),1400)}
+function updatePanel(){let g=selected,near=g&&canReachBlock(g),pullLandingSpot=g&&near&&g.depth<3?manipulationLanding(g,g.depth+1,1):null,pushLandingSpot=g&&near&&g.depth>0?manipulationLanding(g,g.depth-1,-1):null;document.querySelector('#pull').disabled=busy||!g||!near||g.depth>=3||!pullLandingSpot?.safe||won;document.querySelector('#push').disabled=busy||!g||!near||g.depth<=0||!pushLandingSpot?.safe||won}
+function setSelected(g){selected=g;updatePanel();render()}
+function pull(dir){if(!selected||!canReachBlock(selected)||won)return;let old=selected.depth,next=Math.max(0,Math.min(3,old+dir));if(next===old){say(dir>0?'This block is all the way out.':'This block is flush with the wall.');return}const landing=manipulationLanding(selected,next,dir);if(!landing.safe){say('Pom has no safe standing spot to move with this piece.');return}history.push(snapshot());selected.depth=next;player=landing.destination;updatePanel();render();say(next>old?`Pulled ${next} step${next===1?'':'s'} out.`:'Pushed one step back.')}
+function snapshot(){return{player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,won}}
+function restore(s){celebration=null;player={...s.player};groups.forEach((g,i)=>g.depth=s.depths[i]);selected=groups.find(g=>g.id===s.selected)||null;won=s.won;updatePanel();render()}
+function animateEdge(from,to){return new Promise(resolve=>{let start=performance.now(),jump=Math.abs(to.x-from.x)>1||Math.abs(to.y-from.y)>0,duration=jump?270:180;function frame(now){let t=Math.min(1,(now-start)/duration);motion={from,to,t,jump};render();if(t<1)requestAnimationFrame(frame);else{player={...to};motion=null;render();resolve()}}requestAnimationFrame(frame)})}
+async function actMove(p){if(busy)return;let path=findPath(p);if(!path||path.length<2){say('That ledge is out of reach. Pull a block out to make a step.');return}history.push(snapshot());busy=true;updatePanel();for(let i=1;i<path.length;i++)await animateEdge(path[i-1],path[i]);busy=false;if(isGoal(p)){won=true;say('Pom made it to the flag!');startCelebration()}else say('Pom made it to that ledge.');updatePanel();render()}
+function hitCell(mx,my){
+ const m=metrics();let best=null,bd=Infinity;
+ function inside(px,py,a){let c=false;for(let i=0,j=a.length-1;i<a.length;j=i++){let xi=a[i][0],yi=a[i][1],xj=a[j][0],yj=a[j][1];if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi))c=!c}return c}
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  // Flush pieces are still selectable so the player can pull them out.
+  const g=byCell[y][x];if(!g)continue;
+  const dx=g.depth*m.d*m.side,fx=m.x+x*m.u+dx,fy=m.y+y*m.u+g.depth*m.d;
+  const front=mx>=fx&&mx<=fx+m.u&&my>=fy&&my<=fy+m.u;
+  // The top face begins at the wall plane and extends exactly as far as pulled.
+  const top=[project(x,y,0,m),project(x+1,y,0,m),project(x+1,y,g.depth,m),project(x,y,g.depth,m)].map(p=>[p.x,p.y]);
+  let side=false;
+  const edges=[
+   {a:[x,y],b:[x+1,y],n:cellDepth(x,y-1)},
+   {a:[x,y+1],b:[x+1,y+1],n:cellDepth(x,y+1)},
+   {a:[x,y+1],b:[x,y],n:cellDepth(x-1,y)},
+   {a:[x+1,y],b:[x+1,y+1],n:cellDepth(x+1,y)}
+  ];
+  for(const e of edges){let start=Math.max(0,e.n);if(start>=g.depth)continue;let ox=start*m.d*m.side,ex=(g.depth-start)*m.d*m.side;
+   const quad=[[m.x+e.a[0]*m.u+ox,m.y+e.a[1]*m.u+ox],[m.x+e.b[0]*m.u+ox,m.y+e.b[1]*m.u+ox],[m.x+e.b[0]*m.u+ox+ex,m.y+e.b[1]*m.u+ox+ex],[m.x+e.a[0]*m.u+ox+ex,m.y+e.a[1]*m.u+ox+ex]];
+   if(inside(mx,my,quad)){side=true;break}
+  }
+  const topHit=g.depth>0&&inside(mx,my,top);
+  if(front||topHit||side){
+   const topZ=topHit?Math.max(0,Math.min(g.depth-1,Math.floor((my-(m.y+y*m.u))/m.d))):null;
+   const target=topHit?point({x,y,z:topZ},m):{x:fx+m.u/2,y:fy+m.u/2};
+   const dist=(mx-target.x)**2+(my-target.y)**2;
+   if(dist<bd){bd=dist;best={x,y,z:topZ,g,topHit}}
+  }
+ }
+ return best
+}
+function turnView(side){viewSide=side;hoverNode=null;document.querySelector('#viewName').textContent=side>0?'Viewing right side':'Viewing left side';document.querySelector('#turnLeft').setAttribute('aria-pressed',String(side<0));document.querySelector('#turnRight').setAttribute('aria-pressed',String(side>0));render()}
+canvas.addEventListener('click',e=>{if(won||busy)return;let r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,m=metrics();
+// Landing spots take priority over block faces, which can overlap in the
+// isometric projection. This keeps every visible top marker directly clickable.
+let target=visibleStandableReachable(m).map(p=>({p,pt:point(p,m)})).map(o=>({...o,dist:Math.hypot(mx-o.pt.x,my-o.pt.y)})).filter(o=>o.dist<m.u*.68).sort((a,b)=>a.dist-b.dist)[0]?.p;if(target){actMove(target);return}
+let hit=hitCell(mx,my);if(hit){
+ if(hit.topHit&&visibleStandableReachable(m).some(p=>key(p)===key(hit))){actMove({x:hit.x,y:hit.y,z:hit.z});return}
+ if(canReachBlock(hit.g)){setSelected(hit.g);say('Block selected. Pull or push it from here.')}else{setSelected(hit.g);say('That block is too far away to reach.')}return
+}
+if(mx< m.x||mx>m.x+W*m.u)say('Choose a block on the wall or an orange landing spot.')});
+canvas.addEventListener('mousemove',e=>{let r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,m=metrics(),hit=hitCell(mx,my),nearest=visibleStandableReachable(m).map(p=>({p,pt:point(p,m)})).map(o=>({...o,dist:Math.hypot(mx-o.pt.x,my-o.pt.y)})).filter(o=>o.dist<m.u*.75).sort((a,b)=>a.dist-b.dist)[0]?.p,next=nearest?key(nearest):null;if(next!==hoverNode){hoverNode=next;render()}canvas.style.cursor=nearest||hit?'pointer':'default'});
+document.querySelector('#turnLeft').onclick=()=>turnView(-1);document.querySelector('#turnRight').onclick=()=>turnView(1);
+document.querySelector('#pull').onclick=()=>pull(1);document.querySelector('#push').onclick=()=>pull(-1);document.querySelector('#undo').onclick=()=>{if(busy)return;if(history.length)restore(history.pop());else say('Nothing to undo yet.')};document.querySelector('#reset').onclick=()=>{if(busy)return;celebration=null;groups.forEach(g=>g.depth=0);player={x:0,y:H,z:0};selected=null;history=[];won=false;updatePanel();render();say('Puzzle reset.')};window.addEventListener('resize',fit);updatePanel();fit();
+</script></body></html>

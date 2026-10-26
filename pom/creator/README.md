@@ -4,19 +4,19 @@ A separate, browser-local companion website for making 32 × 32 puzzles. Uses th
 
 ## Run locally
 
-1. In `pom/v4`, run `npm ci` and `npm run dev -- --host 127.0.0.1 --port 5173`.
+1. In `pom`, run `npm ci` and `npm run dev -- --host 127.0.0.1 --port 5173`.
 2. In `pom/creator`, run `npm ci` and `npm run dev`.
 3. Open <http://localhost:5174/>.
 
-The creator command also starts its isolated player at port 5175. Each website builds independently with `npm run build`; build the player with `npm --prefix pom/v4 run build:playtest` from the repository root. Pages publishes `/pom/creator/`, `/pom/v4/` and `/pom/playtest/`. See [distribution architecture](../docs/distribution.md) for web development, native-app boundaries and deployment configuration.
+The creator command also starts its isolated player at port 5175. Each website builds independently with `npm run build`; build the player with `npm --prefix pom run build:playtest` from the repository root. Pages publishes `/pom/creator/`, `/pom/` and `/pom/playtest/`. See [distribution architecture](../docs/distribution.md) for web development, native-app boundaries and deployment configuration.
 
 Optional build variables (see `.env.example`):
 
 - `VITE_PUBLIC_SITE_URL`: deployed site root; Pages CI supplies its actual base URL.
-- `VITE_GAME_URL`: full web game, default port 5173 locally or `/pom/v4/` on Pages.
+- `VITE_GAME_URL`: full web game, default port 5173 locally or `/pom/` on Pages.
 - `VITE_CREATOR_URL`: public creator, default port 5174 locally or `/pom/creator/` on Pages.
 - `VITE_PLAYTEST_URL`: isolated player, default port 5175 locally or `/pom/playtest/` on Pages.
-- `VITE_SHARE_GAME_URL`: stable game import address encoded in QR cards. Local development defaults to `https://santiesteban.github.io/games/pom/v4/`. Publish the matching game changes before sharing QR cards.
+- `VITE_SHARE_GAME_URL`: stable game import address encoded in QR cards. Local development defaults to `https://santiesteban.github.io/games/pom/`. Publish the matching game changes before sharing QR cards.
 
 ## Editor
 

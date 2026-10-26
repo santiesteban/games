@@ -6,12 +6,15 @@ Keep one repository and independently built applications:
 
 | Component | Source | Output | GitHub Pages path |
 | --- | --- | --- | --- |
-| Full game | `pom/v4` | `pom/v4/dist` | `/games/pom/v4/` |
+| Full game | `pom` | `pom/dist` | `/games/pom/` |
 | Public Puzzle Creator | `pom/creator` | `pom/creator/dist` | `/games/pom/creator/` |
-| Restricted playtest player | `pom/v4`, playtest mode | `pom/v4/dist-playtest` | `/games/pom/playtest/` |
+| Restricted playtest player | `pom`, playtest mode | `pom/dist-playtest` | `/games/pom/playtest/` |
+| Original game archive | `pom/v0.01` | Static files | `/games/pom/v0.01/` |
+| Three.js archive | `pom/v0.02` | `pom/v0.02/dist` | `/games/pom/v0.02/` |
+| Earlier LittleJS archive | `pom/v0.03` | `pom/v0.03/dist` | `/games/pom/v0.03/` |
 | Shared code | `pom/shared` | Bundled into each app | No separate service |
 
-The Pages workflow uses `configure-pages`' actual `base_url`, builds all three outputs, and publishes them in one artifact. All outputs use relative asset paths, so project-site prefixes work. The full game remains publicly playable on Pages during development. The creator's Playtest action uses only the separate player.
+The Pages workflow uses `configure-pages`' actual `base_url`, builds the current game, creator, player and archives, and publishes them in one artifact. `node pom/scripts/stage-site.mjs` prepares the same `_site/` tree locally after the builds. All outputs use relative asset paths, so project-site prefixes work. The full game remains publicly playable on Pages during development. The creator's Playtest action uses only the separate player.
 
 The player uses the same renderer, animation, camera and movement implementation as the full game. Vite resolves `#level-catalog` to `playtest-catalog.js` for this build: only the decoded submitted puzzle exists in its catalog. The full-game catalog JSON is not in its dependency graph. Home, settings, level library, imports and progress saves are unavailable during playtest. A missing/corrupt payload shows an error and a return link rather than opening a built-in level. Legacy full-game `#playtest` links redirect to this player before the game renderer loads.
 
@@ -19,22 +22,22 @@ The player still shares renderer UI scaffolding, appearance defaults and scenery
 
 ## Local development
 
-Install dependencies in `pom/v4` and `pom/creator` with `npm ci`.
+Install dependencies in `pom` and `pom/creator` with `npm ci`.
 
-1. In `pom/v4`, run `npm run dev -- --host 127.0.0.1 --port 5173`.
+1. In `pom`, run `npm run dev -- --host 127.0.0.1 --port 5173`.
 2. In `pom/creator`, run `npm run dev`.
 
-The second command launches both the creator at port **5174** and its playtest player at port **5175**, with live reload. Stopping it stops both child processes. Ports are strict to avoid silently pointing at the wrong app. Use the same hostname (`localhost` or `127.0.0.1`) consistently; those are different browser storage origins. If running an older creator process, restart it to pick up the combined launcher. The player can also be started alone with `npm run dev:playtest` in `pom/v4`.
+The second command launches both the creator at port **5174** and its playtest player at port **5175**, with live reload. Stopping it stops both child processes. Ports are strict to avoid silently pointing at the wrong app. Use the same hostname (`localhost` or `127.0.0.1`) consistently; those are different browser storage origins. If running an older creator process, restart it to pick up the combined launcher. The player can also be started alone with `npm run dev:playtest` in `pom`.
 
 Build independently:
 
 ```sh
-npm --prefix pom/v4 run build
-npm --prefix pom/v4 run build:playtest
+npm --prefix pom run build
+npm --prefix pom run build:playtest
 npm --prefix pom/creator run build
 ```
 
-`npm --prefix pom/v4 run preview:playtest` serves the built player. No backend or database server is required.
+`npm --prefix pom run preview:playtest` serves the built player. No backend or database server is required.
 
 ## Deployment addresses
 
@@ -95,6 +98,11 @@ For Electron, implement this through a narrowly scoped preload/contextBridge and
 At packaging time, configure store IDs, persistent storage, signed releases, OS file handling, and verified HTTPS app links. The HTTPS web game remains the fallback during development. Once final app IDs/domains are known, publish Android/iOS association files and provide the OS link/file events to this bridge. Do not add placeholder association files or claim a link opens an installed app before that registration exists. In-game camera scanning is still deferred; when added, send decoded HTTPS puzzle links through the same import validator.
 
 ## Versioning
+
+The current game has no version directory: source `pom/`, public URL `/games/pom/`. The former v1 and v2 sources and public paths are now `pom/v0.01` and `pom/v0.02`. The former v3 archive is now `pom/v0.03`, served at `/games/pom/v0.03/`. Pages generates redirects for `/pom/v1/`, `/pom/v2/`, `/pom/v3/` and `/pom/v4/`, preserving both query parameters and fragments, so previously exported QR cards still open. Installed import handling also recognizes the former `/pom/v4/` route on configured game origins.
+
+Progress, preferences, designer drafts and control flags keep their historical `little-ledges:v4:*` keys. IndexedDB names and formats stay the same. Moving the URL within the same Pages origin does not require copying or clearing saves.
+
 
 `pom/shared` contains the canonical format, codec, validation, connectivity, movement and push/pull rules, independent of rendering and native APIs. Existing game module paths re-export shared rules for compatibility with current tools. Website and app releases need not ship together, so keep schema, rules and codec versions explicit. Current exports remain schema 1 / rules 1 / codec 1. Unsupported versions are rejected with an update/compatible-export message. Future mechanic changes need explicit version support or migrations; never silently reinterpret a puzzle produced for different rules.
 

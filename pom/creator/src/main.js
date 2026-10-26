@@ -6,7 +6,7 @@ import { deploymentUrls } from '../../shared/deployment.js';
 import { referenceRect, legacyReferencePlacement } from './reference-placement.js';
 import { manipulateState, replaySolution } from '../../shared/rules.js';
 import { createMovementBoard } from '../../shared/movement-routes.js';
-import logo from '../../v4/src/assets/home/header-logo.svg';
+import logo from '../../src/assets/home/header-logo.svg';
 import './style.css';
 document.querySelector('.brand img').src=logo;
 document.querySelector('link[rel=icon]').href=logo;

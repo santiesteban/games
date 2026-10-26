@@ -28,50 +28,50 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: |
-            pom/v2/package-lock.json
-            pom/v3/package-lock.json
-            pom/v4/package-lock.json
+            pom/v0.02/package-lock.json
+            pom/v0.03/package-lock.json
+            pom/package-lock.json
             pom/creator/package-lock.json
 
       - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v6
 
-      - name: Install Pom dependencies
+      - name: Install Pom v0.02 dependencies
         run: npm ci
-        working-directory: pom/v2
+        working-directory: pom/v0.02
 
-      - name: Build Pom v2
+      - name: Build Pom v0.02
         run: npm run build
-        working-directory: pom/v2
+        working-directory: pom/v0.02
 
-      - name: Install Pom v3 dependencies
+      - name: Install Pom v0.03 dependencies
         run: npm ci
-        working-directory: pom/v3
+        working-directory: pom/v0.03
 
-      - name: Check Pom v3 occlusion
+      - name: Check Pom v0.03 occlusion
         run: npm test
-        working-directory: pom/v3
+        working-directory: pom/v0.03
 
-      - name: Build Pom v3
+      - name: Build Pom v0.03
         run: npm run build
-        working-directory: pom/v3
+        working-directory: pom/v0.03
 
-      - name: Install Pom v4 dependencies
+      - name: Install Little Ledges dependencies
         run: npm ci
-        working-directory: pom/v4
+        working-directory: pom
 
-      - name: Build Pom v4
+      - name: Build Little Ledges
         env:
           VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: npm run build
-        working-directory: pom/v4
+        working-directory: pom
 
       - name: Build isolated puzzle playtest
         env:
           VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: npm run build:playtest
-        working-directory: pom/v4
+        working-directory: pom
 
       - name: Install Puzzle Maker dependencies
         run: npm ci
@@ -84,16 +84,7 @@ jobs:
         working-directory: pom/creator
 
       - name: Stage the site
-        run: |
-          mkdir -p _site/pom/v1 _site/pom/v2 _site/pom/v3 _site/pom/v4 _site/pom/creator _site/pom/playtest
-          cp pom/index.html pom/meadow-foreground.png pom/sky-background.png _site/pom/
-          cp -a pom/v1/. _site/pom/v1/
-          cp -a pom/v2/dist/. _site/pom/v2/
-          cp -a pom/v3/dist/. _site/pom/v3/
-          cp -a pom/v4/dist/. _site/pom/v4/
-          cp -a pom/creator/dist/. _site/pom/creator/
-          cp -a pom/v4/dist-playtest/. _site/pom/playtest/
-          touch _site/.nojekyll
+        run: node pom/scripts/stage-site.mjs
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v5

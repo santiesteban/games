@@ -1,0 +1,50 @@
+{
+  "name": "Japan Spring",
+  "colorSpace": "sRGB",
+  "variants": {
+    "portrait": {
+      "width": 1024,
+      "height": 1536,
+      "groundAnchorY": 0.8098958333333334,
+      "groundAnchorPixelY": 1244,
+      "background": "japan-spring-portrait-background.webp",
+      "foreground": "japan-spring-portrait-foreground.webp",
+      "pairBytes": 559120,
+      "foregroundBottomOpaque": true,
+      "foregroundEncoding": "lossless",
+      "backgroundEncoding": "quality92",
+      "sourceSize": [
+        1024,
+        1536
+      ]
+    },
+    "landscape": {
+      "width": 2048,
+      "height": 1024,
+      "groundAnchorY": 0.849609375,
+      "groundAnchorPixelY": 870,
+      "background": "japan-spring-landscape-background.webp",
+      "foreground": "japan-spring-landscape-foreground.webp",
+      "pairBytes": 576488,
+      "foregroundBottomOpaque": true,
+      "foregroundEncoding": "lossless",
+      "backgroundEncoding": "quality92",
+      "sourceSize": [
+        1774,
+        887
+      ]
+    }
+  },
+  "verification": {
+    "gameplayTested": false,
+    "physicalIPhoneTested": false,
+    "staticFramingPreviewsGenerated": true
+  },
+  "notes": [
+    "Independently generated portrait and landscape paintings using built-in image generation.",
+    "Foreground mechanically separated from identical painting with a native SVG alpha mask.",
+    "Landscape source 1774x887 uniformly resized to 2048x1024; portrait native1024x1536.",
+    "Vintage cartoon style, cherry blossom trees at margins, sky dominant; upper-right art lighting. No buildings or characters.",
+    "Ground separation anchors are0.80989583 portrait and0.84960938 landscape, exceeding nominal0.70 because generated scenery sits lower; use measured anchors, integration framing review required."
+  ]
+}
