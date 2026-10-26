@@ -394,6 +394,8 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
 .camera-lab button,.camera-lab select{padding:8px;border:1.5px solid var(--ink);border-radius:8px;background:#fffaf0;color:inherit;font:inherit;cursor:pointer;box-shadow:none;min-height:36px}
 .camera-lab button[aria-pressed=true]{background:#e6eddc}.camera-lab button:disabled,.camera-lab input:disabled{opacity:.45;cursor:default}.camera-lab input{accent-color:#4d6948}
 .camera-lab-presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}.camera-lab .camera-lab-check{justify-content:flex-start}.camera-lab-check input{width:17px;height:17px;margin:0}
+.has-camera-lab #viewController{display:none!important}.camera-lab-orbit{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;margin:8px 0}.camera-lab-orbit button{font-size:12px;padding:6px}
+.camera-lab-measure{display:block;flex:none;font:11px/1.5 'DM Mono',monospace;background:#ecefdf;padding:9px;border-radius:6px;margin:8px 14px}.camera-horizon-guide{position:absolute;left:0;right:0;border-top:1px dashed #fffaf0;filter:drop-shadow(0 1px 0 #292537);z-index:2;pointer-events:none}
 .camera-lab.is-collapsed .camera-lab-body{display:none}
 @media(max-width:760px){
   .stage.has-camera-lab{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}

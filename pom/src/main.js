@@ -69,8 +69,8 @@ const cameraLab=!isMakerPlaytest&&new URLSearchParams(location.search).has('came
 const cameraScenery=cameraLab?createCameraScenery():null;
 function studyOrthographic(){return cameraLab?.state.projection==='orthographic'}
 function depthSkew(side=viewSide){return studyOrthographic()?0:cameraSlant(side)*DEPTH_SKEW}
-function cameraYaw(){return studyOrthographic()?-cameraLab.state.yaw*Math.PI/180*viewSide:0}
-function cameraPitch(){return studyOrthographic()?cameraLab.state.pitch*Math.PI/180*(viewHeightStep ? .55 : 1):cameraPosition(viewSide,viewHeightStep).pitch}
+function cameraYaw(){return studyOrthographic()?-cameraLab.state.yaw*Math.PI/180:0}
+function cameraPitch(){return studyOrthographic()?cameraLab.state.pitch*Math.PI/180:cameraPosition(viewSide,viewHeightStep).pitch}
 function isPreviewLevel(level){return ['design-playground','background-studio'].includes(level.kind)}
 const levelProgress=isMakerPlaytest||cameraLab?{key:null,count:0,has:()=>false,reload(){},complete:()=>false,clear:()=>false}:createLevelProgress(levels.filter(level=>!isPreviewLevel(level)));
 const levelPreferences=createLevelPreferences();
@@ -537,7 +537,12 @@ function syncBackground(){
   if(cameraLab){
     for(const object of backgroundObjects.slice(0,3)){object.mesh=undefined;object.tileInfo=undefined}
     if(gameReady)requestLevelEnvironment();
-    if(activeEnvironmentTextures)cameraScenery.update({state:cameraLab.state,environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,yaw:cameraYaw()});
+    if(activeEnvironmentTextures){
+      const reference=cameraScenery.update({state:cameraLab.state,environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,yaw:cameraYaw(),target:viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
+      const size=vec2(wrap.clientWidth,wrap.clientHeight),points=reference.points.map(point=>render3D.worldToScreen(point,size)),[left,center,right]=points;
+      const slope=(right.y-left.y)/(right.x-left.x||1),y=reference.curved?center.y:center.y+slope*(size.x/2-center.x);
+      cameraLab.measure({percent:y/size.y*100,tilt:Math.atan(slope)*180/Math.PI,curved:reference.curved,unit:viewUnit||size.y/render3D.camera.orthographic,cameraHeight:render3D.camera.pos.y});
+    }
     wrap.dataset.environment=activeEnvironment.id;wrap.dataset.scenerySetting=cameraLab.state.setting;return;
   }
   const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio;
@@ -764,12 +769,13 @@ function puzzleVisualBounds(){
   const floor=puzzleFloorBounds(mural,GRID_DEPTH),cells=groups.flatMap(g=>g.cells);
   return{left:Math.min(floor.left,activeLevel.start.x-.5),right:Math.max(floor.right,activeLevel.start.x+1.5),height:Math.max(1,...cells.map(c=>H-c.y),H-activeLevel.start.y)};
 }
-function applyCameraStudy({resetAngle=false}={}){
+function applyCameraStudy({refit=false,orbit=false}={}){
   if(!gameReady||busy||won)return;
-  stopIntro();if(resetAngle){viewSide=DEFAULT_VIEW.horizontal;viewHeightStep=0}viewPitch=cameraPitch();viewTouched=false;keepInterruptedView=false;
-  refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers();
-  const frame=sceneFrame(wrap.clientWidth,wrap.clientHeight);viewUnit=wrap.clientHeight/frame.height;viewTarget=frame.target;baseCameraHeight=frame.height;
-  requestLevelEnvironment();applyBoardView(false);updateUI();
+  stopIntro();viewPitch=cameraPitch();viewTouched=true;keepInterruptedView=false;
+  // Orthographic orbit moves the camera; its straight board geometry stays put.
+  if(!orbit){refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers()}
+  if(refit){const frame=sceneFrame(wrap.clientWidth,wrap.clientHeight);viewUnit=wrap.clientHeight/frame.height;viewTarget=frame.target;baseCameraHeight=frame.height;viewTouched=false}
+  requestLevelEnvironment();applyBoardView(false);if(!orbit)updateUI();
   wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraYaw=String(cameraYaw());
 }
 function studyFrame(width,height){
@@ -1043,6 +1049,7 @@ function manipulate(dir){const g=selected;if(busy||introPlaying||!g||!canReach(g
 function restore(s){hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 function changeView(horizontal,vertical=viewHeightStep){
   if(busy||won||!viewReady)return;enterPlayFromIntro();
+  if(cameraLab){if(horizontal!==viewSide)cameraLab.orbitBy(-5*(horizontal-viewSide));return}
   const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;
   stopIntro();clearBoardHover();
   // Keep the wall plane in the same screen position, rather than following Pom's sheared depth.
