@@ -33,6 +33,25 @@ The creator uses a restrained cream interface with lighter headings and flat con
 - Image processing stays local: aspect-preserving reference size (10–800%), free positioning, direct image dragging, reference opacity, transparent-cell preservation, nearest-palette conversion with no dithering. Reference uploads are limited to 20 MB / 80 megapixels and downsampled to a maximum dimension of 2048 for local drafts.
 - Move the drawing to the floor or center it. Undo history is kept in memory; drafts and their reference images are saved in IndexedDB on that browser origin.
 
+## Start from a level
+
+Choose **Start from a level → Open QR or JSON** at the top of the settings panel. The importer accepts:
+
+- Little Ledges puzzle JSON, preserving its palette, flag, Pom start and initial pull depths.
+- A Little Ledges QR image, including a complete exported puzzle card, or a pasted sharing link with `#puzzle=` / `?puzzle=`.
+- Original Pushmo / Pullblox QR images, decoded from their binary payload without converting it to text first.
+- The decoder companion's `PUSHMOJSON1:` QR images and decoded Pushmo JSON, using the same conversion rules.
+
+The preview identifies the source, shows the puzzle and flag, and lists conversion warnings before **Create draft**. Importing saves the current draft and creates a fresh editable copy with a new puzzle ID. It does not overwrite the source puzzle or an existing draft, and it clears source reference images and cached analysis. A storage failure blocks replacement of an unsaved current draft.
+
+Files are processed locally; sharing links are decoded without navigating to or fetching their URLs. JSON is limited to 64 KB. QR images accept PNG, JPEG, WebP, AVIF, GIF and BMP, up to 20 MB / 80 megapixels, with a maximum scanning dimension of 3072 pixels. Scanning runs in a dedicated worker with a 20-second limit and is cancelled when the dialog closes or another input is selected. There is no camera permission or upload service involved.
+
+Pushmo conversion preserves the 32 × 32 grid, exact indexed RGB colors and original flag. Every piece starts fully pushed in and Pom starts on the ground. It does not align floating art automatically; the preview warns when the drawing does not reach the floor, and Setup → Align to floor remains available afterward. Solvability is unverified until checked against Little Ledges' rules.
+
+Stages with switches, manholes, invalid source checksums, missing/invalid goals, or duplicate RGB values in used color slots are rejected rather than silently changing their mechanics. Unknown formats, damaged Little Ledges payloads and unrelated QR codes show an inline error and leave the current draft intact.
+
+The imported Pushmo reader/converter is independently written MIT-licensed code from the decoder companion. jsQR 1.4.0 handles QR scanning in the worker; its distribution wrapper is adapted to ES modules. Required notices ship at `import-licenses.txt`; component provenance is in `src/import/vendor/NOTICE.md`. No earlier third-party parser implementation or sample artwork is bundled.
+
 ## Playtest isolation
 
 Playtest opens a separately built player in an iframe using `#playtest=<payload>`. It shares the real game renderer and rules but does not bundle the built-in level catalog. It locks this session to that puzzle, hides the home screen, settings and level library, and blocks normal level/menu navigation. The back arrow returns to the editor. Victory offers Play again and Back to editor. Reload preserves playtest mode. No library imports or progress writes occur in this mode.
