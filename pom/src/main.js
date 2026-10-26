@@ -786,8 +786,9 @@ function studyFrame(width,height){
 }
 function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
-  if(!cameraLab.state.guides){object.mesh=undefined;return}
-  const mesh=new Mesh(),bounds=puzzleFloorBounds(mural,GRID_DEPTH),line=.018,tint=new Color(.28,.32,.25,.5);
+  // Keep the transparent guide layer registered when hidden. Removing its mesh
+  // changes the engine's transparent pass and can hide the character overlay.
+  const mesh=new Mesh(),bounds=puzzleFloorBounds(mural,GRID_DEPTH),line=.018,tint=new Color(.28,.32,.25,cameraLab.state.guides ? .5 : 0);
   const strip=(x0,z0,x1,z1)=>mesh.addQuad(worldPoint(x0,.008,z0),worldPoint(x1,.008,z0),worldPoint(x1,.008,z1),worldPoint(x0,.008,z1),tint);
   for(let x=bounds.left;x<=bounds.right;x++)strip(x-line/2,bounds.back,x+line/2,bounds.front);
   for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z-line/2,bounds.right,z+line/2);
