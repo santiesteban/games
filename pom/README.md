@@ -1,5 +1,7 @@
 # Little Ledges
 
+Camera experiment: open `/?camera-lab=1` while running the game locally. See [camera and scenery study](docs/CAMERA_STUDY.md) for the two environment treatments and comparison controls.
+
 Little Ledges is a LittleJS remake of the original Little Ledges puzzle. The board, pullable block pieces, mascot, flag, and lighting are rendered with LittleJS's native 3D renderer. The interface and meadow artwork follow the original game.
 
 ## Run locally

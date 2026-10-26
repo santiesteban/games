@@ -382,3 +382,21 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
 #levelSettings,.home-settings{width:var(--navigation-icon-width);height:var(--navigation-icon-height);padding:0;border:0;border-radius:0;background:none;box-shadow:none;transform:none;translate:none;filter:none;transition:translate .1s ease}
 #levelSettings svg,.home-settings svg{display:block;width:100%;height:100%;pointer-events:none}
 #levelSettings:active:not(:disabled),.home-settings:active{transform:none;translate:2px 2px;box-shadow:none}
+
+/* URL-gated camera study: independent camera and scenery controls. */
+.stage.has-camera-lab{grid-template-columns:minmax(0,1fr) 292px;grid-template-rows:auto minmax(0,1fr) auto}
+.has-camera-lab>.game-header{grid-column:1/-1;grid-row:1}.has-camera-lab>.canvas-wrap{grid-column:1;grid-row:2}.has-camera-lab>.control-deck{grid-column:1;grid-row:3}
+.camera-lab{grid-column:2;grid-row:2/4;display:flex;flex-direction:column;min-height:0;border-left:2px solid var(--ink);background:#fffaf0;color:var(--ink);font:500 13px/1.4 'DM Sans',sans-serif;overflow:hidden}
+.camera-lab header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #d6d0c5;gap:10px}.camera-lab h2{margin:0;font-size:17px;font-weight:700}
+.camera-lab-body{overflow:auto;padding:0 14px 16px;overscroll-behavior:contain;touch-action:pan-y}.camera-lab-copy{font-size:12px;line-height:1.45;color:#666254;margin:12px 0}
+.camera-lab fieldset{border:0;border-top:1px solid #d6d0c5;padding:12px 0;margin:16px 0}.camera-lab legend{padding:0 6px 0 0;font-weight:700}
+.camera-lab label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;margin:12px 0}.camera-lab select,.camera-lab input[type=range]{width:100%}.camera-lab output{font-variant-numeric:tabular-nums}
+.camera-lab button,.camera-lab select{padding:8px;border:1.5px solid var(--ink);border-radius:8px;background:#fffaf0;color:inherit;font:inherit;cursor:pointer;box-shadow:none;min-height:36px}
+.camera-lab button[aria-pressed=true]{background:#e6eddc}.camera-lab button:disabled,.camera-lab input:disabled{opacity:.45;cursor:default}.camera-lab input{accent-color:#4d6948}
+.camera-lab-presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}.camera-lab .camera-lab-check{justify-content:flex-start}.camera-lab-check input{width:17px;height:17px;margin:0}
+.camera-lab.is-collapsed .camera-lab-body{display:none}
+@media(max-width:760px){
+  .stage.has-camera-lab{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto}
+  .has-camera-lab>.camera-lab{grid-column:1;grid-row:4;max-height:34dvh;border-left:0;border-top:2px solid var(--ink)}
+  .has-camera-lab>.control-deck{grid-row:3}.camera-lab header{padding:7px 12px}.camera-lab h2{font-size:15px}.camera-lab header button{min-height:28px;padding:3px 8px}
+}
