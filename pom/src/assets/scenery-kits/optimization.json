@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-27",
+  "source": "User-supplied optimized WebP exports",
+  "encoding": "Lossy RGB with original alpha preserved exactly",
+  "themes": {
+    "meadow": {
+      "beforeBytes": 8391352,
+      "afterBytes": 1343596,
+      "assets": {
+        "sky.webp": {
+          "previousBytes": 802794,
+          "bytes": 247020,
+          "previousSha256": "8b15b717f2b66ada23f34d4d662d97c8bbca5dfc24a601e355b965087c630f2f",
+          "sha256": "b0b63ff424a3f50e03d4f4860b217176839b1e7791d6820ef178ab18d5bed088",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true,
+          "oppositeEdgeDifferences": {
+            "x": {
+              "maximumChannelDelta": 20,
+              "meanChannelDelta": 1.541
+            }
+          }
+        },
+        "distant-hills.webp": {
+          "previousBytes": 1560698,
+          "bytes": 126410,
+          "previousSha256": "7b698898efa57dd4101e8ecad94a855517abb722df9de92679f196522e35bc3b",
+          "sha256": "1ceba644e8b3dc01849d90a8691fa732942cc855b674accd022e4bafabe52e2d",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true,
+          "oppositeEdgeDifferences": {
+            "x": {
+              "maximumChannelDelta": 9,
+              "meanChannelDelta": 0.591
+            }
+          }
+        },
+        "ground-tile.webp": {
+          "previousBytes": 610352,
+          "bytes": 528288,
+          "previousSha256": "e1795fcac15fbbd4bd1981d54a5fb66e54ef9e08f138515cc702578ce1e65e63",
+          "sha256": "f95a63b5d47b7de7b01979a306c1b1aaa82602cc0d8c22db291b261521617111",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true,
+          "oppositeEdgeDifferences": {
+            "x": {
+              "maximumChannelDelta": 10,
+              "meanChannelDelta": 1.227
+            },
+            "y": {
+              "maximumChannelDelta": 10,
+              "meanChannelDelta": 1.348
+            }
+          }
+        },
+        "tree-a.webp": {
+          "previousBytes": 1558618,
+          "bytes": 106904,
+          "previousSha256": "70fd89fda3382c40b350bd2c5c174ffcde7e9d592b37c0ac0db1f987cc9c4152",
+          "sha256": "e65a74d56c36ab7d4a9c7a601f1018f7604e9cf5afaff7d311ba4f3ff04de5f9",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "tree-b.webp": {
+          "previousBytes": 1451672,
+          "bytes": 119428,
+          "previousSha256": "665fb8990b2c173da72eb2894c499bea6d36618145583a041f976154c3161a3c",
+          "sha256": "6461e300f986d74a7ea4ed868e57125ff28f6ea3cd2e0cf795da91237cb0884a",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "shrub-a.webp": {
+          "previousBytes": 457682,
+          "bytes": 31498,
+          "previousSha256": "18e1b6324a288dbf61c279fbf329b33154110cddce43fbd11cba35a3889a7f5e",
+          "sha256": "7383f5d1a7da7382ef40a83599e355121c1b9e4682f1be4fcd9c088a83dccf8b",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "shrub-b.webp": {
+          "previousBytes": 582568,
+          "bytes": 39200,
+          "previousSha256": "70dcaed17269921128d84b3bca627fa0bf6eee7227fb83ef22530f541d0b3358",
+          "sha256": "9b36a65d95190c993dbc311f7366da1d102702b4157ced83dcfb9b1796ebc074",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "grass-a.webp": {
+          "previousBytes": 232636,
+          "bytes": 22634,
+          "previousSha256": "6cdb440008199c23b8b024d41e9c9cb715db8028276cce90cef21e8314e2fba6",
+          "sha256": "e7f2d1188d622d3872ed69411348888639fffe9a40652812d915c5589955145a",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "grass-b.webp": {
+          "previousBytes": 253818,
+          "bytes": 23866,
+          "previousSha256": "ce33f8207f20295d17a430b35b6d9e204d12749c814aa0170af2f9f15ae1a1d0",
+          "sha256": "05c03418e5c72a2d352a1ecc529da6260762a64a54f15914271ebcdd06fae99a",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "flowers-a.webp": {
+          "previousBytes": 443476,
+          "bytes": 48088,
+          "previousSha256": "c6d71f2254340e426fff7ca88aabbcb3ce11a1ec81b0399c24dcb189e78170e7",
+          "sha256": "27d7d72b56754709228fb2a51b2c35163139af2765cafb20a7861871b4544dc2",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "flowers-b.webp": {
+          "previousBytes": 437038,
+          "bytes": 50260,
+          "previousSha256": "6735671e6273387a64a42cbf8eca0300e62c6988cf4bd75f8f53b6e867d40bf6",
+          "sha256": "e5278888790275a0fad5053decb4237826ff06665d2456063d82b6d6c1ef83d6",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        }
+      },
+      "reductionPercent": 83.99
+    },
+    "japan-spring": {
+      "beforeBytes": 7384248,
+      "afterBytes": 1323388,
+      "assets": {
+        "sky.webp": {
+          "previousBytes": 800388,
+          "bytes": 271628,
+          "previousSha256": "cffde2edd57e57c8bbffdb0f993535bf71b8a96f3e5b5563082ff2134cd93140",
+          "sha256": "8c3427497584d8be4257dfeb2d81b4fe491c2207ed9a9c325198f7e1ec9ccd2a",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true,
+          "oppositeEdgeDifferences": {
+            "x": {
+              "maximumChannelDelta": 15,
+              "meanChannelDelta": 1.471
+            }
+          }
+        },
+        "distant-hills.webp": {
+          "previousBytes": 1184456,
+          "bytes": 273286,
+          "previousSha256": "5480ee1132f4848b1f8a7c8750fa42f4a54b634f28a2a4c17976fcaa0e98acde",
+          "sha256": "e9b4843be827a7f2ec2fd7a5346511616fac61f39f56949ed35248a9fc0af7db",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true,
+          "oppositeEdgeDifferences": {
+            "x": {
+              "maximumChannelDelta": 14,
+              "meanChannelDelta": 0.432
+            }
+          }
+        },
+        "ground-tile.webp": {
+          "previousBytes": 489062,
+          "bytes": 364546,
+          "previousSha256": "9533ed2753e2fe0d9d802320566eaa5e8c6643797a9ee6db12d0be5f014813b8",
+          "sha256": "bcefe53bb061e307bfe6bb271801aa6e2904d160262696f254627844808cf2bf",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true,
+          "oppositeEdgeDifferences": {
+            "x": {
+              "maximumChannelDelta": 11,
+              "meanChannelDelta": 1.31
+            },
+            "y": {
+              "maximumChannelDelta": 14,
+              "meanChannelDelta": 1.274
+            }
+          }
+        },
+        "tree-a.webp": {
+          "previousBytes": 1306594,
+          "bytes": 94908,
+          "previousSha256": "1c9fbad4d1b42ec765aa69b092631a47588ee42254465f8ecd2cdc7ced4f82d0",
+          "sha256": "f2f7e36cda764997f8373e430cd529ca8b6fde17504bf9e3dc86c8653628077d",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "tree-b.webp": {
+          "previousBytes": 1346360,
+          "bytes": 114288,
+          "previousSha256": "0889e61d01b5b7e94869549cf24d817155a4885f18631d305772f83f18821d2d",
+          "sha256": "712d48e396c9eee9d3ef805fb59d52f119c1ce0bea21ff06c829250b8f7aa16c",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "shrub-a.webp": {
+          "previousBytes": 462550,
+          "bytes": 23046,
+          "previousSha256": "fef20f1342b4d54aef8f6352615792e364c2c5671be4a353ac397e78ba365d90",
+          "sha256": "712bedf54753885ac6fc6727a9f829d0ae1956f980efd7b3af825559dcc34268",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "shrub-b.webp": {
+          "previousBytes": 524402,
+          "bytes": 33330,
+          "previousSha256": "1da3bef13b53f0857e388a14151b932390717da3d306af6830c7351e36281159",
+          "sha256": "f476144c3a8abb3d8a298b43629a44d3f62d0eff33fdc2e20e2e76163904889c",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "grass-a.webp": {
+          "previousBytes": 294190,
+          "bytes": 28464,
+          "previousSha256": "e275769772f2e321ae037273fa72e509cad4c80e3872365213f37fb2e18cdbb1",
+          "sha256": "ca89f55cdaa1b3b5fa07915b99968d9c9b3f05663fe14d2d990918fa82b973a4",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "grass-b.webp": {
+          "previousBytes": 178524,
+          "bytes": 21744,
+          "previousSha256": "9853f3021173faf59a20709e396ba89746c37b3c606d79fd3062d04e8e26ec19",
+          "sha256": "8cfed775472acea4b94b28b0b6e909f96d575bf4fe8362ea866842a57b871b7b",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "flowers-a.webp": {
+          "previousBytes": 360636,
+          "bytes": 45730,
+          "previousSha256": "4bbecbefc68f35521736e9464f18ad72d97f04acbba059f0fef6384a75bd0a9e",
+          "sha256": "c43f6fb09fc10ef2b40d009374b41ce9447e33bcb5481004d4b9b86492caf108",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        },
+        "flowers-b.webp": {
+          "previousBytes": 437086,
+          "bytes": 52418,
+          "previousSha256": "119503b828be6cdca57b9ae1468efd613d4228517c441c89f522071a213f9f42",
+          "sha256": "bd94f2c8ed30cf2760a1e96ef6f18680c6ccabd5238560ea13cb53836b32ddd3",
+          "dimensionsUnchanged": true,
+          "alphaExact": true,
+          "alphaBoundsUnchanged": true
+        }
+      },
+      "reductionPercent": 82.08
+    }
+  }
+}

@@ -26,11 +26,13 @@
         "edgeTreatment": "symmetric opposite-edge blend96px; identical paired boundary texels"
       },
       "pngBytes": 13179508,
-      "webpBytes": 802794,
+      "webpBytes": 247020,
       "tileAxes": [
         "x"
       ],
-      "tilingBoundaryPixelsMatch": true
+      "tilingBoundaryPixelsMatch": false,
+      "webpAlphaExact": true,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "distant-hills.png",
@@ -63,13 +65,13 @@
         ]
       },
       "pngBytes": 3815109,
-      "webpBytes": 1560698,
+      "webpBytes": 126410,
       "tileAxes": [
         "x"
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": true
+      "tilingBoundaryPixelsMatch": false,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "ground-tile.png",
@@ -94,7 +96,7 @@
         "edgeTreatment": "symmetric opposite-edge blend96px; identical paired boundary texels"
       },
       "pngBytes": 8273842,
-      "webpBytes": 610352,
+      "webpBytes": 528288,
       "tileAxes": [
         "x",
         "y"
@@ -103,7 +105,9 @@
         16,
         16
       ],
-      "tilingBoundaryPixelsMatch": true
+      "tilingBoundaryPixelsMatch": false,
+      "webpAlphaExact": true,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "tree-a.png",
@@ -137,7 +141,7 @@
         ]
       },
       "pngBytes": 3517978,
-      "webpBytes": 1558618,
+      "webpBytes": 106904,
       "tileAxes": [],
       "pivotPixels": [
         1024,
@@ -152,9 +156,9 @@
         929,
         1277
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "tree-b.png",
@@ -188,7 +192,7 @@
         ]
       },
       "pngBytes": 3534722,
-      "webpBytes": 1451672,
+      "webpBytes": 119428,
       "tileAxes": [],
       "pivotPixels": [
         1024,
@@ -203,9 +207,9 @@
         901,
         1150
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "shrub-a.png",
@@ -239,7 +243,7 @@
         ]
       },
       "pngBytes": 849041,
-      "webpBytes": 457682,
+      "webpBytes": 31498,
       "tileAxes": [],
       "pivotPixels": [
         512,
@@ -254,9 +258,9 @@
         501,
         523
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "shrub-b.png",
@@ -290,7 +294,7 @@
         ]
       },
       "pngBytes": 1116268,
-      "webpBytes": 582568,
+      "webpBytes": 39200,
       "tileAxes": [],
       "pivotPixels": [
         512,
@@ -305,9 +309,9 @@
         499,
         556
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "grass-a.png",
@@ -341,7 +345,7 @@
         ]
       },
       "pngBytes": 432517,
-      "webpBytes": 232636,
+      "webpBytes": 22634,
       "tileAxes": [],
       "pivotPixels": [
         512,
@@ -356,9 +360,9 @@
         424,
         578
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "grass-b.png",
@@ -392,7 +396,7 @@
         ]
       },
       "pngBytes": 482508,
-      "webpBytes": 253818,
+      "webpBytes": 23866,
       "tileAxes": [],
       "pivotPixels": [
         512,
@@ -407,9 +411,9 @@
         465,
         564
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "flowers-a.png",
@@ -443,7 +447,7 @@
         ]
       },
       "pngBytes": 872393,
-      "webpBytes": 443476,
+      "webpBytes": 48088,
       "tileAxes": [],
       "pivotPixels": [
         512,
@@ -458,9 +462,9 @@
         507,
         514
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     },
     {
       "file": "flowers-b.png",
@@ -494,7 +498,7 @@
         ]
       },
       "pngBytes": 856633,
-      "webpBytes": 437038,
+      "webpBytes": 50260,
       "tileAxes": [],
       "pivotPixels": [
         512,
@@ -509,9 +513,9 @@
         499,
         525
       ],
-      "visibleRgbaWebpMaxRgbDelta": 0,
       "webpAlphaExact": true,
-      "tilingBoundaryPixelsMatch": null
+      "tilingBoundaryPixelsMatch": null,
+      "runtimeOptimization": "User-supplied lossy RGB export, 2026-10-27; exact original alpha and registration. See optimization.json."
     }
   ],
   "verification": {
@@ -534,5 +538,6 @@
     "No editable layered painting source exists; individual source PNG layers and registration recipe are provided.",
     "All8 vegetation images in this theme regenerated with broad painted masses and dramatically reduced botanical detail. Sky/ridge/ground art retained."
   ],
-  "revision": "painterly-vegetation-v2"
+  "revision": "painterly-vegetation-v2",
+  "runtimeRevision": "optimized-2026-10-27"
 }
