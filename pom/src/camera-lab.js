@@ -63,7 +63,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
     for(const id of ['followX','followY']){panel.querySelector(`[data-${id}]`).checked=state[id];panel.querySelector(`[data-${id}]`).disabled=original}
     for(const button of panel.querySelectorAll('[data-orbit]'))button.textContent=Number(button.dataset.orbit)===0?'Center':`${tracking?'Track':'Orbit'} ${Number(button.dataset.orbit)>0?'left':'right'}`;
     panel.querySelector('[data-center-pom]').disabled=original;
-    panel.querySelector('[data-camera-note]').textContent=original?'Original sheared geometry and camera angles.':state.pitch===0?'Front inspection view. Raise the downward angle to play.':perspective?'Perspective camera. Field of view changes keep the target at a comparable size. Follow eases after Pom leaves a small area. Center on Pom recenters the view; scenery stays in the world.':'Straight blocks with a rotated orthographic camera.';
+    panel.querySelector('[data-camera-note]').textContent=original?'Original sheared geometry and camera angles.':state.pitch===0?'Front inspection view. Raise the downward angle to play.':perspective?'Perspective camera. Field of view changes keep the target at a comparable size. Pan to inspect; a movement tap resumes smooth centered follow. Center on Pom recenters immediately; scenery stays in the world.':'Straight blocks with a rotated orthographic camera.';
     const fixed=state.setting==='stage'&&state.backdrop==='fixed';
     panel.querySelector('[data-backdrop-field]').hidden=state.setting!=='stage';
     panel.querySelector('[data-horizonLock]').disabled=fixed;panel.querySelector('[data-horizonLock]').checked=!fixed&&state.horizonLock;

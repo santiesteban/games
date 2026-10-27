@@ -780,8 +780,8 @@ function applyCameraStudy({refit=false,orbit=false,centerPom=false}={}){
   // Orbiting or tracking moves the camera; straight board geometry stays put.
   if(!orbit){refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers()}
   if(refit){const frame=sceneFrame(wrap.clientWidth,wrap.clientHeight);viewUnit=wrap.clientHeight/frame.height;viewTarget=frame.target;baseCameraHeight=frame.height;viewTouched=false}
-  if(centerPom){const p=worldPosition(player);viewTarget=vec3(p.x,p.y+.7,viewTarget.z);cameraLab.state.truck=0}
-  requestLevelEnvironment();applyBoardView(false);resetStudyFollow();if(!orbit)updateUI();
+  if(centerPom){viewTarget=worldPosition(player);cameraLab.state.truck=0}
+  requestLevelEnvironment();applyBoardView(false);resetStudyFollow({paused:!centerPom});if(!orbit)updateUI();
   wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraYaw=String(cameraYaw());
 }
 function studyFrame(width,height){
@@ -838,16 +838,26 @@ function positionCameraForView(side,targetOverride){
   const span=viewUnit>0?wrap.clientHeight/viewUnit:(baseCameraHeight||render3D.camera.orthographic);
   configureStudyCamera(span,target,cameraYaw(),viewPitch);
 }
-function resetStudyFollow(){
+function resetStudyFollow({paused=true}={}){
   if(!cameraLab||!playerObject||!viewTarget)return;
-  followAnchor={pom:worldPosition(player),target:viewTarget.copy()};followTime=timeReal;
+  followAnchor={paused};followTime=timeReal;wrap.dataset.cameraFollowPaused=String(paused);
+}
+function resumeStudyFollow(){
+  if(!studyStraight()||(!cameraLab.state.followX&&!cameraLab.state.followY))return;
+  // A gameplay move ends inspection. Do not retain a pan or tracking offset as
+  // Pom's new screen position; ease the enabled axes back to the canvas center.
+  if(cameraLab.state.motion==='track'&&cameraLab.state.truck)viewTarget=cameraFocus.copy();
+  cameraLab.state.truck=0;resetStudyFollow({paused:false});
 }
 function updateStudyFollow(){
   if(!cameraLab||!studyStraight()||(!cameraLab.state.followX&&!cameraLab.state.followY)||!viewReady||!gameReady||won||celebration||!document.querySelector('#menuScreen').hidden)return;
   if(!followAnchor){resetStudyFollow();return}
+  if(followAnchor.paused)return;
   const dt=Math.min(.1,Math.max(0,timeReal-followTime));followTime=timeReal;if(!dt)return;
-  const position=busy?playerObject.pos3D.add(render3D.camera.getForward().scale(.045)):worldPosition(player),zone=Math.max(.35,viewSpan()*.055),outside=d=>Math.sign(d)*Math.max(0,Math.abs(d)-zone);
-  const desired=vec3(cameraLab.state.followX?followAnchor.target.x+outside(position.x-followAnchor.pom.x):viewTarget.x,cameraLab.state.followY?followAnchor.target.y+outside(position.y-followAnchor.pom.y):viewTarget.y,viewTarget.z);
+  const camera=render3D.camera,position=busy?playerObject.pos3D.add(camera.getForward().scale(.045)):worldPosition(player),offset=position.subtract(cameraFocus),right=camera.getRight(),up=camera.getUp();
+  // Follow in the camera plane so depth and downward pitch cannot introduce a
+  // screen-space offset. Translation leaves camera direction and zoom intact.
+  const desired=viewTarget.add(right.scale(cameraLab.state.followX?offset.dot(right):0)).add(up.scale(cameraLab.state.followY?offset.dot(up):0));
   const next=viewTarget.lerp(desired,1-Math.exp(-dt/.18));
   if(next.subtract(viewTarget).length()<.0001)return;
   viewTarget=next;applyBoardView(false);
@@ -879,7 +889,7 @@ function applyBoardView(clamp=true){
   syncCellGeometry();syncBackground();syncFloorGrid();syncHoverSpot();if(playerObject&&!busy)syncPlayer();
   // Readable, projected dimensions also make responsive checks independent of device pixels.
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
-  if(cameraLab){wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraMotion=cameraLab.state.motion;wrap.dataset.cameraTruck=String(cameraLab.state.truck);wrap.dataset.cameraFollowing=String(cameraLab.state.followX||cameraLab.state.followY);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraLab.state.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic)}
+  if(cameraLab){wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraMotion=cameraLab.state.motion;wrap.dataset.cameraTruck=String(cameraLab.state.truck);wrap.dataset.cameraFollowing=String(cameraLab.state.followX||cameraLab.state.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraLab.state.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
 }
 function startBoardView(animate=true){
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
@@ -1042,7 +1052,7 @@ function moveTo(p,pressMarker=false){
   const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
   const winningArrival=!isPreviewLevel(activeLevel)&&nodeKey(path.at(-1))===nodeKey(goalNode());
   const landingOffset=winningArrival?victoryLandingOffset(path.at(-2),path.at(-1),W):0;
-  hideHelp();save();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
+  hideHelp();save();resumeStudyFollow();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   const readyAt=performance.now()+(pressMarker?(movementMarkers?.press(p)??0):0);
   function tick(now){
     if(now<readyAt){requestAnimationFrame(tick);return}
@@ -1078,8 +1088,8 @@ function clickBoard(e){if(busy||won)return;enterPlayFromIntro();const point=boar
     if(x>=-1&&x<W&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }
 }
-function manipulate(dir){const g=selected;if(busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
-function restore(s){hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
+function manipulate(dir){const g=selected;if(busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
+function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 function changeView(horizontal,vertical=viewHeightStep){
   if(busy||won||!viewReady)return;enterPlayFromIntro();
   if(cameraLab){if(horizontal!==viewSide)cameraLab.orbitBy(-5*(horizontal-viewSide));return}
