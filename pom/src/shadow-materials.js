@@ -65,11 +65,11 @@ export const lightboxReceiverShader=new Shader(`${receiverShadow}${lightboxSpill
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
     color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow());
-    color.rgb+=lightboxSpill()*0.8;
+    color.rgb+=lightboxSpill()*0.6;
   }
 `);
 export const lightboxUnshadowedShader=new Shader(`${lightboxSpill}
-  void mainImage(out vec4 color,vec2 uv){color=texture(iChannel0,uv);color.rgb+=lightboxSpill()*0.8;}
+  void mainImage(out vec4 color,vec2 uv){color=texture(iChannel0,uv);color.rgb+=lightboxSpill()*0.6;}
 `);
 export const lightboxGroundShader=new Shader(`${lightboxSpill}
   void mainImage(out vec4 color,vec2 uv){color=vec4(lightboxSpill()*0.7,1.0);}
