@@ -16,10 +16,11 @@ function canvasAt(image,max){
 }
 export function createSceneryKitLoader(){
   const cache=new Map;
-  function load(id){
+  function load(id,{retry=false}={}){
+    if(retry&&cache.get(id)?.status==='error')cache.delete(id);
     if(cache.has(id))return cache.get(id);
     const record={status:'loading',assets:null,error:null};cache.set(id,record);
-    record.promise=Promise.all(metadata[id].assets.map(async meta=>{
+    record.promise=Promise.allSettled(metadata[id].assets.map(async meta=>{
       const name=meta.file.replace(/\.png$/,''),url=urls[`./assets/scenery-kits/${id}/${meta.webp}`];
       if(!url)throw new Error(`Missing scenery image: ${name}`);
       const image=await decode(url);
@@ -35,7 +36,11 @@ export function createSceneryKitLoader(){
         mask={width:source.width,height:source.height,rgba:context.getImageData(0,0,source.width,source.height).data};
       }
       return [name,{meta,texture,mask,uploadWidth:canvas.width,uploadHeight:canvas.height}];
-    })).then(entries=>{record.assets=Object.fromEntries(entries);record.status='ready';return record.assets}).catch(error=>{record.error=error;record.status='error';return null});
+    })).then(results=>{
+      const failed=results.find(result=>result.status==='rejected');
+      if(failed){for(const result of results)if(result.status==='fulfilled')result.value[1].texture.destroyWebGLTexture();throw failed.reason}
+      record.assets=Object.fromEntries(results.map(result=>result.value));record.status='ready';return record.assets;
+    }).catch(error=>{record.error=error;record.status='error';return null});
     return record;
   }
   return {load};

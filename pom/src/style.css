@@ -402,3 +402,18 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
   .has-camera-lab>.camera-lab{grid-column:1;grid-row:4;height:34dvh;max-height:34dvh;border-left:0;border-top:2px solid var(--ink)}
   .has-camera-lab>.camera-lab.is-collapsed{height:auto}.has-camera-lab>.control-deck{grid-row:3}.camera-lab header{padding:7px 12px}.camera-lab h2{font-size:15px}.camera-lab header button{min-height:28px;padding:3px 8px}
 }
+
+.settings-build{margin:24px 0 8px;color:var(--muted);font:11px/1.5 "DM Mono",monospace;text-align:center;overflow-wrap:anywhere}
+
+/* Keep one stable canvas size as the introduction ends. The deck overlays the
+   scenery, so hiding it also removes its empty strip without refitting the camera. */
+.stage.has-overlay-deck>.control-deck{position:absolute;inset:auto 0 0;z-index:7;background:var(--paper);border-top:2px solid var(--ink)}
+.stage.has-overlay-deck .canvas-actions{bottom:calc(var(--control-deck-height,80px) + 14px)}
+.stage.is-introducing>.control-deck,.stage.is-level-loading>.control-deck{visibility:hidden;pointer-events:none}
+
+.level-loading{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#fffaf0;text-align:center}
+.level-loading[hidden]{display:none}.level-loading p{margin:0;font-size:18px;font-weight:600;line-height:1.5;max-width:30em}
+.stage.is-level-loading .canvas-wrap{background:#fffaf0}.stage.is-level-loading .canvas-wrap::before,.stage.is-level-loading .canvas-wrap::after{display:none}
+.stage.is-level-loading .canvas-wrap canvas,.stage.is-level-loading .canvas-actions,.stage.is-level-loading .toast,.stage.is-level-loading .studio-controls{visibility:hidden;pointer-events:none}
+
+.settings-content{touch-action:pan-y}

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "dev:playtest": "vite --mode playtest --host 127.0.0.1 --port 5175 --strictPort",
     "build:playtest": "vite build --mode playtest",
-    "preview:playtest": "vite preview --mode playtest --port 5175"
+    "preview:playtest": "vite preview --mode playtest --port 5175",
+    "test": "node --test src/*.test.js"
   },
   "dependencies": {
     "littlejsengine": "1.27.2"

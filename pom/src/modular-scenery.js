@@ -89,5 +89,5 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     reference={source:'modular-kit',distance:-back,theme:state.environment,curved:false,points:[wall(-1,0,.08),wall(0,0,.08),wall(1,0,.08)]};
     return reference;
   }
-  return {update,clear,get bounds(){return bounds},get contacts(){return contacts},get ready(){return !!reference}};
+  return {async prepare(id,options){const record=loader.load(id,options);await record.promise;if(record.status!=='ready')throw record.error??new Error('The scenery kit could not be loaded.')},update,clear,get bounds(){return bounds},get contacts(){return contacts},get ready(){return !!reference}};
 }

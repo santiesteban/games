@@ -9,6 +9,7 @@ import { CONTROL_FEATURES, TOP_FACE_STYLES, createControlFeatures } from './cont
 import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds } from './floor-grid.js';
 import { outsidePolygonSegments } from './surface-patterns.js';
+import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro } from './camera-intro.js';
 import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
 import { createDesignPlayground } from './design-playground.js';
@@ -37,6 +38,9 @@ import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW, createViewCo
 import skyBackground from '../sky-background.webp';
 import meadowForeground from '../meadow-foreground.webp';
 
+const buildLabel=document.querySelector('#buildNumber');
+if(buildLabel)buildLabel.textContent=`Build ${__BUILD_INFO__.number} · ${__BUILD_INFO__.revision}${__BUILD_INFO__.development?' (development)':''}`;
+
 const makerPlaytestToken=new URLSearchParams(location.hash.slice(1)).get('playtest');
 const isMakerPlaytest=__PLAYTEST_BUILD__||makerPlaytestToken!==null;
 let playtestResult,playtestLoading;
@@ -55,6 +59,9 @@ function showPlaytestResult(){
   if(!playtestResult){playtestResult=document.createElement('dialog');playtestResult.className='puzzle-import playtest-result';playtestResult.setAttribute('aria-label','Playtest complete');playtestResult.innerHTML='<h2>Little world, big success!</h2><p>Pom reached your flag.</p><div class="import-actions"><button class="btn menu-primary" data-retry>Play again</button><button class="btn" data-return>Back to editor</button></div>';document.body.append(playtestResult);playtestResult.querySelector('[data-retry]').onclick=()=>{playtestResult.close();resetLevelState(activeLevel)};playtestResult.querySelector('[data-return]').onclick=returnToMaker;playtestResult.addEventListener('cancel',e=>{e.preventDefault();returnToMaker()})}
   playtestResult.showModal();
 }
+const settingsContent=document.querySelector('.settings-content');
+for(const type of ['wheel','touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','mousedown','mousemove','mouseup'])settingsContent.addEventListener(type,event=>event.stopPropagation(),{passive:true});
+settingsContent.addEventListener('keydown',event=>event.stopPropagation());
 const wrap = document.querySelector('#canvasWrap');
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
@@ -108,6 +115,7 @@ const designPlayground=createDesignPlayground(document.querySelector('#designPan
   }
   return saved;
 });
+let environmentLoadPromise=Promise.resolve(false);
 let shadowFloor,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
 const backgroundStudio=createBackgroundStudio(document.querySelector('#backgroundPanel'),()=>{
   if(!gameReady)return;
@@ -117,7 +125,7 @@ function isDesignPlayground(){return activeLevel.kind==='design-playground'}
 function isBackgroundStudio(){return activeLevel.kind==='background-studio'}
 function currentBackgroundConfiguration(){return isBackgroundStudio()?backgroundStudio.values:backgroundStudio.appliedValues}
 function requestLevelEnvironment(retry=false){
-  if(!environmentLoader)return;
+  if(!environmentLoader)return Promise.resolve(false);
   const preview=currentBackgroundConfiguration();
   const id=cameraLab?.state.environment??preview?.environment??activeLevel.environment??levelGroups.find(group=>group.id===activeLevel.group)?.environment??DEFAULT_ENVIRONMENT;
   if(!cameraLab)cameraState.environment=id;
@@ -133,22 +141,50 @@ function requestLevelEnvironment(retry=false){
   const environment={...environmentSelection.environment};
   if(preview){if(isBackgroundStudio())backgroundStudio.setComposition(environment);environment.groundAnchorY=backgroundStudio.anchorFor(environment,preview)}
   const key=`${environmentCacheKey(environment)}:${environment.groundAnchorY}`;
-  if(key===environmentRequestKey&&!(retry&&failedEnvironmentKey===key))return;
+  if(key===environmentRequestKey&&!(retry&&failedEnvironmentKey===key))return environmentLoadPromise;
   environmentRequestKey=key;failedEnvironmentKey=undefined;
   const request=++environmentRequest;
   const apply=(textures,art=environment,fallback=false)=>{
-    if(request!==environmentRequest)return;
+    if(request!==environmentRequest)return false;
     activeEnvironment=art;activeEnvironmentTextures=textures;syncBackground();syncFloorGrid();
     if(isBackgroundStudio())backgroundStudio.setStatus(fallback?`${art.name}: showing the original artwork because the new composition could not load. Choose the environment again to retry.`:`${art.name}${art.variant?` (${art.variant})`:''} ready. Use Apply to all levels to save the current configuration.`);
+    return true;
   };
-  const cached=environmentLoader.cached(environment);if(cached){apply(cached);return}
+  const cached=environmentLoader.cached(environment);if(cached){environmentLoadPromise=Promise.resolve(apply(cached));return environmentLoadPromise}
   if(isBackgroundStudio())backgroundStudio.setStatus(`Loading ${environment.name}…`);
-  environmentLoader.load(environment).then(textures=>apply(textures)).catch(async()=>{
-    if(request!==environmentRequest)return;failedEnvironmentKey=key;
-    if(environment.variant){try{const textures=await environmentLoader.load(source);apply(textures,source,true);return}catch{}}
+  environmentLoadPromise=environmentLoader.load(environment).then(textures=>apply(textures)).catch(async()=>{
+    if(request!==environmentRequest)return false;failedEnvironmentKey=key;
+    if(environment.variant){try{const textures=await environmentLoader.load(source);return apply(textures,source,true)}catch{}}
     if(request===environmentRequest&&isBackgroundStudio())backgroundStudio.setStatus('The scenery could not be loaded. Choose the environment again to retry. The previous scenery is still displayed.');
+    return false;
+  });
+  return environmentLoadPromise;
+}
+let levelLoading=false;
+const levelLoadingPanel=document.querySelector('#levelLoading'),levelLoadingMessage=document.querySelector('#levelLoadingMessage'),levelLoadingRetry=document.querySelector('#retryLevelAssets');
+const levelAssetGate=createLevelLoadGate((state,error,id)=>{
+  const stage=document.querySelector('.stage');
+  if(state==='ready'){
+    levelLoading=false;startBoardView();syncDesignLighting();
+    // Keep the cover for a composed frame: decoded textures must already be in
+    // the scene before the old canvas pixels can become visible.
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{if(levelAssetGate.isCurrent(id)){stage.classList.remove('is-level-loading');levelLoadingPanel.hidden=true;wrap.setAttribute('aria-busy','false');wrap.dataset.levelAssetState='ready'}}));
+    return;
+  }
+  levelLoading=state!=='idle';stage.classList.toggle('is-level-loading',levelLoading);levelLoadingPanel.hidden=!levelLoading;
+  levelLoadingMessage.textContent=state==='error'?"Couldn't load the puzzle artwork. Check your connection and try again.":'Loading puzzle…';
+  levelLoadingRetry.hidden=state!=='error';wrap.setAttribute('aria-busy',String(state==='loading'));wrap.dataset.levelAssetState=state;
+  if(gameReady)updateUI();
+});
+function loadLevelAssets(retry=false){
+  return levelAssetGate.run(async()=>{
+    const environment=requestLevelEnvironment(retry),state={...cameraState};
+    if(!await environment)throw new Error('The scenery could not be loaded.');
+    if(worldPresentation())await cameraScenery.prepare(state,{retry});
+    await document.fonts.ready;
   });
 }
+levelLoadingRetry.onclick=()=>loadLevelAssets(true);
 function currentDesign(){return isDesignPlayground()?designPlayground.values:designPlayground.appliedValues}
 function movementMarkersEnabled(){return isDesignPlayground()?designPlayground.values.studs.enabled:controlFeatures.enabled('movementStuds')}
 function topFaceStyle(){return isDesignPlayground()?designPlayground.values.topFaces:controlFeatures.topFaceStyle}
@@ -634,20 +670,20 @@ function syncFlag(){
   flagCap.pos3D=base.add(vec3(0,stretchY(.78),0));
 }
 function updateUI(){
-  cameraLab?.setBusy(busy||won||introPlaying);
+  cameraLab?.setBusy(busy||won||introPlaying||levelLoading);
   wrap.classList.toggle('no-piece-selected',!selected);
-  document.querySelector('#levelSettings').disabled=busy||won||introPlaying;
+  document.querySelector('#levelSettings').disabled=busy||won||introPlaying||levelLoading;
   document.querySelector('.control-deck').inert=won;
   document.querySelector('#level-number').textContent=activeLevel.userPuzzle?'★':String(activeLevel.number).padStart(2,'0');document.querySelector('#levelBadge').setAttribute('aria-label',`Level ${activeLevel.number}`);document.querySelector('#level-title').textContent=activeLevel.name;document.querySelector('#exitLevel').disabled=false;
-  document.querySelector('#pull').disabled=busy||won||introPlaying||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
-  document.querySelector('#push').disabled=busy||won||introPlaying||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
+  document.querySelector('#pull').disabled=busy||won||introPlaying||levelLoading||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
+  document.querySelector('#push').disabled=busy||won||introPlaying||levelLoading||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
   document.querySelector('#undo').disabled=busy||!history.length;
   document.querySelector('#reset').disabled=busy||(!history.length&&!won&&!groups.some(g=>g.depth));
   document.querySelector('#studioControls').hidden=!activeLevel.previewMove;document.querySelector('#previewClimb').disabled=busy;document.querySelector('#movementCase').disabled=busy;
   if(activeLevel.studioExample)document.querySelector('#movementCase').value=activeLevel.studioExample.id;
   if(studioTargetObject){studioTargetObject.color=new Color(1,.95,.73,activeLevel.previewMove ? .85 : 0);if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}
   syncInteractionHelp();
-  viewControls.update(viewSide,viewHeightStep);viewControls.setDisabled(busy||won||introPlaying);
+  viewControls.update(viewSide,viewHeightStep);viewControls.setDisabled(busy||won||introPlaying||levelLoading);
   const color=selected?palette[selected.color]:null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
   wrap.style.setProperty('--block-ink',color?blockActionText(color):'#292537');
   syncBlocks();syncPlayer();syncFlag();syncMovementMarkers();
@@ -674,12 +710,13 @@ function syncInteractionHelp(){
   if(key!==interactionHelpKey&&showHelp('Pom can push or pull more than one piece here. Choose a piece by tapping its front or side.','choices'))interactionHelpKey=key;
 }
 function showOpeningHelp(){
-  if(introPlaying)return;
+  if(introPlaying||levelLoading)return;
   if(!openingHelpShown&&!isPreviewLevel(activeLevel)&&showHelp('Pull the blocks out to make steps, then guide Pom to the flag.','intro',6500))openingHelpShown=true;
   else syncInteractionHelp();
 }
 function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=false,deferCheck=false}={}){
   if(isMakerPlaytest)return Promise.resolve(null);
+  if(levelLoading)levelAssetGate.cancel();
   if(!preserveVictoryTransition)victoryEffects.reset();
   let cardReady=Promise.resolve(null);
   syncScreenAppearance(panel==='title'?'home':panel);
@@ -741,11 +778,12 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){if(cameraLab)return;if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
+  levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
-  activeLevel=level;document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  activeLevel=level;document.querySelector('.stage').classList.toggle('has-overlay-deck',!cameraLab&&!isPreviewLevel(level));document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();viewControls.close();cameraLab?.setLevel(level.id);celebration=null;
-  hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();startBoardView();requestLevelEnvironment();
+  hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
 }
 function playUserPuzzle(level){if(!gameReady)return;syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
 function startLevel(id){if(!gameReady||isMakerPlaytest)return;let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);showOpeningHelp()}
@@ -846,7 +884,7 @@ function studyFrame(width,height){
     const project=(x,y,z)=>{x=x+skew*z-cx;y-=cy;z-=cz;return [Math.cos(yaw)*x-Math.sin(yaw)*z,Math.cos(pitch)*y-Math.sin(pitch)*(Math.sin(yaw)*x+Math.cos(yaw)*z)]};
     for(const x of [Math.min(floor.left,visual.left),Math.max(floor.right,visual.right)])for(const y of [0,visual.height+.85])for(const z of [0,4])points.push(project(x,y,z));
   }
-  const halfX=Math.max(...points.map(p=>Math.abs(p[0]))),halfY=Math.max(...points.map(p=>Math.abs(p[1]))),top=24,bottom=82,margin=20;
+  const halfX=Math.max(...points.map(p=>Math.abs(p[0]))),halfY=Math.max(...points.map(p=>Math.abs(p[1]))),top=24,bottom=82+overlayDeckHeight(),margin=20;
   const unit=Math.max(1,Math.min(80,(width-margin*2)/(halfX*2),(height-top-bottom)/(halfY*2)));
   const yaw=cameraYaw(),up=vec3(-Math.sin(yaw)*Math.sin(viewPitch),Math.cos(viewPitch),-Math.cos(yaw)*Math.sin(viewPitch));
   return{height:height/unit,target:vec3(cx,cy,cz).add(up.scale((top-bottom)/(2*unit))),minX:-halfX,maxX:halfX,minY:-halfY,maxY:halfY,top,bottom,margin};
@@ -978,7 +1016,10 @@ function applyBoardView(clamp=true){
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
   if(worldPresentation()){cameraLab?.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraMotion=cameraState.motion;wrap.dataset.cameraTruck=String(cameraState.truck);wrap.dataset.cameraFollowing=String(cameraState.followX||cameraState.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraState.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
 }
+function overlayDeckHeight(){return document.querySelector('.stage').classList.contains('has-overlay-deck')?document.querySelector('.control-deck').getBoundingClientRect().height:0}
 function startBoardView(animate=true){
+  if(levelLoading)return;
+  document.querySelector('.stage').style.setProperty('--control-deck-height',`${overlayDeckHeight()}px`);
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
   const f=sceneFrame(viewWidth,viewHeight);
   if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
@@ -1016,7 +1057,7 @@ function zoomBoard(unit,x,y){
 function clearBoardHover(){hovered=null;movementMarkers?.setHovered(null);if(hoverObject)hoverObject.color=new Color(1,1,1,0)}
 function boardPoint(e){const r=wrap.getBoundingClientRect();return {x:e.clientX-r.left-wrap.clientLeft,y:e.clientY-r.top-wrap.clientTop}}
 function boardDown(e){
-  if(won||!viewReady||e.button>0)return;enterPlayFromIntro();stopIntro();const p=boardPoint(e);boardPointers.set(e.pointerId,p);wrap.setPointerCapture(e.pointerId);
+  if(levelLoading||won||!viewReady||e.button>0)return;enterPlayFromIntro();stopIntro();const p=boardPoint(e);boardPointers.set(e.pointerId,p);wrap.setPointerCapture(e.pointerId);
   if(boardPointers.size===1)boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};else{boardGesture.multi=true;clearBoardHover()}
 }
 function boardMove(e){
@@ -1126,7 +1167,7 @@ function gameUpdate(){
   updateSelectionLightbox();
 }
 function moveTo(p,pressMarker=false){
-  if(won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
+  if(levelLoading||won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
   const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
   const winningArrival=!isPreviewLevel(activeLevel)&&nodeKey(path.at(-1))===nodeKey(goalNode());
   const landingOffset=winningArrival?victoryLandingOffset(path.at(-2),path.at(-1),W):0;
@@ -1154,7 +1195,7 @@ function moveTo(p,pressMarker=false){
 function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return ray.getPosition(t)}
 function standableAt(ray){ray=boardRay(ray);let best=null,bestD=Infinity;if(Math.abs(ray.direction.y)>1e-6)for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+depthSkew()*(p.z+.5),t=(h-ray.origin.y)/ray.direction.y;if(t<0)continue;const q=ray.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best)return best;const floor=pointOnFloor(ray);if(floor){const p=standableReachable().filter(n=>n.y===H).sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<.9)return p}}return null}
 function updateHover(e){if(!hoverObject)return;if(introPlaying){clearBoardHover();return}const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight)),p=standableAt(ray);hovered=p;movementMarkers?.setHovered(!busy&&!won?pickMovementMarker(ray):null);if(!p||(movementMarkersEnabled()&&p.y<H)){hoverObject.color=new Color(1,1,1,0);return}hoverObject.pos3D=standingSpotCenter(p);hoverObject.color=new Color(1,1,1,.33)}
-function clickBoard(e){if(busy||won)return;enterPlayFromIntro();const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
+function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
   const stud=pickMovementMarker(ray);if(stud){moveTo(stud,true);return}
   // Resolve visible, walkable cube tops before wall faces. The wall can be
   // nearer along the ray even when the pointer is visually on a platform top.
@@ -1166,10 +1207,10 @@ function clickBoard(e){if(busy||won)return;enterPlayFromIntro();const point=boar
     if(x>=-1&&x<W&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }
 }
-function manipulate(dir){const g=selected;if(busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
+function manipulate(dir){const g=selected;if(levelLoading||busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
 function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 function changeView(horizontal,vertical=viewHeightStep){
-  if(busy||won||!viewReady)return;enterPlayFromIntro();
+  if(levelLoading||busy||won||!viewReady)return;enterPlayFromIntro();
   if(cameraLab){if(horizontal!==viewSide)cameraLab.orbitBy(-5*(horizontal-viewSide));return}
   if(worldPresentation()){const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;viewSide=next.horizontal;viewHeightStep=next.vertical;cameraState.yaw=-35*viewSide;cameraState.pitch=viewHeightStep?10:20;applyCameraStudy({orbit:true});updateUI();return}
   const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;
@@ -1183,7 +1224,7 @@ function changeView(horizontal,vertical=viewHeightStep){
 }
 
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>boardUp(e,true));wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
-wrap.addEventListener('wheel',e=>{if(won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
+wrap.addEventListener('wheel',e=>{if(levelLoading||won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
 // Overlay controls must never select or move a ground spot underneath them.
 const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',clearBoardHover);
 const studioControls=document.querySelector('#studioControls'),movementCase=document.querySelector('#movementCase');for(const example of movementExamples){const option=document.createElement('option');option.value=example.id;option.textContent=example.label;movementCase.append(option)}movementCase.onchange=()=>{if(!busy)resetLevelState(studioLevel(levels,movementExamples.find(example=>example.id===movementCase.value)))};
@@ -1209,7 +1250,7 @@ setLoadingScreen(undefined);
 await engineInit(gameInit,gameUpdate,undefined,undefined,undefined,[skyBackground,meadowForeground],wrap);
 new ResizeObserver(()=>{
   const r={width:wrap.clientWidth,height:wrap.clientHeight};setCanvasFixedSize(vec2(Math.max(1,r.width),Math.max(1,r.height)));if(!backgroundObjects.length)return;
-  if(r.width===viewWidth&&r.height===viewHeight)return;
+  if(levelLoading||r.width===viewWidth&&r.height===viewHeight)return;
   const mobile=mobileBoard(),changedMode=mobile!==viewMobile;viewWidth=r.width;viewHeight=r.height;baseCameraHeight=fitCamera(r.width,r.height);
   if(celebration){render3D.updateMatrices(r.width/r.height);return}
   if(changedMode||introPlaying){startBoardView();return}

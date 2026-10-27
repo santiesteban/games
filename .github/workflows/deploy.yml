@@ -61,6 +61,10 @@ jobs:
         run: npm ci
         working-directory: pom
 
+      - name: Check Little Ledges
+        run: npm test
+        working-directory: pom
+
       - name: Build Little Ledges
         env:
           VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}

@@ -126,3 +126,12 @@ Validation before final vegetation delivery: all four reference distances checke
 
 
 Final vegetation delivery: integrated `little-ledges-scenery-kits-painterly-v2` for both themes. All sixteen trees, shrubs, grasses and flower standees were replaced with the artist's broader painted versions. Sky, distant hills and ground remain byte-for-byte identical to the prior kit. Runtime WebP hashes are recorded in `src/assets/scenery-kits/runtime-manifest.json`; PNG masters and authoring sources remain in the delivered external package. Independently verified dimensions, alpha baselines and supporting pivot pixels for all sixteen exports. Browser checks confirmed all eight standees per theme at ground Y = 0, shared 0.08-unit thickness, stable positions through both 35° orbit directions and clear playable silhouettes. Final normal-game Meadow view and isolated creator playtest were reviewed with no runtime errors.
+
+
+## Asset-ready presentation and build identification
+
+Each level now waits behind a loading cover for its decoded scenery, vegetation textures and fonts. Only the newest requested level may reveal a scene or report a failure. Failed requests show a retry button; failed vegetation records can be discarded and reloaded, releasing partial GPU uploads. The cover remains through a composed frame before revealing the complete level and beginning its camera introduction. Back navigation cancels pending reveals. Creator playtests use the same gate.
+
+The ordinary-game control deck overlays a constant-height canvas and is hidden as a whole during loading and the camera introduction, so there is no empty footer band or layout jump when controls return. Settings has independent wheel/touch handling so its build identifier is reachable. The identifier uses the GitHub workflow run number in deployment, a local timestamp otherwise, and includes the source revision and development marker where applicable.
+
+Validation: 47 game tests passed, including waiting for all assets, stale failure suppression, cancellation and retry. Full and restricted-playtest builds passed. A temporary local server delayed Japan Spring images and failed one vegetation image: the canvas remained hidden, the error offered a retry, and retry revealed the complete modular scenery. Desktop and 390 × 844 introductions showed no footer band; canvas height stayed fixed when controls returned. Settings scrolling and the build label were checked at both sizes. Temporary review-server code is outside the repository and is not shipped.

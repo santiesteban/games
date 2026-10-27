@@ -45,3 +45,8 @@ See [web and installed-app architecture](docs/distribution.md). The web game, pu
 | v0.03 (formerly v3) | `pom/v0.03` | `/games/pom/v0.03/` |
 
 The previous `/pom/v1/`, `/pom/v2/` and `/pom/v3/` addresses redirect to their current archive locations while retaining query strings and puzzle fragments. `/pom/v4/` serves the current game through a compatibility entry with shared assets, without redirecting existing Home Screen shortcuts out of their saved app scope. The historical `little-ledges:v4:*` storage keys remain unchanged to preserve progress and settings.
+
+
+Levels remain covered by a loading message until their scenery textures, vegetation and fonts are ready. Failed artwork loads offer a retry, and leaving the level cancels its pending reveal. The control deck overlays the scene and stays hidden through the opening camera presentation, keeping the canvas size stable.
+
+Settings includes the build number and source revision. GitHub Pages builds use the workflow run number; local builds use a timestamp identifier, and the live preview is marked as development. Run `npm test` for the game tests; the deployment workflow runs them before building.

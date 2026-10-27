@@ -6,6 +6,13 @@ import {cardboardMesh} from './cardboard.js';
 export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
   let kit,kitPromise,kitError;
   let key,objects=[],reference;
+  const usesKit=state=>state.artworkSet==='kit'&&state.setting==='landscape'&&['meadow','japan-spring'].includes(state.environment);
+  function loadKit(retry=false){
+    if(retry&&kitError){kitError=undefined;kitPromise=undefined}
+    return kitPromise??=import('./modular-scenery.js').then(({createModularScenery})=>{kit=createModularScenery({onChange,onStatus});onChange();return kit}).catch(error=>{kitError=error;onStatus('New kit renderer unavailable.');throw error});
+  }
+  async function prepare(state,{retry=false}={}){if(usesKit(state)){const renderer=await loadKit(retry);await renderer.prepare(state.environment,{retry})}}
+
   const color=hex=>new Color(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
   function add(mesh,tileInfo,tint=new Color(1)){
     mesh.doubleSided=true;const object=new EngineObject3D(vec3(),mesh,tileInfo,tint);
@@ -19,11 +26,11 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     polygon(Array.from({length:20},(_,i)=>{const a=i*Math.PI/10;return vec3(x+height*.09+Math.cos(a)*height*.32,height*.79+Math.sin(a)*height*.23,z+.025)}),japan?'#f2d4d5':'#92ae87');
   }
   function update({state,environment,textures,width,height,artworkBounds,yaw=0,target=vec3(width/2,0,1.5)}){
-    const wantsKit=state.artworkSet==='kit'&&state.setting==='landscape'&&['meadow','japan-spring'].includes(state.environment);
+    const wantsKit=usesKit(state);
     if(wantsKit){
       if(!kit){
         onStatus(kitError?'New kit renderer unavailable.':"Loading the new image kit…");
-        kitPromise??=import('./modular-scenery.js').then(({createModularScenery})=>{kit=createModularScenery({onChange,onStatus});onChange()}).catch(error=>{kitError=error;onStatus('New kit renderer unavailable.')});
+        loadKit().catch(()=>{});
       }
       const modular=kit?.update({state,environment,textures,width,height,artworkBounds,yaw,target});
       if(modular){for(const object of objects)object.destroy();objects=[];key=undefined;return modular}
@@ -81,5 +88,5 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     }
     return reference;
   }
-  return{update,get bounds(){return kit?.bounds},get contacts(){return kit?.contacts??[]},destroy(){kit?.clear();for(const object of objects)object.destroy();objects=[];key=undefined}};
+  return{prepare,update,get bounds(){return kit?.bounds},get contacts(){return kit?.contacts??[]},destroy(){kit?.clear();for(const object of objects)object.destroy();objects=[];key=undefined}};
 }
