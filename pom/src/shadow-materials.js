@@ -43,3 +43,34 @@ export const groundShadowShader=new Shader(`${receiverShadow}
     color=vec4(0.0,0.0,0.0,sunColor.r*(1.0-surfaceShadow()));
   }
 `);
+
+// The game preserves its painted palette with unlit materials. Receive the
+// lab's point lights explicitly instead of relighting the whole illustration.
+const lightboxSpill=`
+  vec3 lightboxSpill(){
+    vec3 n=normalize(worldNormal),energy=vec3(0.0);
+    if(!gl_FrontFacing)n=-n;
+    for(int i=0;i<8;i++){
+      if(i>=lightCount)break;
+      vec4 source=lights[i];if(source.w<=0.0)continue;
+      vec3 delta=source.xyz-worldPos;float distance=length(delta);
+      float falloff=max(0.0,1.0-distance/source.w);
+      float facing=0.18+0.82*max(0.0,dot(n,delta/max(distance,0.0001)));
+      energy+=lightColors[i].rgb*lightColors[i].a*falloff*falloff*facing;
+    }
+    return min(energy,vec3(0.85));
+  }
+`;
+export const lightboxReceiverShader=new Shader(`${receiverShadow}${lightboxSpill}
+  void mainImage(out vec4 color,vec2 uv){
+    color=texture(iChannel0,uv);
+    color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow());
+    color.rgb+=lightboxSpill()*0.8;
+  }
+`);
+export const lightboxUnshadowedShader=new Shader(`${lightboxSpill}
+  void mainImage(out vec4 color,vec2 uv){color=texture(iChannel0,uv);color.rgb+=lightboxSpill()*0.8;}
+`);
+export const lightboxGroundShader=new Shader(`${lightboxSpill}
+  void mainImage(out vec4 color,vec2 uv){color=vec4(lightboxSpill()*0.7,1.0);}
+`);

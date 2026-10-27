@@ -14,11 +14,12 @@ import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { createCameraLab } from './camera-lab.js';
+import { createSelectionLightbox } from './selection-lightbox.js';
 import { createGoalBadge } from './goal-badge.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import { createVictoryEffects, victoryLandingOffset, victoryArrival } from './victory-effects.js';
-import { pieceShadowShader, groundShadowShader } from './shadow-materials.js';
+import { pieceShadowShader, groundShadowShader, lightboxReceiverShader, lightboxUnshadowedShader } from './shadow-materials.js';
 import { createLevelGridObserver } from './level-grid.js';
 import { puzzleThumbnail } from './puzzle-thumbnail.js';
 import { createMyPuzzles } from './my-puzzles.js';
@@ -357,12 +358,12 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
   m.doubleSided=true;return m;
 }
 function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),palette[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
-function syncExtrusions(){for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
+function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
   const reachable=walkabilityFacesEnabled()?reachableSurfaceKeys():null;
   for(const g of groups)if(g.depth)for(const c of g.cells){
     const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
-    extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);
-    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,stretchY(.003),0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth,reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top)}
+    extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);g.lightboxSurfaces.push(dark);
+    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,stretchY(.003),0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth,reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top);g.lightboxSurfaces.push(top)}
   }
 }
 function drawMapOutlines(){
@@ -396,7 +397,7 @@ function drawMapOutlines(){
 function roundedInsetLoop(points,offset,radius){if(points.length<3)return[];const sign=-1,verts=points.map((v,i)=>{const prev=points[(i+points.length-1)%points.length],next=points[(i+1)%points.length],normal=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:-dy/l*sign,y:dx/l*sign}},n0=normal(prev,v),n1=normal(v,next),sx=n0.x+n1.x,sy=n0.y+n1.y,l=Math.hypot(sx,sy)||1,n={x:sx/l,y:sy/l},k=offset/(n.x*n1.x+n.y*n1.y||1);return{x:v.x+n.x*k,y:v.y+n.y*k}}),result=[];for(let i=0;i<verts.length;i++){const v=verts[i],prev=verts[(i+verts.length-1)%verts.length],next=verts[(i+1)%verts.length],unit=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:dx/l,y:dy/l}},u0=unit(v,prev),u1=unit(v,next),r=Math.min(radius,Math.hypot(v.x-prev.x,v.y-prev.y)/2,Math.hypot(v.x-next.x,v.y-next.y)/2),a={x:v.x+u0.x*r,y:v.y+u0.y*r},b={x:v.x+u1.x*r,y:v.y+u1.y*r};for(let step=0;step<=5;step++){const t=step/5,s=1-t;result.push({x:s*s*a.x+2*s*t*v.x+t*t*b.x,y:s*s*a.y+2*s*t*v.y+t*t*b.y})}}return result}
 function drawSelectedOutline(){
   const g=selected,selection=currentDesign().selection;
-  if(!g||won||!selection.enabled)return;
+  if(!g||won||!selection.enabled||lightboxEnabled())return;
   const color=designColor(selection.color),solid=selection.style==='solid';
   const width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=g.depth+.028,offset=5.5,radius=6,dash=6,gap=4,stroke=2.2*viewSpan()/height;
   const frontWorld=point=>{const ray=render3D.screenToRay(vec2(point.x,point.y),size),t=(z-ray.origin.z)/ray.direction.z;return ray.getPosition(t)};
@@ -505,7 +506,7 @@ function syncFloorGrid(){
 function syncDesignLighting(){
   const enabled=isDesignPlayground()?designPlayground.values.shadows.enabled:controlFeatures.enabled('pieceShadows');
   render3D.shadows=enabled;
-  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=enabled?pieceShadowShader:undefined;object.castShadow=false;object.receiveShadow=enabled}
+  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=lightboxEnabled()?(enabled?lightboxReceiverShader:lightboxUnshadowedShader):(enabled?pieceShadowShader:undefined);object.castShadow=false;object.receiveShadow=enabled}
   // The solid prisms cast shadows. Decorative top overlays and the offset front
   // faces only receive them, avoiding multiple almost-coplanar shadow layers.
   for(const object of extrusionOutlines)object.castShadow=enabled;
@@ -528,15 +529,37 @@ function syncDesignLighting(){
   // Its projection therefore cannot paint the sky, even after panning or zooming.
   shadowFloor.scale3D=vec3((visual.right-visual.left+8)/2,1,4);shadowFloor.pos3D=worldPoint((visual.left+visual.right)/2,-.008,4.025);
 }
-let pulsePiece=null,pulseStart=0;
+let pulsePiece=null,pulseStart=0,selectionLightbox;
+function lightboxEnabled(){return cameraLab?.state.selectionEffect==='lightbox'}
 const reducedSelectionMotion=matchMedia('(prefers-reduced-motion:reduce)');
+function selectionPhase(now=performance.now()){
+  if(pulsePiece!==selected){pulsePiece=selected;pulseStart=now}
+  return reducedSelectionMotion.matches?.6:(1-Math.cos((now-pulseStart)*Math.PI*2/1400))/2;
+}
 function selectedSurfaceColor(g,now=performance.now()){
   const color=palette[g.color];if(g!==selected||won)return color;
-  if(pulsePiece!==g){pulsePiece=g;pulseStart=now}
-  const phase=(1-Math.cos((now-pulseStart)*Math.PI*2/1400))/2;
+  const phase=selectionPhase(now);
+  if(lightboxEnabled()){
+    const amount=cameraLab.state.lightboxStrength*(.18+.5*phase);
+    return new Color(color.r+(1-color.r)*amount,color.g+(.88-color.g)*amount,color.b+(.42-color.b)*amount);
+  }
   return tinted(color,reducedSelectionMotion.matches?.12:.26*phase);
 }
-function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting()}
+function updateSelectionLightbox(){
+  if(!selectionLightbox)return;
+  const group=lightboxEnabled()&&!won&&!introPlaying&&document.querySelector('#menuScreen').hidden?selected:null;
+  const pulse=selectionPhase(),strength=cameraLab.state.lightboxStrength;
+  if(group){
+    for(const object of group.objects){object.emissive=1+strength*(.04+.12*pulse);object.shader=undefined}
+    // The luminous front is the selection cue. Keep its top/side materials
+    // steady, including excluding those faces from the pulsing local spill.
+    const shadows=controlFeatures.enabled('pieceShadows');
+    for(const object of group.lightboxSurfaces??[]){object.emissive=1;object.shader=shadows?pieceShadowShader:undefined}
+  }
+  selectionLightbox.update({group,width:W,height:H,worldPoint,pulse,strength,spill:cameraLab.state.lightboxSpill,glow:cameraLab.state.lightboxGlow});
+  wrap.dataset.selectionEffect=cameraLab.state.selectionEffect;wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);
+}
+function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting();updateSelectionLightbox()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
 function syncBackground(){
   if(cameraLab){
@@ -775,8 +798,9 @@ function puzzleVisualBounds(){
   const floor=puzzleFloorBounds(mural,GRID_DEPTH),cells=groups.flatMap(g=>g.cells);
   return{left:Math.min(floor.left,activeLevel.start.x-.5),right:Math.max(floor.right,activeLevel.start.x+1.5),height:Math.max(1,...cells.map(c=>H-c.y),H-activeLevel.start.y)};
 }
-function applyCameraStudy({refit=false,orbit=false,centerPom=false}={}){
+function applyCameraStudy({refit=false,orbit=false,centerPom=false,selectionOnly=false}={}){
   if(!gameReady||busy||won)return;
+  if(selectionOnly){syncBlocks();return}
   stopIntro();viewPitch=cameraPitch();viewTouched=true;keepInterruptedView=false;
   // Orbiting or tracking moves the camera; straight board geometry stays put.
   if(!orbit){refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers()}
@@ -995,6 +1019,7 @@ function gameInit(){
   if(cameraLab)setCanvasClearColor(new Color(1,250/255,240/255));
   setDebugWatermark(false);new Render3DPlugin();
   movementMarkers=createMovementMarkers();
+  if(cameraLab)selectionLightbox=createSelectionLightbox();
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);
   baseCameraHeight=fitCamera(bounds.width,bounds.height);render3D.camera.orthographic=baseCameraHeight;positionCameraForView(viewSide);
@@ -1036,6 +1061,7 @@ function gameUpdate(){
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;
+  updateSelectionLightbox();
 }
 function moveTo(p,pressMarker=false){
   if(won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}

@@ -1,6 +1,6 @@
 // Temporary, URL-gated study. Values stay in this page and never enter level JSON.
 export function createCameraLab({levels,environments,onChange,onLevel}){
-  const state={projection:'orthographic',motion:'orbit',truck:0,fov:35,followX:false,followY:false,yaw:20,pitch:25,setting:'stage',backdrop:'turning',holdFraming:true,horizonLock:true,horizonGuide:true,environment:'japan-spring',background:true,foreground:true,props:true,guides:true};
+  const state={selectionEffect:'lightbox',lightboxStrength:.65,lightboxSpill:true,lightboxGlow:true,projection:'orthographic',motion:'orbit',truck:0,fov:35,followX:false,followY:false,yaw:20,pitch:25,setting:'stage',backdrop:'turning',holdFraming:true,horizonLock:true,horizonGuide:true,environment:'japan-spring',background:true,foreground:true,props:true,guides:true};
   const panel=document.createElement('aside');panel.className='camera-lab';panel.setAttribute('aria-label','Camera and scenery study');
   panel.innerHTML=`<header><h2>Camera & scenery</h2><button type="button" data-collapse aria-expanded="true">Hide</button></header>
     <output data-horizon-measure class="camera-lab-measure" aria-live="polite"></output>
@@ -24,6 +24,12 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
       <button type="button" data-center-pom>Center on Pom</button>
       <p class="camera-lab-copy">Side movement holds the downward angle. Track mode moves the camera and target together. Presets and Fit entire puzzle can change framing.</p>
       <p data-camera-note class="camera-lab-copy" aria-live="polite"></p></fieldset>
+      <fieldset><legend>Selected piece</legend>
+      <label>Highlight style<select data-selection-effect aria-label="Highlight style"><option value="lightbox">Pulsing light box</option><option value="original">Original outline & tint</option></select></label>
+      <label>Light box strength <output data-lightbox-strength-output>65%</output><input data-lightbox-strength aria-label="Light box strength" type="range" min="0" max="100" step="5" value="65"></label>
+      <label class="camera-lab-check"><input type="checkbox" data-lightbox-spill checked> Light spill onto nearby surfaces</label>
+      <label class="camera-lab-check"><input type="checkbox" data-lightbox-glow checked> Soft glow</label>
+      <p class="camera-lab-copy">A smooth pale-gold pulse brightens only the selected front face. Tops and sides keep their normal shading. Nearby blocks and ground receive its warm light. Reduced motion uses a steady light.</p></fieldset>
       <fieldset><legend>Scenery</legend><div class="camera-lab-presets"><button type="button" data-setting="stage">Wall & ground set</button><button type="button" data-setting="landscape">Landscape</button></div>
       <label data-backdrop-field>Set backdrop<select data-backdrop aria-label="Set backdrop"><option value="fixed">Fixed wall</option><option value="turning" selected>Wall turns with the view</option><option value="curved">Curved wall</option></select></label>
       <label class="camera-lab-check"><input type="checkbox" data-horizonLock checked> Hold horizon height during orbit</label>
@@ -64,6 +70,9 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
     for(const button of panel.querySelectorAll('[data-orbit]'))button.textContent=Number(button.dataset.orbit)===0?'Center':`${tracking?'Track':'Orbit'} ${Number(button.dataset.orbit)>0?'left':'right'}`;
     panel.querySelector('[data-center-pom]').disabled=original;
     panel.querySelector('[data-camera-note]').textContent=original?'Original sheared geometry and camera angles.':state.pitch===0?'Front inspection view. Raise the downward angle to play.':perspective?'Perspective camera. Field of view changes keep the target at a comparable size. Pan to inspect; a movement tap resumes smooth centered follow. Center on Pom recenters immediately; scenery stays in the world.':'Straight blocks with a rotated orthographic camera.';
+    panel.querySelector('[data-selection-effect]').value=state.selectionEffect;
+    panel.querySelector('[data-lightbox-strength]').value=state.lightboxStrength*100;panel.querySelector('[data-lightbox-strength-output]').value=`${Math.round(state.lightboxStrength*100)}%`;
+    for(const id of ['strength','spill','glow'])panel.querySelector(`[data-lightbox-${id}]`).disabled=state.selectionEffect!=='lightbox';
     const fixed=state.setting==='stage'&&state.backdrop==='fixed';
     panel.querySelector('[data-backdrop-field]').hidden=state.setting!=='stage';
     panel.querySelector('[data-horizonLock]').disabled=fixed;panel.querySelector('[data-horizonLock]').checked=!fixed&&state.horizonLock;
@@ -92,6 +101,9 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
   for(const button of panel.querySelectorAll('[data-orbit]'))button.onclick=()=>orbitTo(Number(button.dataset.orbit)*(state.motion==='track'?-1:1));
   panel.querySelector('[data-backdrop]').onchange=event=>{state.backdrop=event.target.value;change()};
   for(const id of ['background','foreground','props','guides','holdFraming','horizonLock','horizonGuide','followX','followY'])panel.querySelector(`[data-${id}]`).onchange=event=>{state[id]=event.target.checked;change()};
+  panel.querySelector('[data-selection-effect]').onchange=event=>{state.selectionEffect=event.target.value;change({selectionOnly:true})};
+  panel.querySelector('[data-lightbox-strength]').oninput=event=>{state.lightboxStrength=Number(event.target.value)/100;change({selectionOnly:true})};
+  for(const id of ['spill','glow'])panel.querySelector(`[data-lightbox-${id}]`).onchange=event=>{state[id==='spill'?'lightboxSpill':'lightboxGlow']=event.target.checked;change({selectionOnly:true})};
   panel.querySelector('[data-fit]').onclick=()=>onChange({refit:true});refresh();
   return{state,panel,orbitBy(delta){orbitTo(state.motion==='track'?state.truck-delta:state.yaw+delta)},setLevel(id){levelSelect.value=id},measure({percent,tilt,curved,unit,cameraHeight}){
     if(!Number.isFinite(percent)){panel.querySelector('[data-horizon-measure]').textContent='Backdrop join is outside the view.';guide.hidden=true;return}
