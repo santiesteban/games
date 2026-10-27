@@ -49,7 +49,7 @@ export function createCameraScenery(){
     }else{
       const wall=[wallPoint(-span/2,wallHeight),wallPoint(span/2,wallHeight),wallPoint(span/2,0),wallPoint(-span/2,0)];
       patch(wall,state.background?textures[0]:undefined,uv(0,anchor),state.background?new Color(1):color('#eee9df'));
-      reference={curved:false,points:[wallPoint(-span/2,0),wallPoint(0,0),wallPoint(span/2,0)]};
+      reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
     }
     const groundBack=landscape||following||curved?-40:back;
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];
