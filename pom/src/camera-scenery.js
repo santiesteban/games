@@ -3,7 +3,8 @@ import {cardboardMesh} from './cardboard.js';
 
 // World-anchored scenery for the camera study. Scenery never enters gameplay
 // collision or picking. The original registered images are reused unchanged.
-export function createCameraScenery(){
+export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
+  let kit,kitPromise,kitError;
   let key,objects=[],reference;
   const color=hex=>new Color(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
   function add(mesh,tileInfo,tint=new Color(1)){
@@ -17,7 +18,18 @@ export function createCameraScenery(){
     polygon(Array.from({length:24},(_,i)=>{const a=i*Math.PI/12,r=1+.055*Math.cos(i*2.6);return vec3(x+Math.cos(a)*height*.45*r,height*.7+Math.sin(a)*height*.34*r,z+.01)}),japan?'#e5b5bf':'#6e9270');
     polygon(Array.from({length:20},(_,i)=>{const a=i*Math.PI/10;return vec3(x+height*.09+Math.cos(a)*height*.32,height*.79+Math.sin(a)*height*.23,z+.025)}),japan?'#f2d4d5':'#92ae87');
   }
-  function update({state,environment,textures,width,height,yaw=0,target=vec3(width/2,0,1.5)}){
+  function update({state,environment,textures,width,height,artworkBounds,yaw=0,target=vec3(width/2,0,1.5)}){
+    const wantsKit=state.artworkSet==='kit'&&state.setting==='landscape'&&['meadow','japan-spring'].includes(state.environment);
+    if(wantsKit){
+      if(!kit){
+        onStatus(kitError?'New kit renderer unavailable.':"Loading the new image kit…");
+        kitPromise??=import('./modular-scenery.js').then(({createModularScenery})=>{kit=createModularScenery({onChange,onStatus});onChange()}).catch(error=>{kitError=error;onStatus('New kit renderer unavailable.')});
+      }
+      const modular=kit?.update({state,environment,textures,width,height,artworkBounds,yaw,target});
+      if(modular){for(const object of objects)object.destroy();objects=[];key=undefined;return modular}
+    }else{
+      kit?.clear();onStatus(state.artworkSet==='previous'?'Previous artwork comparison':state.setting!=='landscape'?'New image kits are available in Landscape.':'New image kits are available for Meadow and Japan Spring.');
+    }
     const landscape=state.setting==='landscape',curved=!landscape&&state.backdrop==='curved',following=landscape||state.backdrop==='turning';
     const pivot=state.horizonLock?{x:target.x,z:target.z}:{x:width/2,z:0};
     const next=JSON.stringify([state.setting,state.backdrop,state.environment,state.background,state.foreground,state.props,environment.variant,width,height,following||curved?yaw:0,following||curved?pivot:null]);
@@ -69,5 +81,5 @@ export function createCameraScenery(){
     }
     return reference;
   }
-  return{update,destroy(){for(const object of objects)object.destroy();objects=[];key=undefined}};
+  return{update,get bounds(){return kit?.bounds},get contacts(){return kit?.contacts??[]},destroy(){kit?.clear();for(const object of objects)object.destroy();objects=[];key=undefined}};
 }

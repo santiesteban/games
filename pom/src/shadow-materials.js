@@ -44,33 +44,14 @@ export const groundShadowShader=new Shader(`${receiverShadow}
   }
 `);
 
-// The game preserves its painted palette with unlit materials. Receive the
-// lab's point lights explicitly instead of relighting the whole illustration.
-const lightboxSpill=`
-  vec3 lightboxSpill(){
-    vec3 n=normalize(worldNormal),energy=vec3(0.0);
-    if(!gl_FrontFacing)n=-n;
-    for(int i=0;i<8;i++){
-      if(i>=lightCount)break;
-      vec4 source=lights[i];if(source.w<=0.0)continue;
-      vec3 delta=source.xyz-worldPos;float distance=length(delta);
-      float falloff=max(0.0,1.0-distance/source.w);
-      float facing=0.18+0.82*max(0.0,dot(n,delta/max(distance,0.0001)));
-      energy+=lightColors[i].rgb*lightColors[i].a*falloff*falloff*facing;
-    }
-    return min(energy,vec3(0.85));
-  }
-`;
-export const lightboxReceiverShader=new Shader(`${receiverShadow}${lightboxSpill}
+// A closed solid cannot receive direct sunlight on a face pointing away from
+// the sun. Enforce that geometric fact before sampling the biased shadow map;
+// otherwise its filtering leaks a bright rim at convex checkerboard corners.
+// Keep this on solid puzzle faces, not painted character/flag billboards.
+export const solidPieceShadowShader=new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
-    color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow());
-    color.rgb+=lightboxSpill()*0.6;
+    float visible=dot(normalize(worldNormal),sunDirection)>0.0001?surfaceShadow():0.0;
+    color.rgb*=1.0-sunColor.r*(1.0-visible);
   }
-`);
-export const lightboxUnshadowedShader=new Shader(`${lightboxSpill}
-  void mainImage(out vec4 color,vec2 uv){color=texture(iChannel0,uv);color.rgb+=lightboxSpill()*0.6;}
-`);
-export const lightboxGroundShader=new Shader(`${lightboxSpill}
-  void mainImage(out vec4 color,vec2 uv){color=vec4(lightboxSpill()*0.7,1.0);}
 `);

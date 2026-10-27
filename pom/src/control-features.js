@@ -1,6 +1,7 @@
 import { DEFAULT_DESIGN } from './design-style.js';
 
 export const CONTROL_FEATURES=[
+  {id:'selectionLightbox',defaultEnabled:true,label:'Pulsing piece highlight',description:'Use an inward light-box pulse. Turn off for the classic outline and tint.'},
   {id:'movementStuds',defaultEnabled:DEFAULT_DESIGN.studs.enabled,label:'Reachable platform studs',description:'Show small raised bumps on platforms Pom can reach. Tap a bump to press it down and move there.'},
   {id:'autoSelectPieces',defaultEnabled:true,label:'Automatically select nearby pieces',description:'After Pom moves, select a piece he can push or pull: behind him first, then right, then left.'},
   {id:'pullDepthColors',defaultEnabled:false,label:'Color top faces by pull distance',description:'Green at the front, yellow on the second row, and red on the third, with gentle gradients and subtle square grid lines on the tops and sides.'},

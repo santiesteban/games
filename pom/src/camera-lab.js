@@ -1,12 +1,22 @@
+import {puzzleBackgroundDistance,puzzleArtworkWidth} from './scenery-distance.js';
+
 // Temporary, URL-gated study. Values stay in this page and never enter level JSON.
 export function createCameraLab({levels,environments,onChange,onLevel}){
-  const state={autoTilt:true,selectionEffect:'lightbox',lightboxStrength:.65,lightboxSpill:true,lightboxGlow:true,projection:'orthographic',motion:'orbit',truck:0,fov:35,followX:false,followY:false,yaw:20,pitch:25,setting:'stage',backdrop:'turning',holdFraming:true,horizonLock:true,horizonGuide:true,environment:'japan-spring',background:true,foreground:true,props:true,guides:true};
+  const state={backgroundDistanceAuto:true,backgroundDistance:8,artworkSet:'kit',autoTilt:true,selectionEffect:'lightbox',lightboxStrength:.65,lightboxGlow:true,projection:'perspective',motion:'orbit',truck:0,fov:35,followX:true,followY:true,yaw:0,pitch:20,setting:'landscape',backdrop:'turning',holdFraming:true,horizonLock:false,horizonGuide:false,environment:'japan-spring',background:true,foreground:true,props:true,guides:true};
   const panel=document.createElement('aside');panel.className='camera-lab';panel.setAttribute('aria-label','Camera and scenery study');
   panel.innerHTML=`<header><h2>Camera & scenery</h2><button type="button" data-collapse aria-expanded="true">Hide</button></header>
     <output data-horizon-measure class="camera-lab-measure" aria-live="polite"></output>
     <div class="camera-lab-body" tabindex="0" role="region" aria-label="Camera controls scroll area">
       <p class="camera-lab-copy">Compare the same puzzle position. Changes here last only for this visit.</p>
       <label>Puzzle<select data-level aria-label="Puzzle"></select></label>
+      <fieldset><legend>Artwork</legend>
+      <label>Scenery artwork<select data-artwork-set aria-label="Scenery artwork"><option value="kit">New image kit</option><option value="previous">Previous artwork</option></select></label>
+      <output data-kit-status class="camera-lab-copy" aria-live="polite">Loading the new image kit…</output>
+      <label>Artwork<select data-environment aria-label="Artwork"></select></label>
+      <label class="camera-lab-check"><input type="checkbox" data-background-auto checked> Automatic distance by puzzle size</label>
+      <label>Background distance <output data-background-distance-output>8 units</output><input data-background-distance aria-label="Background distance" type="range" min="8" max="50" step="1" value="8"></label>
+      <p class="camera-lab-copy">Automatic: 1.5 × puzzle width, rounded up to 2 units, minimum 8. Moving the slider switches to manual. Kept behind the puzzle and cutouts.</p>
+      </fieldset>
       <fieldset><legend>Camera</legend><div class="camera-lab-presets">
         <button type="button" data-preset="current">Current oblique</button><button type="button" data-preset="gentle">Gentle ortho</button>
         <button type="button" data-preset="three-quarter">Three-quarter</button><button type="button" data-preset="front">Front artwork</button>
@@ -29,14 +39,12 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
       <fieldset><legend>Selected piece</legend>
       <label>Highlight style<select data-selection-effect aria-label="Highlight style"><option value="lightbox">Pulsing light box</option><option value="original">Original outline & tint</option></select></label>
       <label>Light box strength <output data-lightbox-strength-output>65%</output><input data-lightbox-strength aria-label="Light box strength" type="range" min="0" max="100" step="5" value="65"></label>
-      <label class="camera-lab-check"><input type="checkbox" data-lightbox-spill checked> Light spill onto nearby surfaces</label>
-      <label class="camera-lab-check"><input type="checkbox" data-lightbox-glow checked> Soft glow</label>
-      <p class="camera-lab-copy">A smooth hue shift highlights only the selected front face, including white and black pieces. Tops and sides keep their normal shading. Nearby blocks and ground receive a faint light spill in the shifted color. Reduced motion uses a steady light.</p></fieldset>
+      <label class="camera-lab-check"><input type="checkbox" data-lightbox-glow checked> Inner glow</label>
+      <p class="camera-lab-copy">A balanced color pulse and inward glow stay inside the selected front face, including white and black pieces. Tops, sides, nearby blocks and ground keep their normal shading. Reduced motion uses a steady light.</p></fieldset>
       <fieldset><legend>Scenery</legend><div class="camera-lab-presets"><button type="button" data-setting="stage">Wall & ground set</button><button type="button" data-setting="landscape">Landscape</button></div>
       <label data-backdrop-field>Set backdrop<select data-backdrop aria-label="Set backdrop"><option value="fixed">Fixed wall</option><option value="turning" selected>Wall turns with the view</option><option value="curved">Curved wall</option></select></label>
       <label class="camera-lab-check"><input type="checkbox" data-horizonLock checked> Hold horizon height during orbit</label>
       <label class="camera-lab-check"><input type="checkbox" data-horizonGuide checked> Horizontal reference line</label>
-      <label>Artwork<select data-environment aria-label="Artwork"></select></label>
       <p data-scenery-note class="camera-lab-copy"></p>
       <label class="camera-lab-check"><input type="checkbox" data-background checked> Background</label>
       <label class="camera-lab-check"><input type="checkbox" data-foreground checked> Ground artwork</label>
@@ -57,7 +65,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
   const environmentSelect=panel.querySelector('[data-environment]');
   for(const environment of environments)environmentSelect.add(new Option(environment.name,environment.id));
   environmentSelect.value=state.environment;
-  let activePreset='gentle';
+  let activePreset='perspective';
   function refresh(){
     for(const button of panel.querySelectorAll('[data-preset]'))button.setAttribute('aria-pressed',String(button.dataset.preset===activePreset));
     for(const button of panel.querySelectorAll('[data-setting]'))button.setAttribute('aria-pressed',String(button.dataset.setting===state.setting));
@@ -74,8 +82,13 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
     panel.querySelector('[data-camera-note]').textContent=original?'Original sheared geometry and camera angles.':state.pitch===0?'Front inspection view. Raise the downward angle to play.':perspective?'Perspective camera. Field of view changes keep the target at a comparable size. Pan to inspect; a movement tap resumes smooth centered follow. Center on Pom recenters immediately; scenery stays in the world.':'Straight blocks with a rotated orthographic camera.';
     panel.querySelector('[data-selection-effect]').value=state.selectionEffect;
     panel.querySelector('[data-lightbox-strength]').value=state.lightboxStrength*100;panel.querySelector('[data-lightbox-strength-output]').value=`${Math.round(state.lightboxStrength*100)}%`;
-    for(const id of ['strength','spill','glow'])panel.querySelector(`[data-lightbox-${id}]`).disabled=state.selectionEffect!=='lightbox';
+    for(const id of ['strength','glow'])panel.querySelector(`[data-lightbox-${id}]`).disabled=state.selectionEffect!=='lightbox';
     panel.querySelector('[data-auto-tilt]').checked=state.autoTilt;panel.querySelector('[data-auto-tilt]').disabled=original;
+    panel.querySelector('[data-artwork-set]').value=state.artworkSet;
+    panel.querySelector('[data-background-auto]').checked=state.backgroundDistanceAuto;
+    panel.querySelector('[data-background-distance]').value=state.backgroundDistance;panel.querySelector('[data-background-distance-output]').value=`${state.backgroundDistance} units`;
+    panel.querySelector('[data-background-distance]').disabled=state.artworkSet!=='kit'||state.setting!=='landscape'||!['meadow','japan-spring'].includes(state.environment);
+    for(const id of ['background','foreground','props','guides','holdFraming','horizonGuide'])panel.querySelector(`[data-${id}]`).checked=state[id];
     const fixed=state.setting==='stage'&&state.backdrop==='fixed';
     panel.querySelector('[data-backdrop-field]').hidden=state.setting!=='stage';
     panel.querySelector('[data-horizonLock]').disabled=fixed;panel.querySelector('[data-horizonLock]').checked=!fixed&&state.horizonLock;
@@ -87,10 +100,13 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
   function orbitTo(value){if(state.projection==='oblique')return;if(state.motion==='track')state.truck=Math.max(-60,Math.min(60,value));else state.yaw=Math.max(-40,Math.min(40,value));activePreset='custom';change({orbit:true,refit:!state.holdFraming})}
   panel.querySelector('[data-collapse]').onclick=event=>{const collapsed=panel.classList.toggle('is-collapsed');event.target.textContent=collapsed?'Show':'Hide';event.target.setAttribute('aria-expanded',String(!collapsed))};
   levelSelect.onchange=()=>onLevel(levelSelect.value);
+  panel.querySelector('[data-background-distance]').oninput=event=>{state.backgroundDistanceAuto=false;state.backgroundDistance=Number(event.target.value);change()};
+  panel.querySelector('[data-background-auto]').onchange=event=>{state.backgroundDistanceAuto=event.target.checked;if(state.backgroundDistanceAuto)state.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(levels.find(level=>level.id===levelSelect.value)??{width:4,grid:[]}));change()};
+  panel.querySelector('[data-artwork-set]').onchange=event=>{state.artworkSet=event.target.value;change()};
   environmentSelect.onchange=()=>{state.environment=environmentSelect.value;change()};
   for(const button of panel.querySelectorAll('[data-preset]'))button.onclick=()=>{
     activePreset=button.dataset.preset;state.projection=activePreset==='current'?'oblique':activePreset==='perspective'?'perspective':'orthographic';
-    state.motion=activePreset==='perspective'?'track':'orbit';state.truck=0;state.followX=state.followY=activePreset==='perspective';
+    state.motion='orbit';state.truck=0;state.followX=state.followY=activePreset==='perspective';
     if(activePreset==='perspective'){state.setting='landscape';state.horizonLock=false;state.fov=35}
     [state.yaw,state.pitch]=activePreset==='perspective'?[0,20]:activePreset==='three-quarter'?[35,35]:activePreset==='front'?[0,0]:[20,25];change({refit:true});
   };
@@ -107,9 +123,9 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
   panel.querySelector('[data-auto-tilt]').onchange=event=>{state.autoTilt=event.target.checked;change({visibilityOnly:true})};
   panel.querySelector('[data-selection-effect]').onchange=event=>{state.selectionEffect=event.target.value;change({selectionOnly:true})};
   panel.querySelector('[data-lightbox-strength]').oninput=event=>{state.lightboxStrength=Number(event.target.value)/100;change({selectionOnly:true})};
-  for(const id of ['spill','glow'])panel.querySelector(`[data-lightbox-${id}]`).onchange=event=>{state[id==='spill'?'lightboxSpill':'lightboxGlow']=event.target.checked;change({selectionOnly:true})};
+  panel.querySelector('[data-lightbox-glow]').onchange=event=>{state.lightboxGlow=event.target.checked;change({selectionOnly:true})};
   panel.querySelector('[data-fit]').onclick=()=>onChange({refit:true});refresh();
-  return{state,panel,reportTilt(degrees){panel.querySelector('[data-auto-tilt-note]').textContent=state.projection==='oblique'?'Original camera: automatic tilt unavailable.':state.pitch<5?'Front artwork: automatic tilt paused.':`Current downward angle: ${degrees.toFixed(1)}° · base ${state.pitch}°`},orbitBy(delta){orbitTo(state.motion==='track'?state.truck-delta:state.yaw+delta)},setLevel(id){levelSelect.value=id},measure({percent,tilt,curved,unit,cameraHeight}){
+  return{state,panel,setArtworkStatus(message){const status=panel.querySelector('[data-kit-status]');if(status.textContent!==message)status.textContent=message},reportTilt(degrees){panel.querySelector('[data-auto-tilt-note]').textContent=state.projection==='oblique'?'Original camera: automatic tilt unavailable.':state.pitch<5?'Front artwork: automatic tilt paused.':`Current downward angle: ${degrees.toFixed(1)}° · base ${state.pitch}°`},orbitBy(delta){orbitTo(state.motion==='track'?state.truck-delta:state.yaw+delta)},setLevel(id){levelSelect.value=id;if(state.backgroundDistanceAuto)state.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(levels.find(level=>level.id===id)??{width:4,grid:[]}));refresh()},measure({percent,tilt,curved,unit,cameraHeight}){
     if(!Number.isFinite(percent)){panel.querySelector('[data-horizon-measure]').textContent='Backdrop join is outside the view.';guide.hidden=true;return}
     panel.querySelector('[data-horizon-measure]').textContent=`${curved?'Center of join':'Horizon / join'}: ${percent.toFixed(2)}% from top${curved?' · curved':` · ${(Math.abs(tilt)<.005?0:tilt).toFixed(2)}° tilt`}`;
     guide.hidden=!state.horizonGuide||percent<0||percent>100;guide.style.top=`${percent}%`;

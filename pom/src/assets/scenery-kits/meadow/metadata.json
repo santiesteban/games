@@ -1,0 +1,538 @@
+{
+  "theme": "meadow",
+  "coordinateConvention": "top-left origin; bounds [left,top,rightExclusive,bottomExclusive]; pivots use pixel-boundary coordinates; last supporting pixel is baseline-1",
+  "colorSpace": "sRGB",
+  "assets": [
+    {
+      "file": "sky.png",
+      "webp": "sky.webp",
+      "width": 4096,
+      "height": 2048,
+      "alphaMode": "opaque",
+      "alphaBoundsPixels": [
+        0,
+        0,
+        4096,
+        2048
+      ],
+      "nativeSourceDimensions": [
+        1774,
+        887
+      ],
+      "source": "sources/sky-generated.png",
+      "transform": {
+        "uniformScale": 2.3089064261555805,
+        "resize": "uniform; exact matching source aspect ratio",
+        "edgeTreatment": "symmetric opposite-edge blend96px; identical paired boundary texels"
+      },
+      "pngBytes": 13179508,
+      "webpBytes": 802794,
+      "tileAxes": [
+        "x"
+      ],
+      "tilingBoundaryPixelsMatch": true
+    },
+    {
+      "file": "distant-hills.png",
+      "webp": "distant-hills.webp",
+      "width": 4096,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        0,
+        311,
+        4096,
+        1024
+      ],
+      "nativeSourceDimensions": [
+        2172,
+        724
+      ],
+      "source": "sources/distant-hills-generated.png",
+      "transform": {
+        "sourceCrop": [
+          0,
+          346,
+          2172,
+          724
+        ],
+        "uniformScale": 1.8858195211786373,
+        "registeredOffset": [
+          0,
+          311
+        ]
+      },
+      "pngBytes": 3815109,
+      "webpBytes": 1560698,
+      "tileAxes": [
+        "x"
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": true
+    },
+    {
+      "file": "ground-tile.png",
+      "webp": "ground-tile.webp",
+      "width": 2048,
+      "height": 2048,
+      "alphaMode": "opaque",
+      "alphaBoundsPixels": [
+        0,
+        0,
+        2048,
+        2048
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/ground-tile-generated.png",
+      "transform": {
+        "uniformScale": 1.6331738437001595,
+        "resize": "uniform; exact matching source aspect ratio",
+        "edgeTreatment": "symmetric opposite-edge blend96px; identical paired boundary texels"
+      },
+      "pngBytes": 8273842,
+      "webpBytes": 610352,
+      "tileAxes": [
+        "x",
+        "y"
+      ],
+      "tileWorldSize": [
+        16,
+        16
+      ],
+      "tilingBoundaryPixelsMatch": true
+    },
+    {
+      "file": "tree-a.png",
+      "webp": "tree-a.webp",
+      "width": 2048,
+      "height": 2048,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        241,
+        350,
+        1981,
+        1984
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/tree-a-generated.png",
+      "transform": {
+        "contactSourceX": 573,
+        "sourceCrop": [
+          33,
+          104,
+          1233,
+          1231
+        ],
+        "uniformScale": 1.45,
+        "registeredOffset": [
+          241,
+          350
+        ]
+      },
+      "pngBytes": 3517978,
+      "webpBytes": 1558618,
+      "tileAxes": [],
+      "pivotPixels": [
+        1024,
+        1984
+      ],
+      "groundContactPixelY": 1984,
+      "visibleHeightWorldUnits": 4.4,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        929,
+        1277
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "tree-b.png",
+      "webp": "tree-b.webp",
+      "width": 2048,
+      "height": 2048,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        287,
+        68,
+        1728,
+        1984
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/tree-b-generated.png",
+      "transform": {
+        "contactSourceX": 649,
+        "sourceCrop": [
+          187,
+          30,
+          1090,
+          1231
+        ],
+        "uniformScale": 1.59533721898418,
+        "registeredOffset": [
+          287,
+          68
+        ]
+      },
+      "pngBytes": 3534722,
+      "webpBytes": 1451672,
+      "tileAxes": [],
+      "pivotPixels": [
+        1024,
+        1984
+      ],
+      "groundContactPixelY": 1984,
+      "visibleHeightWorldUnits": 3.2,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        901,
+        1150
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "shrub-a.png",
+      "webp": "shrub-a.webp",
+      "width": 1024,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        45,
+        330,
+        989,
+        992
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/shrub-a-generated.png",
+      "transform": {
+        "contactSourceX": 623,
+        "sourceCrop": [
+          51,
+          273,
+          1206,
+          1082
+        ],
+        "uniformScale": 0.8181818181818182,
+        "registeredOffset": [
+          44,
+          330
+        ]
+      },
+      "pngBytes": 849041,
+      "webpBytes": 457682,
+      "tileAxes": [],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "groundContactPixelY": 992,
+      "visibleHeightWorldUnits": 1.1,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        501,
+        523
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "shrub-b.png",
+      "webp": "shrub-b.webp",
+      "width": 1024,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        79,
+        36,
+        946,
+        992
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/shrub-b-generated.png",
+      "transform": {
+        "contactSourceX": 628,
+        "sourceCrop": [
+          124,
+          64,
+          1133,
+          1177
+        ],
+        "uniformScale": 0.8589398023360287,
+        "registeredOffset": [
+          79,
+          36
+        ]
+      },
+      "pngBytes": 1116268,
+      "webpBytes": 582568,
+      "tileAxes": [],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "groundContactPixelY": 992,
+      "visibleHeightWorldUnits": 0.9,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        499,
+        556
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "grass-a.png",
+      "webp": "grass-a.webp",
+      "width": 1024,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        35,
+        408,
+        959,
+        992
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/grass-a-generated.png",
+      "transform": {
+        "contactSourceX": 647,
+        "sourceCrop": [
+          42,
+          244,
+          1214,
+          985
+        ],
+        "uniformScale": 0.7884297520661157,
+        "registeredOffset": [
+          35,
+          408
+        ]
+      },
+      "pngBytes": 432517,
+      "webpBytes": 232636,
+      "tileAxes": [],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "groundContactPixelY": 992,
+      "visibleHeightWorldUnits": 0.6,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        424,
+        578
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "grass-b.png",
+      "webp": "grass-b.webp",
+      "width": 1024,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        61,
+        277,
+        989,
+        992
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/grass-b-generated.png",
+      "transform": {
+        "contactSourceX": 613,
+        "sourceCrop": [
+          83,
+          204,
+          1174,
+          1045
+        ],
+        "uniformScale": 0.8502673796791443,
+        "registeredOffset": [
+          61,
+          277
+        ]
+      },
+      "pngBytes": 482508,
+      "webpBytes": 253818,
+      "tileAxes": [],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "groundContactPixelY": 992,
+      "visibleHeightWorldUnits": 0.5,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        465,
+        564
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "flowers-a.png",
+      "webp": "flowers-a.webp",
+      "width": 1024,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        69,
+        36,
+        946,
+        992
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/flowers-a-generated.png",
+      "transform": {
+        "contactSourceX": 642,
+        "sourceCrop": [
+          100,
+          46,
+          1173,
+          1215
+        ],
+        "uniformScale": 0.8177929854576561,
+        "registeredOffset": [
+          69,
+          36
+        ]
+      },
+      "pngBytes": 872393,
+      "webpBytes": 443476,
+      "tileAxes": [],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "groundContactPixelY": 992,
+      "visibleHeightWorldUnits": 0.75,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        507,
+        514
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    },
+    {
+      "file": "flowers-b.png",
+      "webp": "flowers-b.webp",
+      "width": 1024,
+      "height": 1024,
+      "alphaMode": "straight-rgba",
+      "alphaBoundsPixels": [
+        35,
+        76,
+        923,
+        992
+      ],
+      "nativeSourceDimensions": [
+        1254,
+        1254
+      ],
+      "source": "sources/flowers-b-generated.png",
+      "transform": {
+        "contactSourceX": 678,
+        "sourceCrop": [
+          88,
+          63,
+          1186,
+          1196
+        ],
+        "uniformScale": 0.8084745762711865,
+        "registeredOffset": [
+          35,
+          76
+        ]
+      },
+      "pngBytes": 856633,
+      "webpBytes": 437038,
+      "tileAxes": [],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "groundContactPixelY": 992,
+      "visibleHeightWorldUnits": 0.7,
+      "groundContactVerified": true,
+      "safeMarginsVerified": true,
+      "pivotOverlapsBottomSupport": true,
+      "measuredBottomSupportXRange": [
+        499,
+        525
+      ],
+      "visibleRgbaWebpMaxRgbDelta": 0,
+      "webpAlphaExact": true,
+      "tilingBoundaryPixelsMatch": null
+    }
+  ],
+  "verification": {
+    "dimensionsChecked": true,
+    "contactBaselinesChecked": true,
+    "pivotSupportChecked": true,
+    "safeMarginsChecked": true,
+    "tilingBoundaryPixelsChecked": true,
+    "losslessRgbaWebpPixelsChecked": "alpha exact; visible RGB delta<=2 after ICC decoding; fullytransparent RGB ignored",
+    "profilesChecked": true,
+    "alphaPreviewsReviewed": true,
+    "repeatPreviewsReviewed": true,
+    "illustrativeMockupsRendered": true,
+    "gameTested": false,
+    "physicalDeviceTested": false
+  },
+  "notes": [
+    "Native raster generations retained; cutouts registered with uniform resampling and alpha cleanup.",
+    "Opposite edge texels mechanically matched for tiling surfaces; repeat previews supplied.",
+    "No editable layered painting source exists; individual source PNG layers and registration recipe are provided.",
+    "All8 vegetation images in this theme regenerated with broad painted masses and dramatically reduced botanical detail. Sky/ridge/ground art retained."
+  ],
+  "revision": "painterly-vegetation-v2"
+}

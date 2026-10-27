@@ -1,0 +1,97 @@
+{
+  "sourceKit": "little-ledges-scenery-kits-painterly-v2",
+  "themes": {
+    "meadow": {
+      "sky.webp": {
+        "sha256": "8b15b717f2b66ada23f34d4d662d97c8bbca5dfc24a601e355b965087c630f2f",
+        "bytes": 802794
+      },
+      "distant-hills.webp": {
+        "sha256": "7b698898efa57dd4101e8ecad94a855517abb722df9de92679f196522e35bc3b",
+        "bytes": 1560698
+      },
+      "ground-tile.webp": {
+        "sha256": "e1795fcac15fbbd4bd1981d54a5fb66e54ef9e08f138515cc702578ce1e65e63",
+        "bytes": 610352
+      },
+      "tree-a.webp": {
+        "sha256": "70fd89fda3382c40b350bd2c5c174ffcde7e9d592b37c0ac0db1f987cc9c4152",
+        "bytes": 1558618
+      },
+      "tree-b.webp": {
+        "sha256": "665fb8990b2c173da72eb2894c499bea6d36618145583a041f976154c3161a3c",
+        "bytes": 1451672
+      },
+      "shrub-a.webp": {
+        "sha256": "18e1b6324a288dbf61c279fbf329b33154110cddce43fbd11cba35a3889a7f5e",
+        "bytes": 457682
+      },
+      "shrub-b.webp": {
+        "sha256": "70dcaed17269921128d84b3bca627fa0bf6eee7227fb83ef22530f541d0b3358",
+        "bytes": 582568
+      },
+      "grass-a.webp": {
+        "sha256": "6cdb440008199c23b8b024d41e9c9cb715db8028276cce90cef21e8314e2fba6",
+        "bytes": 232636
+      },
+      "grass-b.webp": {
+        "sha256": "ce33f8207f20295d17a430b35b6d9e204d12749c814aa0170af2f9f15ae1a1d0",
+        "bytes": 253818
+      },
+      "flowers-a.webp": {
+        "sha256": "c6d71f2254340e426fff7ca88aabbcb3ce11a1ec81b0399c24dcb189e78170e7",
+        "bytes": 443476
+      },
+      "flowers-b.webp": {
+        "sha256": "6735671e6273387a64a42cbf8eca0300e62c6988cf4bd75f8f53b6e867d40bf6",
+        "bytes": 437038
+      }
+    },
+    "japan-spring": {
+      "sky.webp": {
+        "sha256": "cffde2edd57e57c8bbffdb0f993535bf71b8a96f3e5b5563082ff2134cd93140",
+        "bytes": 800388
+      },
+      "distant-hills.webp": {
+        "sha256": "5480ee1132f4848b1f8a7c8750fa42f4a54b634f28a2a4c17976fcaa0e98acde",
+        "bytes": 1184456
+      },
+      "ground-tile.webp": {
+        "sha256": "9533ed2753e2fe0d9d802320566eaa5e8c6643797a9ee6db12d0be5f014813b8",
+        "bytes": 489062
+      },
+      "tree-a.webp": {
+        "sha256": "1c9fbad4d1b42ec765aa69b092631a47588ee42254465f8ecd2cdc7ced4f82d0",
+        "bytes": 1306594
+      },
+      "tree-b.webp": {
+        "sha256": "0889e61d01b5b7e94869549cf24d817155a4885f18631d305772f83f18821d2d",
+        "bytes": 1346360
+      },
+      "shrub-a.webp": {
+        "sha256": "fef20f1342b4d54aef8f6352615792e364c2c5671be4a353ac397e78ba365d90",
+        "bytes": 462550
+      },
+      "shrub-b.webp": {
+        "sha256": "1da3bef13b53f0857e388a14151b932390717da3d306af6830c7351e36281159",
+        "bytes": 524402
+      },
+      "grass-a.webp": {
+        "sha256": "e275769772f2e321ae037273fa72e509cad4c80e3872365213f37fb2e18cdbb1",
+        "bytes": 294190
+      },
+      "grass-b.webp": {
+        "sha256": "9853f3021173faf59a20709e396ba89746c37b3c606d79fd3062d04e8e26ec19",
+        "bytes": 178524
+      },
+      "flowers-a.webp": {
+        "sha256": "4bbecbefc68f35521736e9464f18ad72d97f04acbba059f0fef6384a75bd0a9e",
+        "bytes": 360636
+      },
+      "flowers-b.webp": {
+        "sha256": "119503b828be6cdca57b9ae1468efd613d4228517c441c89f522071a213f9f42",
+        "bytes": 437086
+      }
+    }
+  }
+}

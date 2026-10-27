@@ -15,6 +15,7 @@ import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { createCameraLab } from './camera-lab.js';
 import { createSelectionLightbox } from './selection-lightbox.js';
+import { puzzleBackgroundDistance, puzzleArtworkWidth } from './scenery-distance.js';
 import { selectionColor } from './selection-color.js';
 import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
 import { chooseVisibilityPitch, visibilityCameraPose } from './camera-visibility.js';
@@ -22,7 +23,7 @@ import { createGoalBadge } from './goal-badge.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import { createVictoryEffects, victoryLandingOffset, victoryArrival } from './victory-effects.js';
-import { pieceShadowShader, groundShadowShader, lightboxReceiverShader, lightboxUnshadowedShader } from './shadow-materials.js';
+import { pieceShadowShader, solidPieceShadowShader, groundShadowShader } from './shadow-materials.js';
 import { createLevelGridObserver } from './level-grid.js';
 import { puzzleThumbnail } from './puzzle-thumbnail.js';
 import { createMyPuzzles } from './my-puzzles.js';
@@ -73,13 +74,15 @@ let viewPitch=cameraPosition(DEFAULT_VIEW.horizontal,DEFAULT_VIEW.vertical).pitc
 const movementRouteCache=new Map;let movementBoardCache,movementBoardKey,reachableKey,reachableValue;
 const {levels,groups:levelGroups}=catalog;
 const cameraLab=!isMakerPlaytest&&new URLSearchParams(location.search).has('camera-lab')?createCameraLab({levels,environments:ENVIRONMENTS,onChange:applyCameraStudy,onLevel:startLevel}):null;
-const cameraScenery=cameraLab?createCameraScenery():null;
-function studyPerspective(){return cameraLab?.state.projection==='perspective'}
-function studyStraight(){return !!cameraLab&&cameraLab.state.projection!=='oblique'}
+const cameraState=cameraLab?.state??{projection:'perspective',motion:'orbit',truck:0,fov:35,followX:true,followY:true,yaw:0,pitch:20,autoTilt:true,setting:'landscape',backdrop:'turning',artworkSet:'kit',backgroundDistance:8,horizonLock:false,horizonGuide:false,environment:'meadow',background:true,foreground:true,props:true,guides:true,lightboxStrength:.65,lightboxGlow:true};
+const cameraScenery=createCameraScenery({onChange(){if(gameReady&&viewReady){applyBoardView(false);syncDesignLighting()}},onStatus:message=>cameraLab?.setArtworkStatus(message)});
+function worldPresentation(){return !!cameraLab||!isPreviewLevel(activeLevel)}
+function studyPerspective(){return worldPresentation()&&cameraState.projection==='perspective'}
+function studyStraight(){return worldPresentation()&&cameraState.projection!=='oblique'}
 function viewSpan(){return studyPerspective()?(cameraFrameHeight||baseCameraHeight||1):render3D.camera.orthographic}
 function depthSkew(side=viewSide){return studyStraight()?0:cameraSlant(side)*DEPTH_SKEW}
-function cameraYaw(){return studyStraight()&&cameraLab.state.motion!=='track'?-cameraLab.state.yaw*Math.PI/180:0}
-function cameraPitch(){return studyStraight()?cameraLab.state.pitch*Math.PI/180:cameraPosition(viewSide,viewHeightStep).pitch}
+function cameraYaw(){return studyStraight()&&cameraState.motion!=='track'?-cameraState.yaw*Math.PI/180:0}
+function cameraPitch(){return studyStraight()?cameraState.pitch*Math.PI/180:cameraPosition(viewSide,viewHeightStep).pitch}
 function isPreviewLevel(level){return ['design-playground','background-studio'].includes(level.kind)}
 const levelProgress=isMakerPlaytest||cameraLab?{key:null,count:0,has:()=>false,reload(){},complete:()=>false,clear:()=>false}:createLevelProgress(levels.filter(level=>!isPreviewLevel(level)));
 const levelPreferences=createLevelPreferences();
@@ -117,6 +120,7 @@ function requestLevelEnvironment(retry=false){
   if(!environmentLoader)return;
   const preview=currentBackgroundConfiguration();
   const id=cameraLab?.state.environment??preview?.environment??activeLevel.environment??levelGroups.find(group=>group.id===activeLevel.group)?.environment??DEFAULT_ENVIRONMENT;
+  if(!cameraLab)cameraState.environment=id;
   const source=environmentById(id),width=Math.max(1,wrap.clientWidth),height=Math.max(1,wrap.clientHeight);
   const selectionKey=`${source.id}:${activeLevel.id}:${width}:${height}:${viewSide}:${viewHeightStep}:${preview?.composition??'auto'}`;
   if(environmentSelection?.key!==selectionKey){
@@ -124,7 +128,7 @@ function requestLevelEnvironment(retry=false){
     // download a different composition. Resizes and camera angles still adapt.
     const frame=sceneFrame(width,height),groundFraction=.5+(frame.target.y*Math.cos(viewPitch)-frame.target.z*Math.sin(viewPitch))/frame.height;
     const previous=environmentSelection?.environment.id===source.id?environmentSelection.environment.variant:undefined;
-    environmentSelection={key:selectionKey,environment:selectEnvironmentComposition(source,{width,height,groundFraction,previous,preferred:cameraLab?'landscape':preview?.composition})};
+    environmentSelection={key:selectionKey,environment:selectEnvironmentComposition(source,{width,height,groundFraction,previous,preferred:worldPresentation()?'landscape':preview?.composition})};
   }
   const environment={...environmentSelection.environment};
   if(preview){if(isBackgroundStudio())backgroundStudio.setComposition(environment);environment.groundAnchorY=backgroundStudio.anchorFor(environment,preview)}
@@ -342,9 +346,8 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
   else {
     squareFace(m,(x,y)=>P(x,y,depth),[lo,hi,lo,hi],defaultFace,vec3(0,0,1));
     quad([hi,lo,0],[lo,lo,0],[lo,hi,0],[hi,hi,0]);
-    if(depthColorsEnabled()){
-      for(let z=0;z<depth;z++)gradientBandFace(m,(x,z)=>P(x,hi,z),[lo,hi,z,z+1],depthRowColor(depth,z),vec3(0,1,0));
-    }else squareFace(m,(x,z)=>P(x,hi,z),[lo,hi,0,depth],topPalette[color],vec3(0,1,0));
+    // The separate per-cell top meshes are the actual solid top surface.
+    // Do not leave a lighter full-depth top underneath the checkerboard.
     quad([lo,lo,0],[hi,lo,0],[hi,lo,depth],[lo,lo,depth]);
     const sx=side>0?lo:hi;
     const ox=side>0?hi:lo;
@@ -355,8 +358,8 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
         gradientBandFace(m,(y,z)=>P(ox,y,z),[lo,hi,z,z+1],face,vec3(Math.sign(ox),0,0),true);
       }
     }else{
-      squareFace(m,(y,z)=>P(sx,y,z),[lo,hi,0,depth],sidePalette[color],vec3(side,0,0));
-      quad([ox,lo,depth],[ox,lo,0],[ox,hi,0],[ox,hi,depth]);
+      squareFace(m,(y,z)=>P(sx,y,z),[lo,hi,0,depth],sidePalette[color],vec3(Math.sign(sx),0,0));
+      squareFace(m,(y,z)=>P(ox,y,z),[lo,hi,0,depth],defaultFace,vec3(Math.sign(ox),0,0));
     }
   }
   m.doubleSided=true;return m;
@@ -375,7 +378,7 @@ function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const 
   for(const g of groups)if(g.depth)for(const c of g.cells){
     const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
     extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);g.lightboxSurfaces.push(dark);
-    for(let z=0;z<g.depth;z++){const top=makeSurface(base.add(vec3(0,stretchY(.003),0)),prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth,reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top);g.lightboxSurfaces.push(top)}
+    for(let z=0;z<g.depth;z++){const top=makeSurface(base,prismMesh(c.x,c.y,1,viewSide,g.color,true,z,g.depth,reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top);g.lightboxSurfaces.push(top)}
   }
 }
 function drawMapOutlines(){
@@ -474,7 +477,7 @@ function drawHoverSpot(){
 }
 function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;syncPomMatrix();render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(playerObject.mesh,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));syncPomMatrix();playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;syncPomMatrix();playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
 function syncFloorGrid(){
-  if(cameraLab){syncStudyFloor();return}
+  if(worldPresentation()){syncStudyFloor();return}
   const showFloor=currentBackgroundConfiguration()?.showGuides??true,custom=customFloorGridEnabled(),floor=currentDesign().floorGrid;
   wrap.dataset.floorStyle=custom?'walkability-custom-grid':'walkability-grid';
   const o=backgroundObjects[backgroundObjects.length-1];if(!o)return;
@@ -518,10 +521,10 @@ function syncFloorGrid(){
 function syncDesignLighting(){
   const enabled=isDesignPlayground()?designPlayground.values.shadows.enabled:controlFeatures.enabled('pieceShadows');
   render3D.shadows=enabled;
-  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=lightboxEnabled()?(enabled?lightboxReceiverShader:lightboxUnshadowedShader):(enabled?pieceShadowShader:undefined);object.castShadow=false;object.receiveShadow=enabled}
-  // The solid prisms cast shadows. Decorative top overlays and the offset front
-  // faces only receive them, avoiding multiple almost-coplanar shadow layers.
-  for(const object of extrusionOutlines)object.castShadow=enabled;
+  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=enabled?solidPieceShadowShader:undefined;object.castShadow=false;object.receiveShadow=enabled}
+  // Prism sides and their per-cell tops form one closed casting surface. The
+  // offset painted front only receives shadows; there is no duplicate top layer.
+  for(const object of [...extrusionOutlines,...extrusionObjects])object.castShadow=enabled;
   // Resting pieces now have solid cardboard backs, which cast their shadows.
   // Their painted front overlays must not cast a second offset shadow.
   movementMarkers?.setShadowShader(enabled?pieceShadowShader:undefined);
@@ -534,6 +537,7 @@ function syncDesignLighting(){
   render3D.sunDirection=vec3(Math.sin(azimuth)*Math.cos(elevation),Math.sin(elevation),Math.cos(azimuth)*Math.cos(elevation));
   render3D.sunColor=new Color(strength,strength,strength);render3D.ambientColor=new Color(1-strength,1-strength,1-strength);render3D.ambientGroundColor=render3D.ambientColor;
   render3D.shadowSoftness=shadows.softness;render3D.shadowBias=.0008;render3D.shadowMapSize=2048;const visual=puzzleVisualBounds();render3D.shadowRange=Math.max(visual.right-visual.left,visual.height)+6;render3D.shadowCenter=worldPoint((visual.left+visual.right)/2,visual.height/2,1.5);
+  if(worldPresentation()&&cameraScenery.bounds){const b=cameraScenery.bounds;render3D.shadowRange=Math.max(b.right-b.left,b.front-b.back,visual.height)+6;render3D.shadowCenter=vec3((b.left+b.right)/2,visual.height/3,(b.back+b.front)/2)}
   if(!shadowFloor){
     const mesh=new Mesh();mesh.addQuad(vec3(-1,0,-1),vec3(1,0,-1),vec3(1,0,1),vec3(-1,0,1));mesh.doubleSided=true;
     shadowFloor=makeSurface(vec3(),mesh,new Color(1));shadowFloor.scale3D=vec3((W+8)/2,1,5);shadowFloor.shader=groundShadowShader;shadowFloor.transparent=true;shadowFloor.castShadow=false;shadowFloor.receiveShadow=true;
@@ -543,7 +547,7 @@ function syncDesignLighting(){
   shadowFloor.scale3D=vec3((visual.right-visual.left+8)/2,1,4);shadowFloor.pos3D=worldPoint((visual.left+visual.right)/2,-.008,4.025);
 }
 let pulsePiece=null,pulseStart=0,selectionLightbox;
-function lightboxEnabled(){return cameraLab?.state.selectionEffect==='lightbox'}
+function lightboxEnabled(){return worldPresentation()&&(cameraLab?cameraState.selectionEffect==='lightbox':controlFeatures.enabled('selectionLightbox'))}
 const reducedSelectionMotion=matchMedia('(prefers-reduced-motion:reduce)');
 function selectionPhase(now=performance.now()){
   if(pulsePiece!==selected){pulsePiece=selected;pulseStart=now}
@@ -553,7 +557,7 @@ function selectedSurfaceColor(g,now=performance.now()){
   const color=palette[g.color];if(g!==selected||won)return color;
   const phase=selectionPhase(now);
   if(lightboxEnabled()){
-    const shifted=selectionColor(color,phase,cameraLab.state.lightboxStrength);
+    const shifted=selectionColor(color,phase,cameraState.lightboxStrength);
     return new Color(shifted.r,shifted.g,shifted.b);
   }
   return tinted(color,reducedSelectionMotion.matches?.12:.26*phase);
@@ -561,31 +565,33 @@ function selectedSurfaceColor(g,now=performance.now()){
 function updateSelectionLightbox(){
   if(!selectionLightbox)return;
   const group=lightboxEnabled()&&!won&&!introPlaying&&document.querySelector('#menuScreen').hidden?selected:null;
-  const pulse=selectionPhase(),strength=cameraLab.state.lightboxStrength;
+  const pulse=selectionPhase(),strength=cameraState.lightboxStrength;
   if(group){
     for(const object of group.objects){object.emissive=1+strength*(.01+.03*pulse);object.shader=undefined}
     // The luminous front is the selection cue. Keep its top/side materials
-    // steady, including excluding those faces from the pulsing local spill.
+    // steady. No local light sources or outside glow are created.
     const shadows=controlFeatures.enabled('pieceShadows');
-    for(const object of group.lightboxSurfaces??[]){object.emissive=1;object.shader=shadows?pieceShadowShader:undefined}
+    for(const object of group.lightboxSurfaces??[]){object.emissive=1;object.shader=shadows?solidPieceShadowShader:undefined}
   }
-  selectionLightbox.update({group,width:W,height:H,worldPoint,tint:group?selectedSurfaceColor(group):new Color(1),pulse,strength,spill:cameraLab.state.lightboxSpill,glow:cameraLab.state.lightboxGlow});
-  wrap.dataset.selectionEffect=cameraLab.state.selectionEffect;wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
+  selectionLightbox.update({group,width:W,height:H,worldPoint,tint:group?selectedSurfaceColor(group):new Color(1),pulse,strength,glow:cameraState.lightboxGlow});
+  wrap.dataset.selectionGlow='inside';wrap.dataset.selectionSpill='false';wrap.dataset.selectionEffect=lightboxEnabled()?'lightbox':'original';wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
 }
 function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting();updateSelectionLightbox()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
 function syncBackground(){
-  if(cameraLab){
+  if(!worldPresentation())cameraScenery.destroy();
+  if(worldPresentation()){
     for(const object of backgroundObjects.slice(0,3)){object.mesh=undefined;object.tileInfo=undefined}
     if(gameReady)requestLevelEnvironment();
     if(activeEnvironmentTextures){
-      const reference=cameraScenery.update({state:cameraLab.state,environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,yaw:cameraYaw(),target:cameraFocus??viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
+      const reference=cameraScenery.update({state:cameraState,environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,artworkBounds:puzzleVisualBounds(),yaw:cameraYaw(),target:cameraFocus??viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
+      wrap.dataset.backgroundDistance=reference.distance?.toFixed(2)??'';wrap.dataset.scenerySource=reference.source??'previous-artwork';wrap.dataset.sceneryContacts=JSON.stringify(cameraScenery.contacts);
       const size=vec2(wrap.clientWidth,wrap.clientHeight),points=reference.points.map(point=>render3D.worldToScreen(point,size)),[left,center,right]=points;
       const valid=points.every(point=>point&&Number.isFinite(point.x)&&Number.isFinite(point.y));
       const slope=valid?(right.y-left.y)/(right.x-left.x||1):0,y=valid?(reference.curved?center.y:center.y+slope*(size.x/2-center.x)):NaN;
-      cameraLab.measure({percent:y/size.y*100,tilt:Math.atan(slope)*180/Math.PI,curved:reference.curved,unit:viewUnit||size.y/viewSpan(),cameraHeight:render3D.camera.pos.y});
+      cameraLab?.measure({percent:y/size.y*100,tilt:Math.atan(slope)*180/Math.PI,curved:reference.curved,unit:viewUnit||size.y/viewSpan(),cameraHeight:render3D.camera.pos.y});
     }
-    wrap.dataset.environment=activeEnvironment.id;wrap.dataset.scenerySetting=cameraLab.state.setting;return;
+    wrap.dataset.environment=activeEnvironment.id;wrap.dataset.scenerySetting=cameraState.setting;return;
   }
   const width=wrap.clientWidth,height=wrap.clientHeight,ratio=width/height,cam=render3D.camera,forward=cam.getForward(),up=cam.getUp(),right=cam.getRight(),ortho=cam.orthographic,worldWidth=ortho*ratio;
   if(!activeEnvironmentTextures||backgroundObjects.length<2)return;
@@ -736,9 +742,9 @@ function updateProgressSettings(){
 function recordCompletedLevel(){if(cameraLab)return;if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
   victoryEffects.reset();
-  activeLevel=level;document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();useLevelPalette(level);W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  activeLevel=level;document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
-  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();viewControls.close();cameraLab?.setLevel(level.id);celebration=null;
+  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();viewControls.close();cameraLab?.setLevel(level.id);celebration=null;
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();startBoardView();requestLevelEnvironment();
 }
 function playUserPuzzle(level){if(!gameReady)return;syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
@@ -748,10 +754,20 @@ document.querySelector('#openSettings').addEventListener('click',()=>{settingsRe
 document.querySelector('#levelSettings').addEventListener('click',()=>{if(busy||won||introPlaying)return;settingsReturnToLevel=true;showMenu('settings')});
 function syncControlFeatureInputs(){
   for(const feature of CONTROL_FEATURES){const input=document.querySelector(`#${feature.id}`);if(input)input.checked=controlFeatures.enabled(feature.id)}
+  const highlight=document.querySelector('#pieceHighlight');if(highlight)highlight.value=controlFeatures.enabled('selectionLightbox')?'lightbox':'original';
   const appearance=document.querySelector('#topFaceAppearance');if(appearance)appearance.value=controlFeatures.topFaceStyle;
 }
 for(const feature of CONTROL_FEATURES){
   if(feature.id==='walkabilityTopFaces')continue;
+  if(feature.id==='selectionLightbox'){
+    const row=document.createElement('label');row.className='setting-toggle';
+    const text=document.createElement('span');text.textContent='Piece highlight';
+    const help=document.createElement('small');help.id='pieceHighlightHelp';help.textContent='Choose a pulsing inner light or the classic outline and tint.';text.append(help);
+    const choice=document.createElement('select');choice.id='pieceHighlight';choice.setAttribute('aria-label','Piece highlight');choice.setAttribute('aria-describedby',help.id);
+    for(const [id,name]of [['lightbox','Pulsing light box'],['original','Classic outline and tint']])choice.add(new Option(name,id));choice.value=controlFeatures.enabled('selectionLightbox')?'lightbox':'original';
+    choice.onchange=()=>{const saved=controlFeatures.set('selectionLightbox',choice.value==='lightbox');refreshControlFeatures();document.querySelector('#pieceHighlightMessage').textContent=saved?'':'This setting applies now, but could not be saved on this device.'};
+    row.append(text,choice);document.querySelector('#gameplayFeatureToggles').append(row);continue;
+  }
   if(feature.id==='pullDepthColors'){
     const row=document.createElement('label');row.className='setting-toggle';
     const text=document.createElement('span');text.textContent='Top-face appearance';
@@ -814,14 +830,14 @@ function puzzleVisualBounds(){
 function applyCameraStudy({refit=false,orbit=false,centerPom=false,selectionOnly=false,visibilityOnly=false}={}){
   if(!gameReady||busy||won)return;
   if(selectionOnly){syncBlocks();return}
-  if(visibilityOnly){visibilityStudy.lastCheck=-1;visibilityStudy.target=null;if(cameraLab.state.autoTilt)resetStudyFollow({paused:false});return}
+  if(visibilityOnly){visibilityStudy.lastCheck=-1;visibilityStudy.target=null;if(cameraState.autoTilt)resetStudyFollow({paused:false});return}
   stopIntro();viewPitch=cameraPitch();viewTouched=true;keepInterruptedView=false;
   // Orbiting or tracking moves the camera; straight board geometry stays put.
   if(!orbit){refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers()}
   if(refit){const frame=sceneFrame(wrap.clientWidth,wrap.clientHeight);viewUnit=wrap.clientHeight/frame.height;viewTarget=frame.target;baseCameraHeight=frame.height;viewTouched=false}
-  if(centerPom){viewTarget=worldPosition(player);cameraLab.state.truck=0}
+  if(centerPom){viewTarget=worldPosition(player);cameraState.truck=0}
   requestLevelEnvironment();applyBoardView(false);resetStudyFollow({paused:!centerPom});if(!orbit)updateUI();
-  wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraYaw=String(cameraYaw());
+  wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraYaw=String(cameraYaw());
 }
 function studyFrame(width,height){
   const visual=puzzleVisualBounds(),floor=puzzleFloorBounds(mural,GRID_DEPTH),cx=(visual.left+visual.right)/2,cy=(visual.height+.85)/2,cz=1.5,points=[];
@@ -839,14 +855,14 @@ function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
   // Keep the transparent guide layer registered when hidden. Removing its mesh
   // changes the engine's transparent pass and can hide the character overlay.
-  const mesh=new Mesh(),bounds=puzzleFloorBounds(mural,GRID_DEPTH),line=.018,tint=new Color(.28,.32,.25,cameraLab.state.guides ? .5 : 0);
+  const mesh=new Mesh(),bounds=puzzleFloorBounds(mural,GRID_DEPTH),line=.018,tint=new Color(.28,.32,.25,cameraState.guides ? .5 : 0);
   const strip=(x0,z0,x1,z1)=>mesh.addQuad(worldPoint(x0,.008,z0),worldPoint(x1,.008,z0),worldPoint(x1,.008,z1),worldPoint(x0,.008,z1),tint);
   for(let x=bounds.left;x<=bounds.right;x++)strip(x-line/2,bounds.back,x+line/2,bounds.front);
   for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z-line/2,bounds.right,z+line/2);
   mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;
 }
 function sceneFrame(width,height,side=viewSide){
-  if(cameraLab)return studyFrame(width,height);
+  if(worldPresentation())return studyFrame(width,height);
   const c=Math.cos(viewPitch),s=Math.sin(viewPitch),points=[];
   const floor=puzzleFloorBounds(mural,GRID_DEPTH),visual=puzzleVisualBounds();
   // Reserve one fixed frame for all six angles, so rotating never recenters or zooms the wall.
@@ -867,44 +883,44 @@ function configureStudyCamera(span,target,yaw,pitch){
   cameraFrameHeight=span;cameraFocus=target.copy();
   const camera=render3D.camera,perspective=studyPerspective();
   camera.orthographic=perspective?0:span;
-  if(perspective)camera.fov=cameraLab.state.fov*Math.PI/180;
+  if(perspective)camera.fov=cameraState.fov*Math.PI/180;
   const distance=perspective?Math.max(2,span/(2*Math.tan(camera.fov/2))):15;
   camera.orbit(target,distance,yaw,pitch);
 }
 function positionCameraForView(side,targetOverride){
   let target=targetOverride||sceneFrame(wrap.clientWidth,wrap.clientHeight,side).target;
-  if(cameraLab?.state.motion==='track'&&studyStraight())target=target.add(vec3(cameraLab.state.truck*W/100,0,0));
+  if(worldPresentation()&&cameraState.motion==='track'&&studyStraight())target=target.add(vec3(cameraState.truck*W/100,0,0));
   const span=viewUnit>0?wrap.clientHeight/viewUnit:(baseCameraHeight||render3D.camera.orthographic);
   configureStudyCamera(span,target,cameraYaw(),viewPitch);
 }
 function resetStudyFollow({paused=true}={}){
-  if(!cameraLab||!playerObject||!viewTarget)return;
+  if(!worldPresentation()||!playerObject||!viewTarget)return;
   followAnchor={paused};followTime=timeReal;wrap.dataset.cameraFollowPaused=String(paused);
   if(paused){visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1}
 }
 function resumeStudyFollow(){
-  if(!studyStraight()||(!cameraLab.state.followX&&!cameraLab.state.followY&&!cameraLab.state.autoTilt))return;
+  if(!studyStraight()||(!cameraState.followX&&!cameraState.followY&&!cameraState.autoTilt))return;
   // A gameplay move ends inspection. Do not retain a pan or tracking offset as
   // Pom's new screen position; ease the enabled axes back to the canvas center.
-  if(cameraLab.state.motion==='track'&&cameraLab.state.truck)viewTarget=cameraFocus.copy();
-  cameraLab.state.truck=0;resetStudyFollow({paused:false});
+  if(cameraState.motion==='track'&&cameraState.truck)viewTarget=cameraFocus.copy();
+  cameraState.truck=0;resetStudyFollow({paused:false});
 }
 function updateStudyFollow(){
-  if(!cameraLab||!studyStraight()||(!cameraLab.state.followX&&!cameraLab.state.followY)||!viewReady||!gameReady||won||celebration||!document.querySelector('#menuScreen').hidden)return;
+  if(!worldPresentation()||!studyStraight()||(!cameraState.followX&&!cameraState.followY)||!viewReady||!gameReady||won||celebration||!document.querySelector('#menuScreen').hidden)return;
   if(!followAnchor){resetStudyFollow();return}
   if(followAnchor.paused)return;
   const dt=Math.min(.1,Math.max(0,timeReal-followTime));followTime=timeReal;if(!dt)return;
   const camera=render3D.camera,position=busy?playerObject.pos3D.add(camera.getForward().scale(.045)):worldPosition(player),offset=position.subtract(cameraFocus),right=camera.getRight(),up=camera.getUp();
   // Follow in the camera plane so depth and downward pitch cannot introduce a
   // screen-space offset. Translation leaves camera direction and zoom intact.
-  const desired=viewTarget.add(right.scale(cameraLab.state.followX?offset.dot(right):0)).add(up.scale(cameraLab.state.followY?offset.dot(up):0));
+  const desired=viewTarget.add(right.scale(cameraState.followX?offset.dot(right):0)).add(up.scale(cameraState.followY?offset.dot(up):0));
   const next=viewTarget.lerp(desired,1-Math.exp(-dt/.18));
   if(next.subtract(viewTarget).length()<.0001)return;
   viewTarget=next;applyBoardView(false);
 }
 function updateStudyVisibility(){
   if(!studyStraight()||!gameReady||!viewReady||won||celebration||!cameraFocus||!playerObject||!document.querySelector('#menuScreen').hidden)return;
-  const base=cameraPitch(),enabled=cameraLab.state.autoTilt&&base>=5*Math.PI/180;
+  const base=cameraPitch(),enabled=cameraState.autoTilt&&base>=5*Math.PI/180;
   const dt=Math.min(.1,Math.max(0,timeReal-visibilityStudy.lastTime));visibilityStudy.lastTime=timeReal;
   // Panning/explicit camera controls pause automatic changes until gameplay
   // resumes. Disabling the option still restores the requested base angle.
@@ -928,15 +944,15 @@ function updateStudyVisibility(){
   const next=reducedSelectionMotion.matches||Math.abs(target-viewPitch)<.0002?target:viewPitch+(target-viewPitch)*(1-Math.exp(-dt/(Math.abs(target-base)>.01?.22:.65)));
   if(Math.abs(next-viewPitch)<1e-8)return;
   const pose=visibilityCameraPose({...options,pitch:next});
-  viewTarget=vec3(pose.focus.x-(cameraLab.state.motion==='track'?cameraLab.state.truck*W/100:0),pose.focus.y,pose.focus.z);
+  viewTarget=vec3(pose.focus.x-(cameraState.motion==='track'?cameraState.truck*W/100:0),pose.focus.y,pose.focus.z);
   viewPitch=next;applyBoardView(false);
   if(busy){playerObject.pos3D=position.add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix()}
-  wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);cameraLab.reportTilt(viewPitch*180/Math.PI);
+  wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);cameraLab?.reportTilt(viewPitch*180/Math.PI);
 }
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
 const tappingUnit=()=>32/Math.max(.18,Math.sin(viewPitch));
 function stopIntro(){introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
-function finishIntro(){introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
+function finishIntro(){if(!cameraLab&&worldPresentation())resetStudyFollow({paused:false});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
 function enterPlayFromIntro(){
   if(!introPlaying)return;
   stopIntro();viewTouched=true;keepInterruptedView=true;finishIntro();
@@ -946,7 +962,7 @@ function clampBoardView(){
   viewUnit=Math.max(fitUnit,Math.min(Math.max(tappingUnit(),fitUnit),viewUnit));
   // An interrupted intro can be between the normal framing bounds. Keep that
   // exact view and allow the player's gesture to continue without a camera snap.
-  if(keepInterruptedView||cameraLab)return;
+  if(keepInterruptedView||worldPresentation())return;
   if(viewUnit<=fitUnit*1.001){viewTarget=f.target;return}
   const halfX=(width/2-f.margin)/viewUnit,loX=f.minX+halfX,hiX=f.maxX-halfX;
   viewTarget.x=loX<=hiX?Math.max(loX,Math.min(hiX,viewTarget.x)):(f.minX+f.maxX)/2;
@@ -960,7 +976,7 @@ function applyBoardView(clamp=true){
   syncCellGeometry();syncBackground();syncFloorGrid();syncHoverSpot();if(playerObject&&!busy)syncPlayer();
   // Readable, projected dimensions also make responsive checks independent of device pixels.
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
-  if(cameraLab){cameraLab.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraMotion=cameraLab.state.motion;wrap.dataset.cameraTruck=String(cameraLab.state.truck);wrap.dataset.cameraFollowing=String(cameraLab.state.followX||cameraLab.state.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraLab.state.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
+  if(worldPresentation()){cameraLab?.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraMotion=cameraState.motion;wrap.dataset.cameraTruck=String(cameraState.truck);wrap.dataset.cameraFollowing=String(cameraState.followX||cameraState.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraState.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
 }
 function startBoardView(animate=true){
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
@@ -972,7 +988,7 @@ function startBoardView(animate=true){
   const token=introFrame,from=viewTarget.copy(),unit=Math.max(fitUnit,viewMobile?tappingUnit():64),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
   const needsZoom=unit>fitUnit*1.01;
   if(cameraLab){viewUnit=fitUnit;viewTarget=f.target;applyBoardView(false);resetStudyFollow();finishIntro();return}
-  viewUnit=unit;viewTarget=needsZoom?pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0)):from.copy();clampBoardView();
+  viewUnit=unit;viewTarget=needsZoom?(worldPresentation()?pom.copy():pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0))):from.copy();clampBoardView();
   const target=viewTarget.copy(),endUnit=viewUnit;
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
   if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
@@ -992,10 +1008,10 @@ function startBoardView(animate=true){
   };
 }
 
-function panBoard(dx,dy){if(cameraLab){viewTarget=viewTarget.add(render3D.camera.getRight().scale(-dx/viewUnit)).add(render3D.camera.getUp().scale(dy/viewUnit));return}viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
+function panBoard(dx,dy){if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale(-dx/viewUnit)).add(render3D.camera.getUp().scale(dy/viewUnit));return}viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
 function zoomBoard(unit,x,y){
   const old=viewUnit,f=sceneFrame(wrap.clientWidth,wrap.clientHeight),min=wrap.clientHeight/f.height;viewUnit=Math.max(min,Math.min(Math.max(tappingUnit(),min),unit));
-  const scale=1/old-1/viewUnit;if(cameraLab){viewTarget=viewTarget.add(render3D.camera.getRight().scale((x-wrap.clientWidth/2)*scale)).add(render3D.camera.getUp().scale((wrap.clientHeight/2-y)*scale));return}viewTarget=viewTarget.add(vec3((x-wrap.clientWidth/2)*scale,(wrap.clientHeight/2-y)*scale/Math.cos(viewPitch),0));
+  const scale=1/old-1/viewUnit;if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale((x-wrap.clientWidth/2)*scale)).add(render3D.camera.getUp().scale((wrap.clientHeight/2-y)*scale));return}viewTarget=viewTarget.add(vec3((x-wrap.clientWidth/2)*scale,(wrap.clientHeight/2-y)*scale/Math.cos(viewPitch),0));
 }
 function clearBoardHover(){hovered=null;movementMarkers?.setHovered(null);if(hoverObject)hoverObject.color=new Color(1,1,1,0)}
 function boardPoint(e){const r=wrap.getBoundingClientRect();return {x:e.clientX-r.left-wrap.clientLeft,y:e.clientY-r.top-wrap.clientTop}}
@@ -1062,10 +1078,10 @@ function pomScreenPoint(){
 
 function gameInit(){
   const bounds=wrap.getBoundingClientRect();setCanvasFixedSize(vec2(Math.max(1,bounds.width),Math.max(1,bounds.height)));
-  if(cameraLab)setCanvasClearColor(new Color(1,250/255,240/255));
+  setCanvasClearColor(new Color(1,250/255,240/255));
   setDebugWatermark(false);new Render3DPlugin();
   movementMarkers=createMovementMarkers();
-  if(cameraLab)selectionLightbox=createSelectionLightbox();
+  selectionLightbox=createSelectionLightbox();
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);
   baseCameraHeight=fitCamera(bounds.width,bounds.height);render3D.camera.orthographic=baseCameraHeight;positionCameraForView(viewSide);
@@ -1155,6 +1171,7 @@ function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEa
 function changeView(horizontal,vertical=viewHeightStep){
   if(busy||won||!viewReady)return;enterPlayFromIntro();
   if(cameraLab){if(horizontal!==viewSide)cameraLab.orbitBy(-5*(horizontal-viewSide));return}
+  if(worldPresentation()){const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;viewSide=next.horizontal;viewHeightStep=next.vertical;cameraState.yaw=-35*viewSide;cameraState.pitch=viewHeightStep?10:20;applyCameraStudy({orbit:true});updateUI();return}
   const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;
   stopIntro();clearBoardHover();
   // Keep the wall plane in the same screen position, rather than following Pom's sheared depth.
