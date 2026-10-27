@@ -29,7 +29,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
       <label>Light box strength <output data-lightbox-strength-output>65%</output><input data-lightbox-strength aria-label="Light box strength" type="range" min="0" max="100" step="5" value="65"></label>
       <label class="camera-lab-check"><input type="checkbox" data-lightbox-spill checked> Light spill onto nearby surfaces</label>
       <label class="camera-lab-check"><input type="checkbox" data-lightbox-glow checked> Soft glow</label>
-      <p class="camera-lab-copy">A smooth pale-gold pulse brightens only the selected front face. Tops and sides keep their normal shading. Nearby blocks and ground receive its warm light. Reduced motion uses a steady light.</p></fieldset>
+      <p class="camera-lab-copy">A smooth hue shift highlights only the selected front face, including white and black pieces. Tops and sides keep their normal shading. Nearby blocks and ground receive a faint light spill in the shifted color. Reduced motion uses a steady light.</p></fieldset>
       <fieldset><legend>Scenery</legend><div class="camera-lab-presets"><button type="button" data-setting="stage">Wall & ground set</button><button type="button" data-setting="landscape">Landscape</button></div>
       <label data-backdrop-field>Set backdrop<select data-backdrop aria-label="Set backdrop"><option value="fixed">Fixed wall</option><option value="turning" selected>Wall turns with the view</option><option value="curved">Curved wall</option></select></label>
       <label class="camera-lab-check"><input type="checkbox" data-horizonLock checked> Hold horizon height during orbit</label>

@@ -1,4 +1,5 @@
 import {EngineObject3D,Mesh,Color,vec2,vec3} from 'littlejsengine';
+import {cardboardMesh} from './cardboard.js';
 
 // World-anchored scenery for the camera study. Scenery never enters gameplay
 // collision or picking. The original registered images are reused unchanged.
@@ -10,14 +11,9 @@ export function createCameraScenery(){
     object.lighting=false;object.emissive=1;object.castShadow=false;object.receiveShadow=false;objects.push(object);return object;
   }
   function patch(points,texture,uvs,tint){return add(new Mesh().addQuad(...points,tint,uvs),texture)}
-  function polygon(points,tint){
-    const mesh=new Mesh(),vertices=[vec3(points.reduce((n,p)=>n+p.x,0)/points.length,points.reduce((n,p)=>n+p.y,0)/points.length,points.reduce((n,p)=>n+p.z,0)/points.length),...points],indices=[];
-    for(let i=1;i<vertices.length;i++)indices.push(0,i,i===vertices.length-1?1:i+1);
-    return add(mesh.addTriangles(vertices,indices,vec3(0,0,1),undefined,color(tint)));
-  }
+  function polygon(points,tint){return add(cardboardMesh(points,color(tint)))}
   function tree(x,z,height,japan){
-    const mesh=new Mesh(),trunk=color('#796550');
-    mesh.addQuad(vec3(x-.1,0,z),vec3(x+.1,0,z),vec3(x+.08,height*.72,z),vec3(x-.08,height*.72,z),trunk);add(mesh);
+    polygon([vec3(x-.1,0,z),vec3(x+.1,0,z),vec3(x+.08,height*.72,z),vec3(x-.08,height*.72,z)],'#796550');
     polygon(Array.from({length:24},(_,i)=>{const a=i*Math.PI/12,r=1+.055*Math.cos(i*2.6);return vec3(x+Math.cos(a)*height*.45*r,height*.7+Math.sin(a)*height*.34*r,z+.01)}),japan?'#e5b5bf':'#6e9270');
     polygon(Array.from({length:20},(_,i)=>{const a=i*Math.PI/10;return vec3(x+height*.09+Math.cos(a)*height*.32,height*.79+Math.sin(a)*height*.23,z+.025)}),japan?'#f2d4d5':'#92ae87');
   }

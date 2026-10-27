@@ -18,7 +18,7 @@ export function createSelectionLightbox(){
     halo?.destroy();ground?.destroy();halo=ground=undefined;key=currentGroup=undefined;
     for(const light of lights)light.intensity=0;
   }
-  function update({group,width,height,worldPoint,pulse,strength,spill,glow}){
+  function update({group,width,height,worldPoint,tint,pulse,strength,spill,glow}){
     if(!group||strength<=0){clear();return}
     const next=`${width}:${height}:${group.id}:${group.depth}:${worldPoint(0,1,0).y}:${worldPoint(0,0,1).x}`;
     if(next!==key||currentGroup!==group){
@@ -38,10 +38,11 @@ export function createSelectionLightbox(){
       const floor=new Mesh().addQuad(vec3(-3,-.004,0),vec3(width+3,-.004,0),vec3(width+3,-.004,8),vec3(-3,-.004,8));
       floor.doubleSided=true;ground=new EngineObject3D(vec3(),floor);ground.emissive=1;ground.transparent=true;ground.additive=true;ground.shader=lightboxGroundShader;ground.castShadow=ground.receiveShadow=false;
     }
-    const tint=new Color(1,.86,.45);
+    const peak=Math.max(.001,tint.r,tint.g,tint.b);
+    tint=new Color(tint.r/peak,tint.g/peak,tint.b/peak);
     halo.color=new Color(tint.r,tint.g,tint.b,glow?strength*(.5+.5*pulse):0);
     for(let i=0;i<lights.length;i++){
-      const cell=samples[i],light=lights[i];light.intensity=spill&&cell?strength*(.7+.9*pulse)/Math.sqrt(samples.length):0;
+      const cell=samples[i],light=lights[i];light.intensity=spill&&cell?.3*strength*(.7+.9*pulse)/Math.sqrt(samples.length):0;
       light.color=tint;
       if(cell)light.pos3D=worldPoint(cell.x+.5,height-cell.y-.5,group.depth+.5);
     }

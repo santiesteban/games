@@ -15,6 +15,8 @@ import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { createCameraLab } from './camera-lab.js';
 import { createSelectionLightbox } from './selection-lightbox.js';
+import { selectionColor } from './selection-color.js';
+import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
 import { createGoalBadge } from './goal-badge.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
@@ -360,6 +362,14 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
 function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),palette[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
 function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
   const reachable=walkabilityFacesEnabled()?reachableSurfaceKeys():null;
+  for(const g of groups)if(!g.depth){
+    const points=[worldPoint(-.5,.5,0),worldPoint(-.5,-.5,0),worldPoint(.5,-.5,0),worldPoint(.5,.5,0)];
+    const mesh=cardboardMesh(points,palette[g.color],vec3(-depthSkew()*CARDBOARD_THICKNESS,0,-CARDBOARD_THICKNESS));
+    for(const c of g.cells){
+      const card=makeSurface(worldPoint(c.x+.5,H-c.y-.5,0),mesh,new Color(1));
+      extrusionOutlines.push(card);sideObjectInfo.set(card,g);g.lightboxSurfaces.push(card);
+    }
+  }
   for(const g of groups)if(g.depth)for(const c of g.cells){
     const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),dark=makeSurface(base,prismMesh(c.x,c.y,g.depth,viewSide,g.color,false),new Color(1));
     extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);g.lightboxSurfaces.push(dark);
@@ -510,7 +520,8 @@ function syncDesignLighting(){
   // The solid prisms cast shadows. Decorative top overlays and the offset front
   // faces only receive them, avoiding multiple almost-coplanar shadow layers.
   for(const object of extrusionOutlines)object.castShadow=enabled;
-  for(const group of groups)if(!group.depth)for(const object of group.objects)object.castShadow=enabled;
+  // Resting pieces now have solid cardboard backs, which cast their shadows.
+  // Their painted front overlays must not cast a second offset shadow.
   movementMarkers?.setShadowShader(enabled?pieceShadowShader:undefined);
   for(const part of pomParts){part.emissive=1;part.shader=enabled?pieceShadowShader:undefined;part.castShadow=enabled&&part===playerObject;part.receiveShadow=enabled}
   for(const part of [flagPole,flagCloth,flagVase,flagCap,flagPrint].filter(Boolean)){part.emissive=1;part.shader=enabled?pieceShadowShader:undefined;part.castShadow=enabled&&!!part.mesh&&part!==flagPrint;part.receiveShadow=enabled}
@@ -540,8 +551,8 @@ function selectedSurfaceColor(g,now=performance.now()){
   const color=palette[g.color];if(g!==selected||won)return color;
   const phase=selectionPhase(now);
   if(lightboxEnabled()){
-    const amount=cameraLab.state.lightboxStrength*(.18+.5*phase);
-    return new Color(color.r+(1-color.r)*amount,color.g+(.88-color.g)*amount,color.b+(.42-color.b)*amount);
+    const shifted=selectionColor(color,phase,cameraLab.state.lightboxStrength);
+    return new Color(shifted.r,shifted.g,shifted.b);
   }
   return tinted(color,reducedSelectionMotion.matches?.12:.26*phase);
 }
@@ -550,14 +561,14 @@ function updateSelectionLightbox(){
   const group=lightboxEnabled()&&!won&&!introPlaying&&document.querySelector('#menuScreen').hidden?selected:null;
   const pulse=selectionPhase(),strength=cameraLab.state.lightboxStrength;
   if(group){
-    for(const object of group.objects){object.emissive=1+strength*(.04+.12*pulse);object.shader=undefined}
+    for(const object of group.objects){object.emissive=1+strength*(.01+.03*pulse);object.shader=undefined}
     // The luminous front is the selection cue. Keep its top/side materials
     // steady, including excluding those faces from the pulsing local spill.
     const shadows=controlFeatures.enabled('pieceShadows');
     for(const object of group.lightboxSurfaces??[]){object.emissive=1;object.shader=shadows?pieceShadowShader:undefined}
   }
-  selectionLightbox.update({group,width:W,height:H,worldPoint,pulse,strength,spill:cameraLab.state.lightboxSpill,glow:cameraLab.state.lightboxGlow});
-  wrap.dataset.selectionEffect=cameraLab.state.selectionEffect;wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);
+  selectionLightbox.update({group,width:W,height:H,worldPoint,tint:group?selectedSurfaceColor(group):new Color(1),pulse,strength,spill:cameraLab.state.lightboxSpill,glow:cameraLab.state.lightboxGlow});
+  wrap.dataset.selectionEffect=cameraLab.state.selectionEffect;wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
 }
 function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,g.depth),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting();updateSelectionLightbox()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
