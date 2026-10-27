@@ -17,6 +17,7 @@ import { createCameraLab } from './camera-lab.js';
 import { createSelectionLightbox } from './selection-lightbox.js';
 import { selectionColor } from './selection-color.js';
 import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
+import { chooseVisibilityPitch, visibilityCameraPose } from './camera-visibility.js';
 import { createGoalBadge } from './goal-badge.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
@@ -56,6 +57,7 @@ function showPlaytestResult(){
 const wrap = document.querySelector('#canvasWrap');
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
+let visibilityStudy={target:null,lastCheck:-1,lastTime:0,lastBlocked:-1,boxes:[],board:null,key:null};
 let viewUnit=0,viewTarget,viewReady=false,viewMobile=false,viewTouched=false,introFrame=0,introPlaying=false,settingsReturnToLevel=false,viewWidth=0,viewHeight=0;
 const boardPointers=new Map();let boardGesture=null,introTick=null,keepInterruptedView=false;
 const pageUrl=new URL(location.href);if(pageUrl.searchParams.has('style')){pageUrl.searchParams.delete('style');window.history.replaceState(null,'',pageUrl)}
@@ -735,7 +737,7 @@ function recordCompletedLevel(){if(cameraLab)return;if(activeLevel.userPuzzle){m
 function resetLevelState(level){
   victoryEffects.reset();
   activeLevel=level;document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();useLevelPalette(level);W=level.width;H=level.height;mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
-  clearMovementRoutes();followAnchor=undefined;
+  clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();viewControls.close();cameraLab?.setLevel(level.id);celebration=null;
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();startBoardView();requestLevelEnvironment();
 }
@@ -809,9 +811,10 @@ function puzzleVisualBounds(){
   const floor=puzzleFloorBounds(mural,GRID_DEPTH),cells=groups.flatMap(g=>g.cells);
   return{left:Math.min(floor.left,activeLevel.start.x-.5),right:Math.max(floor.right,activeLevel.start.x+1.5),height:Math.max(1,...cells.map(c=>H-c.y),H-activeLevel.start.y)};
 }
-function applyCameraStudy({refit=false,orbit=false,centerPom=false,selectionOnly=false}={}){
+function applyCameraStudy({refit=false,orbit=false,centerPom=false,selectionOnly=false,visibilityOnly=false}={}){
   if(!gameReady||busy||won)return;
   if(selectionOnly){syncBlocks();return}
+  if(visibilityOnly){visibilityStudy.lastCheck=-1;visibilityStudy.target=null;if(cameraLab.state.autoTilt)resetStudyFollow({paused:false});return}
   stopIntro();viewPitch=cameraPitch();viewTouched=true;keepInterruptedView=false;
   // Orbiting or tracking moves the camera; straight board geometry stays put.
   if(!orbit){refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers()}
@@ -877,9 +880,10 @@ function positionCameraForView(side,targetOverride){
 function resetStudyFollow({paused=true}={}){
   if(!cameraLab||!playerObject||!viewTarget)return;
   followAnchor={paused};followTime=timeReal;wrap.dataset.cameraFollowPaused=String(paused);
+  if(paused){visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1}
 }
 function resumeStudyFollow(){
-  if(!studyStraight()||(!cameraLab.state.followX&&!cameraLab.state.followY))return;
+  if(!studyStraight()||(!cameraLab.state.followX&&!cameraLab.state.followY&&!cameraLab.state.autoTilt))return;
   // A gameplay move ends inspection. Do not retain a pan or tracking offset as
   // Pom's new screen position; ease the enabled axes back to the canvas center.
   if(cameraLab.state.motion==='track'&&cameraLab.state.truck)viewTarget=cameraFocus.copy();
@@ -897,6 +901,37 @@ function updateStudyFollow(){
   const next=viewTarget.lerp(desired,1-Math.exp(-dt/.18));
   if(next.subtract(viewTarget).length()<.0001)return;
   viewTarget=next;applyBoardView(false);
+}
+function updateStudyVisibility(){
+  if(!studyStraight()||!gameReady||!viewReady||won||celebration||!cameraFocus||!playerObject||!document.querySelector('#menuScreen').hidden)return;
+  const base=cameraPitch(),enabled=cameraLab.state.autoTilt&&base>=5*Math.PI/180;
+  const dt=Math.min(.1,Math.max(0,timeReal-visibilityStudy.lastTime));visibilityStudy.lastTime=timeReal;
+  // Panning/explicit camera controls pause automatic changes until gameplay
+  // resumes. Disabling the option still restores the requested base angle.
+  if(enabled&&(followAnchor?.paused||boardPointers.size))return;
+  const position=busy?playerObject.pos3D.add(render3D.camera.getForward().scale(.045)):worldPosition(player);
+  const options={position,focus:cameraFocus,distance:render3D.camera.pos.subtract(cameraFocus).length(),yaw:cameraYaw(),currentPitch:viewPitch,perspective:studyPerspective()};
+  if(!enabled)visibilityStudy.target=base;
+  else if(timeReal-visibilityStudy.lastCheck>=.12){
+    visibilityStudy.lastCheck=timeReal;
+    const key=groups.map(g=>g.depth).join(',');
+    if(visibilityStudy.board!==activeLevel||visibilityStudy.key!==key){
+      visibilityStudy.board=activeLevel;visibilityStudy.key=key;
+      visibilityStudy.boxes=groups.flatMap(g=>g.cells.map(c=>({min:{x:c.x,y:H-c.y-1,z:g.depth?0:-CARDBOARD_THICKNESS},max:{x:c.x+1,y:H-c.y,z:g.depth+.025}})));
+    }
+    const result=chooseVisibilityPitch({...options,boxes:visibilityStudy.boxes,basePitch:base});
+    if(Math.abs(result.pitch-base)>.01){visibilityStudy.target=result.pitch;visibilityStudy.lastBlocked=timeReal}
+    else if(timeReal-visibilityStudy.lastBlocked>.8)visibilityStudy.target=base;
+    wrap.dataset.pomBaseVisibility=result.baseVisibility.toFixed(3);wrap.dataset.pomBestVisibility=result.visibility.toFixed(3);
+  }
+  const target=visibilityStudy.target??base;
+  const next=reducedSelectionMotion.matches||Math.abs(target-viewPitch)<.0002?target:viewPitch+(target-viewPitch)*(1-Math.exp(-dt/(Math.abs(target-base)>.01?.22:.65)));
+  if(Math.abs(next-viewPitch)<1e-8)return;
+  const pose=visibilityCameraPose({...options,pitch:next});
+  viewTarget=vec3(pose.focus.x-(cameraLab.state.motion==='track'?cameraLab.state.truck*W/100:0),pose.focus.y,pose.focus.z);
+  viewPitch=next;applyBoardView(false);
+  if(busy){playerObject.pos3D=position.add(render3D.camera.getForward().scale(-.045));playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix()}
+  wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);cameraLab.reportTilt(viewPitch*180/Math.PI);
 }
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
 const tappingUnit=()=>32/Math.max(.18,Math.sin(viewPitch));
@@ -925,7 +960,7 @@ function applyBoardView(clamp=true){
   syncCellGeometry();syncBackground();syncFloorGrid();syncHoverSpot();if(playerObject&&!busy)syncPlayer();
   // Readable, projected dimensions also make responsive checks independent of device pixels.
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
-  if(cameraLab){wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraMotion=cameraLab.state.motion;wrap.dataset.cameraTruck=String(cameraLab.state.truck);wrap.dataset.cameraFollowing=String(cameraLab.state.followX||cameraLab.state.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraLab.state.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
+  if(cameraLab){cameraLab.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraLab.state.projection;wrap.dataset.cameraMotion=cameraLab.state.motion;wrap.dataset.cameraTruck=String(cameraLab.state.truck);wrap.dataset.cameraFollowing=String(cameraLab.state.followX||cameraLab.state.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraLab.state.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
 }
 function startBoardView(animate=true){
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
@@ -1068,7 +1103,7 @@ function gameInit(){
 }
 function gameUpdate(){
   introTick?.(timeReal*1000);
-  syncCellGeometry();syncPomMatrix();updateStudyFollow();
+  syncCellGeometry();syncPomMatrix();updateStudyFollow();updateStudyVisibility();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;

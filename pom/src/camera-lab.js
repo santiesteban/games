@@ -1,6 +1,6 @@
 // Temporary, URL-gated study. Values stay in this page and never enter level JSON.
 export function createCameraLab({levels,environments,onChange,onLevel}){
-  const state={selectionEffect:'lightbox',lightboxStrength:.65,lightboxSpill:true,lightboxGlow:true,projection:'orthographic',motion:'orbit',truck:0,fov:35,followX:false,followY:false,yaw:20,pitch:25,setting:'stage',backdrop:'turning',holdFraming:true,horizonLock:true,horizonGuide:true,environment:'japan-spring',background:true,foreground:true,props:true,guides:true};
+  const state={autoTilt:true,selectionEffect:'lightbox',lightboxStrength:.65,lightboxSpill:true,lightboxGlow:true,projection:'orthographic',motion:'orbit',truck:0,fov:35,followX:false,followY:false,yaw:20,pitch:25,setting:'stage',backdrop:'turning',holdFraming:true,horizonLock:true,horizonGuide:true,environment:'japan-spring',background:true,foreground:true,props:true,guides:true};
   const panel=document.createElement('aside');panel.className='camera-lab';panel.setAttribute('aria-label','Camera and scenery study');
   panel.innerHTML=`<header><h2>Camera & scenery</h2><button type="button" data-collapse aria-expanded="true">Hide</button></header>
     <output data-horizon-measure class="camera-lab-measure" aria-live="polite"></output>
@@ -19,6 +19,8 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
       <div class="camera-lab-orbit"><button type="button" data-orbit="35">Orbit left</button><button type="button" data-orbit="0">Center</button><button type="button" data-orbit="-35">Orbit right</button></div>
       <label class="camera-lab-check"><input type="checkbox" data-holdFraming checked> Keep framing while orbiting</label>
       <label>Downward angle <output data-pitch-output></output><input data-pitch aria-label="Downward angle" type="range" min="0" max="45" step="1" value="25"></label>
+      <label class="camera-lab-check"><input type="checkbox" data-auto-tilt checked> Keep Pom visible automatically</label>
+      <output data-auto-tilt-note class="camera-lab-copy">Automatic tilt waits for gameplay.</output>
       <label class="camera-lab-check"><input type="checkbox" data-followX> Follow Pom horizontally</label>
       <label class="camera-lab-check"><input type="checkbox" data-followY> Follow Pom vertically</label>
       <button type="button" data-center-pom>Center on Pom</button>
@@ -73,6 +75,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
     panel.querySelector('[data-selection-effect]').value=state.selectionEffect;
     panel.querySelector('[data-lightbox-strength]').value=state.lightboxStrength*100;panel.querySelector('[data-lightbox-strength-output]').value=`${Math.round(state.lightboxStrength*100)}%`;
     for(const id of ['strength','spill','glow'])panel.querySelector(`[data-lightbox-${id}]`).disabled=state.selectionEffect!=='lightbox';
+    panel.querySelector('[data-auto-tilt]').checked=state.autoTilt;panel.querySelector('[data-auto-tilt]').disabled=original;
     const fixed=state.setting==='stage'&&state.backdrop==='fixed';
     panel.querySelector('[data-backdrop-field]').hidden=state.setting!=='stage';
     panel.querySelector('[data-horizonLock]').disabled=fixed;panel.querySelector('[data-horizonLock]').checked=!fixed&&state.horizonLock;
@@ -101,11 +104,12 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
   for(const button of panel.querySelectorAll('[data-orbit]'))button.onclick=()=>orbitTo(Number(button.dataset.orbit)*(state.motion==='track'?-1:1));
   panel.querySelector('[data-backdrop]').onchange=event=>{state.backdrop=event.target.value;change()};
   for(const id of ['background','foreground','props','guides','holdFraming','horizonLock','horizonGuide','followX','followY'])panel.querySelector(`[data-${id}]`).onchange=event=>{state[id]=event.target.checked;change()};
+  panel.querySelector('[data-auto-tilt]').onchange=event=>{state.autoTilt=event.target.checked;change({visibilityOnly:true})};
   panel.querySelector('[data-selection-effect]').onchange=event=>{state.selectionEffect=event.target.value;change({selectionOnly:true})};
   panel.querySelector('[data-lightbox-strength]').oninput=event=>{state.lightboxStrength=Number(event.target.value)/100;change({selectionOnly:true})};
   for(const id of ['spill','glow'])panel.querySelector(`[data-lightbox-${id}]`).onchange=event=>{state[id==='spill'?'lightboxSpill':'lightboxGlow']=event.target.checked;change({selectionOnly:true})};
   panel.querySelector('[data-fit]').onclick=()=>onChange({refit:true});refresh();
-  return{state,panel,orbitBy(delta){orbitTo(state.motion==='track'?state.truck-delta:state.yaw+delta)},setLevel(id){levelSelect.value=id},measure({percent,tilt,curved,unit,cameraHeight}){
+  return{state,panel,reportTilt(degrees){panel.querySelector('[data-auto-tilt-note]').textContent=state.projection==='oblique'?'Original camera: automatic tilt unavailable.':state.pitch<5?'Front artwork: automatic tilt paused.':`Current downward angle: ${degrees.toFixed(1)}° · base ${state.pitch}°`},orbitBy(delta){orbitTo(state.motion==='track'?state.truck-delta:state.yaw+delta)},setLevel(id){levelSelect.value=id},measure({percent,tilt,curved,unit,cameraHeight}){
     if(!Number.isFinite(percent)){panel.querySelector('[data-horizon-measure]').textContent='Backdrop join is outside the view.';guide.hidden=true;return}
     panel.querySelector('[data-horizon-measure]').textContent=`${curved?'Center of join':'Horizon / join'}: ${percent.toFixed(2)}% from top${curved?' · curved':` · ${(Math.abs(tilt)<.005?0:tilt).toFixed(2)}° tilt`}`;
     guide.hidden=!state.horizonGuide||percent<0||percent>100;guide.style.top=`${percent}%`;
