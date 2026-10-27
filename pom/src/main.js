@@ -14,6 +14,7 @@ import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { createCameraLab } from './camera-lab.js';
+import { createGoalBadge } from './goal-badge.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import { createVictoryEffects, victoryLandingOffset, victoryArrival } from './victory-effects.js';
@@ -578,7 +579,7 @@ function syncFlag(){
   const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;
   const raised=g.depth>0,cx=goalCell.x+.5,cy=H-goalCell.y-.5;
   // The front-face badge disappears together with its flag when the piece rises.
-  flagPrint.mesh=raised?undefined:flagMeshes.print;flagPrint.pos3D=vec3(cx,stretchY(cy),.032);flagPrint.scale3D=vec3(1,stretchY(1),1);
+  flagPrint.mesh=raised?undefined:flagMeshes.print;flagPrint.tileInfo=raised?undefined:flagMeshes.printTile;flagPrint.pos3D=vec3(cx,stretchY(cy),.045);flagPrint.scale3D=vec3(1,stretchY(1),1);
   for(const [part,mesh]of [[flagPole,flagMeshes.pole],[flagCloth,flagMesh],[flagVase,flagMeshes.vase],[flagCap,flagMeshes.cap]]){
     part.mesh=raised?mesh:undefined;part.rotation3D=vec3();part.scale3D=vec3(1,stretchY(1),1);part.castShadow=raised&&render3D.shadows;
   }
@@ -898,7 +899,7 @@ function startBoardView(animate=true){
   const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
   if(isPreviewLevel(activeLevel)||activeLevel.studioExample||!document.querySelector('#menuScreen').hidden){finishIntro();return}
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const token=introFrame,from=viewTarget.copy(),unit=viewMobile?Math.max(fitUnit,tappingUnit()):fitUnit,pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
+  const token=introFrame,from=viewTarget.copy(),unit=Math.max(fitUnit,viewMobile?tappingUnit():64),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
   const needsZoom=unit>fitUnit*1.01;
   if(cameraLab){viewUnit=fitUnit;viewTarget=f.target;applyBoardView(false);resetStudyFollow();finishIntro();return}
   viewUnit=unit;viewTarget=needsZoom?pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0)):from.copy();clampBoardView();
@@ -1018,22 +1019,11 @@ function gameInit(){
   umbrellaCanopy=new EngineObject3D(vec3(0,.84,3),makeFanMesh(umbrellaRim),undefined,new Color(.15,.2,.27,0));umbrellaCanopy.scale3D=vec3(.78,.58,1);umbrellaCanopy.lighting=false;umbrellaCanopy.transparent=true;playerObject.addChild(umbrellaCanopy);
   for(let panel=0;panel<4;panel++){const start=-Math.PI/2+panel*Math.PI/4,end=start+Math.PI/4,arc=Array.from({length:9},(_,i)=>{const a=start+(end-start)*i/8;return[.5*Math.sin(a),.52*Math.cos(a)]}),piece=new EngineObject3D(vec3(0,.84,3.035),makeSectorMesh(umbrellaCenter,arc),undefined,new Color(1));piece.scale3D=vec3(.76,.56,1);piece.lighting=false;piece.transparent=true;playerObject.addChild(piece);umbrellaPanels.push(piece)}
   umbrellaHandle=new EngineObject3D(vec3(0,.84,2.96),makeFanMesh([[-.035,-.02],[.035,-.02],[.035,-.6],[-.035,-.6]]),undefined,new Color(.15,.2,.27,0));umbrellaHandle.lighting=false;umbrellaHandle.transparent=true;playerObject.addChild(umbrellaHandle);setUmbrellaVisible(false);
-  const print=new Mesh();
-  const badge=(half,radius,color,z)=>{
-    const corners=[[half-radius,half-radius,0],[-half+radius,half-radius,Math.PI/2],[-half+radius,-half+radius,Math.PI],[half-radius,-half+radius,Math.PI*1.5]];
-    const perimeter=corners.flatMap(([x,y,angle])=>Array.from({length:7},(_,i)=>vec3(x+radius*Math.cos(angle+i*Math.PI/12),y+radius*Math.sin(angle+i*Math.PI/12),z)));
-    const vertices=[vec3(0,0,z),...perimeter],indices=[];
-    for(let i=1;i<vertices.length;i++)indices.push(0,i,i===vertices.length-1?1:i+1);
-    print.addTriangles(vertices,indices,vec3(0,0,1),undefined,color);
-  };
-  // Tiny depth offsets keep the frame, cream fill and glyph free of z-fighting.
-  badge(.26,.075,inkColor,0);badge(.245,.065,new Color(1,250/255,240/255),.001);
-  print.addQuad(vec3(-.12,-.14,.002),vec3(-.08,-.14,.002),vec3(-.08,.14,.002),vec3(-.12,.14,.002),inkColor);
-  print.addStrip([vec3(-.08,.14,.002),vec3(-.08,.01,.002),vec3(.125,.075,.002)],vec3(0,0,1),undefined,new Color(1,.443,.22));print.doubleSided=true;
+  const {mesh:print,texture:printTexture}=createGoalBadge();
   const vase=buildLathe([[.075,0],[.09,.015],[.115,.12],[.135,.13],[.135,.17],[.105,.17],[.095,.14],[0,.14]],20,true,true);
   vase.colors=vase.normals.map(n=>{const shade=n.y>.4?1:n.y<-.4?.64:.82+.1*(n.x*.6+n.z*.8);return new Color(shade,shade,shade)});vase.dirty=true;
   flagMeshes={print,pole:buildCapsule(.045,.68,12,4,true),vase,cap:buildSphere(.085,12,6,true)};
-  flagPrint=new EngineObject3D(vec3(),print,undefined,new Color(1));flagPrint.lighting=false;flagPrint.castShadow=false;
+  flagPrint=new EngineObject3D(vec3(),print,printTexture,new Color(1));flagPrint.lighting=false;flagPrint.castShadow=false;flagPrint.transparent=true;flagMeshes.printTile=flagPrint.tileInfo;
   flagPole=new EngineObject3D(vec3(),flagMeshes.pole,undefined,inkColor);
   flagCloth=new EngineObject3D(vec3(),flagMesh,undefined,new Color(1,.443,.22));flagCloth.lighting=false;
   flagVase=new EngineObject3D(vec3(),vase,undefined,new Color(.56,.33,.20));
