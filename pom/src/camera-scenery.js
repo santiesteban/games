@@ -6,7 +6,7 @@ import {cardboardMesh} from './cardboard.js';
 export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
   let kit,kitPromise,kitError;
   let key,objects=[],reference;
-  const usesKit=state=>state.artworkSet==='kit'&&state.setting==='landscape'&&['meadow','japan-spring'].includes(state.environment);
+  const usesKit=state=>state.artworkSet==='kit'&&state.setting==='landscape'&&['meadow','japan-spring','daisy-meadow'].includes(state.environment);
   function loadKit(retry=false){
     if(retry&&kitError){kitError=undefined;kitPromise=undefined}
     return kitPromise??=import('./modular-scenery.js').then(({createModularScenery})=>{kit=createModularScenery({onChange,onStatus});onChange();return kit}).catch(error=>{kitError=error;onStatus('New kit renderer unavailable.');throw error});
@@ -88,5 +88,5 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     }
     return reference;
   }
-  return{prepare,update,get bounds(){return kit?.bounds},get contacts(){return kit?.contacts??[]},destroy(){kit?.clear();for(const object of objects)object.destroy();objects=[];key=undefined}};
+  return{prepare,update,get bounds(){return kit?.bounds},get pickRecords(){return kit?.pickRecords??[]},get contacts(){return kit?.contacts??[]},destroy(){kit?.clear();for(const object of objects)object.destroy();objects=[];key=undefined}};
 }

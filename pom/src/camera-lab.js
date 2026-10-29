@@ -87,7 +87,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
     panel.querySelector('[data-artwork-set]').value=state.artworkSet;
     panel.querySelector('[data-background-auto]').checked=state.backgroundDistanceAuto;
     panel.querySelector('[data-background-distance]').value=state.backgroundDistance;panel.querySelector('[data-background-distance-output]').value=`${state.backgroundDistance} units`;
-    panel.querySelector('[data-background-distance]').disabled=state.artworkSet!=='kit'||state.setting!=='landscape'||!['meadow','japan-spring'].includes(state.environment);
+    panel.querySelector('[data-background-distance]').disabled=state.artworkSet!=='kit'||state.setting!=='landscape'||!['meadow','japan-spring','daisy-meadow'].includes(state.environment);
     for(const id of ['background','foreground','props','guides','holdFraming','horizonGuide'])panel.querySelector(`[data-${id}]`).checked=state[id];
     const fixed=state.setting==='stage'&&state.backdrop==='fixed';
     panel.querySelector('[data-backdrop-field]').hidden=state.setting!=='stage';

@@ -1,3 +1,5 @@
+import daisyBackground from './assets/scenery-kits/daisy-meadow/flat-background.webp';
+import daisyGround from './assets/scenery-kits/daisy-meadow/ground-tile.webp';
 import { TextureInfo } from 'littlejsengine';
 import meadowBackground from '../sky-background.webp';
 import meadowForeground from '../meadow-foreground.webp';
@@ -53,6 +55,7 @@ function registeredArtwork(id,name,metadata,images){
 
 export const DEFAULT_ENVIRONMENT='meadow';
 export const ENVIRONMENTS=[
+  {id:'daisy-meadow',name:'Daisy Meadow',background:daisyBackground,foreground:daisyGround,foregroundSize:[2048,2048],width:4096,height:2048,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'meadow',name:'Meadow',background:meadowBackground,foreground:meadowForeground,width:2172,height:724,aspectRatio:3,groundAnchorY:.60,registeredLayers:false,foregroundOpacity:.8,groundWashOpacity:.30,floorWashOpacity:.16,floorTileOpacity:.30},
   {id:'highway-desert',name:'Highway Desert',background:highwayBackground,foreground:highwayForeground,width:3072,height:1024,aspectRatio:3,groundAnchorY:.80,registeredLayers:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'cobblestone-alley',name:'Cobblestone Alley',background:alleyBackground,foreground:alleyForeground,width:3072,height:1024,backgroundSize:[3072,1023],aspectRatio:3,groundAnchorY:.82,registeredLayers:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0,variants:{

@@ -417,3 +417,72 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
 .stage.is-level-loading .canvas-wrap canvas,.stage.is-level-loading .canvas-actions,.stage.is-level-loading .toast,.stage.is-level-loading .studio-controls{visibility:hidden;pointer-events:none}
 
 .settings-content{touch-action:pan-y}
+
+/* Projected vector handles use the same depth direction as the selected piece. */
+.uses-piece-drag .canvas-actions{display:none}
+.piece-drag{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:1;transition:opacity 160ms ease}
+.piece-drag.is-suppressed{opacity:0}
+.piece-drag.is-suppressed .piece-drag-handle{pointer-events:none}
+@media (prefers-reduced-motion:reduce){.piece-drag{transition:none}}
+.piece-drag[hidden],.piece-drag-handle[hidden]{display:none}
+.piece-drag-handle{position:absolute;width:76px;height:52px;margin:0;padding:0;border:0;outline:none;appearance:none;-webkit-tap-highlight-color:transparent;background:transparent;pointer-events:auto;touch-action:none;cursor:grab;filter:drop-shadow(0 2px 3px #29253766)}
+.piece-drag-handle svg{width:100%;height:100%;overflow:visible}
+.piece-drag-handle path{fill:#fffaf0;stroke-linecap:round;stroke-linejoin:round}
+.piece-drag-handle .arrow-outline{stroke:#292537;stroke-width:7}
+.piece-drag-handle .arrow-line{fill:var(--piece-arrow-color,#fffaf0);stroke:#fffaf0;stroke-width:2}
+.piece-drag-handle:hover .arrow-line,.piece-drag-handle:focus-visible .arrow-line{stroke:#ffe18a}
+.piece-drag-handle.dragging{cursor:grabbing}
+.piece-drag-handle:focus,.piece-drag-handle:focus-visible,.piece-drag-handle:active:not(:disabled){outline:none;box-shadow:none;transform:none;translate:none}
+.stage.is-won .piece-drag,.stage.is-introducing .piece-drag{display:none}
+
+.interaction-lab{position:absolute;top:70px;left:12px;right:12px;z-index:9;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;background:#fffaf0;border:2px solid var(--ink);border-radius:12px;font-size:12px}
+.interaction-lab select{min-width:0;max-width:100%;font:inherit;padding:8px;border:1px solid var(--ink);border-radius:8px;background:white}
+.interaction-lab .btn{font-size:12px;min-height:34px;padding:6px 10px}
+.interaction-lab-link{display:inline-block;margin-top:18px;color:var(--ink);font-weight:700}
+
+.piece-drag-handle .depth-tail-outline{stroke:#292537;stroke-width:3;fill:#fffaf0}
+.piece-drag-handle .depth-tail-fill{stroke:#fffaf0;stroke-width:1;fill:#fffaf0}
+.piece-drag-handle .depth-tail-fill.filled{fill:var(--piece-arrow-color,#fffaf0);stroke:#fffaf0;stroke-width:1}
+
+.piece-drag-shadow{position:absolute;inset:0;pointer-events:none;opacity:.32;transition:opacity 160ms ease-out}
+.piece-drag-shadow.is-fading{opacity:0}
+@media (prefers-reduced-motion:reduce){.piece-drag-shadow{transition:none}}
+.piece-drag-shadow[hidden]{display:none}
+.piece-drag-shadow path{fill:#000;stroke:#000;stroke-linecap:round;stroke-linejoin:round}
+
+.uses-stacked-buttons .canvas-actions{display:none}
+.stacked-piece-controls{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:7;display:flex;align-items:end;pointer-events:auto;width:min(360px,calc(100% - 24px))}
+.stacked-piece-controls[hidden],.stacked-piece-column[hidden]{display:none}
+.stacked-piece-column{display:flex;flex:1 1 0;min-width:0;max-width:100%;padding-inline:5px;box-sizing:border-box;flex-direction:column;gap:6px;opacity:1;transform:scale(1);transform-origin:center;transition:opacity 140ms ease,transform 140ms ease;overflow:visible}
+.stacked-piece-column.is-unavailable{flex-grow:0;max-width:0;padding-inline:0;opacity:0;transform:scale(.78);pointer-events:none}
+@keyframes stacked-button-pop{0%{transform:scale(.65);opacity:0}70%{transform:scale(1.06);opacity:1}100%{transform:scale(1);opacity:1}}
+.stacked-piece-column:not(.is-unavailable){animation:stacked-button-pop 260ms ease-out both}
+@media (prefers-reduced-motion:reduce){.stacked-piece-column{transition:none}.stacked-piece-column:not(.is-unavailable){animation:none}}
+.stacked-piece-button{background:var(--block-color);width:100%;min-width:0}
+.stacked-piece-button:disabled{opacity:.48;cursor:default}
+.stage.is-introducing .stacked-piece-controls,.stage.is-level-loading .stacked-piece-controls,.stage.is-won .stacked-piece-controls{visibility:hidden}
+.stage.has-overlay-deck .stacked-piece-controls{bottom:calc(var(--control-deck-height,80px) + 18px)}
+
+.background-controls-body .design-actions{display:flex;flex-wrap:wrap;gap:8px}
+.background-controls-body .design-actions .btn{flex:1 1 125px;min-width:0;white-space:normal}
+.environment-section{border:1px solid #b4a9c5;border-radius:10px;margin:10px 0;background:#fffaf0;overflow:hidden}
+.environment-section>summary{padding:11px 12px;font-weight:700;cursor:pointer;background:#eee8fa}
+.environment-section>summary:focus-visible{outline:2px solid var(--ink);outline-offset:-3px}
+.environment-section>fieldset{border:0;margin:0;padding:10px}
+.environment-section>fieldset>legend{display:none}
+.environment-section>.design-field,.environment-section>.design-copy,.environment-section>.design-save-status,.environment-section>.design-actions,.environment-section>button{margin:10px}
+.environment-section .design-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+.environment-element-section{grid-column:1/-1;border-top:1px solid #d4cadc;margin-top:8px;padding-top:6px}
+.environment-element-section>summary{font-weight:700;cursor:pointer;padding:8px 0}
+.environment-element-section[open]{display:block}
+.environment-element-section .design-field{margin-block:8px}
+.environment-section .design-field:has(input[type=file]){display:flex;flex-direction:column;align-items:stretch}
+.environment-section input[type=file]{width:100%;min-width:0;font-size:11px}
+
+.environment-guide-link{display:inline-block;margin-top:8px;color:var(--ink);font-weight:700;text-decoration:underline}
+.environment-guide-dialog{width:min(760px,calc(100vw - 32px));max-height:85vh;max-height:85dvh;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;padding:22px;background:#fffaf0;color:var(--ink);border:2px solid var(--ink);border-radius:14px;line-height:1.6}
+.environment-guide-dialog::backdrop{background:#29253788}
+.environment-guide-dialog>button{position:sticky;top:0;float:right;margin-left:16px}
+.environment-guide-dialog article{font-size:14px;overflow-wrap:anywhere}
+.environment-guide-dialog h1{font-size:25px}.environment-guide-dialog h2{font-size:19px;margin-top:24px}

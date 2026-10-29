@@ -5532,7 +5532,7 @@
       "number": 92,
       "group": "others",
       "kind": "background-studio",
-      "name": "Background Studio",
+      "name": "Environment Studio",
       "description": "Preview Highway Desert and compare scenery layers, ground alignment, and camera angles.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",

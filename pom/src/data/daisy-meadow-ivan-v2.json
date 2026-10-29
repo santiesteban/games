@@ -1,0 +1,273 @@
+{
+  "version": 1,
+  "name": "Environment configuration",
+  "configuration": {
+    "environment": "daisy-meadow",
+    "composition": "auto",
+    "layers": "both",
+    "showGuides": false,
+    "backgroundDistance": 3,
+    "environmentShadowStrength": 0.45,
+    "groundShadowBlur": 0.35,
+    "cutoutStyle": {
+      "padding": 0.01,
+      "depth": 0.01,
+      "paddingColor": "#9aae6f",
+      "depthColor": "#ccb493"
+    },
+    "scenicAtmosphere": true,
+    "sceneryLayout": [
+      {
+        "id": "tree-a",
+        "role": "tree-a",
+        "x": 0.3519955871852787,
+        "y": 0.05438552188861401,
+        "z": -0.10000000000000356,
+        "scale": 1.15,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "tree-b",
+        "role": "tree-b",
+        "x": -0.6925288499234334,
+        "y": -0.23808147859974227,
+        "z": 4,
+        "scale": 1.3,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "shrub-a",
+        "role": "shrub-a",
+        "x": -4.322158565510864,
+        "y": 0.1320907814615846,
+        "z": 6.5000000000000036,
+        "scale": 2.1,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "shrub-b",
+        "role": "shrub-b",
+        "x": -0.4107461375831889,
+        "y": 0.004868195014220866,
+        "z": 0.013571568230489106,
+        "scale": 1,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "grass-a",
+        "role": "grass-a",
+        "x": 1.1386315057528105,
+        "y": 0.010965037341053474,
+        "z": -2.9,
+        "scale": 1,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "grass-b",
+        "role": "grass-b",
+        "x": -0.007490739071478458,
+        "y": 0,
+        "z": 8.881784197001252e-16,
+        "scale": 1,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "flowers-a",
+        "role": "flowers-a",
+        "x": -0.05528370363130142,
+        "y": 0,
+        "z": -1.0988616891457963,
+        "scale": 1,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "flowers-b",
+        "role": "flowers-b",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale": 1,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "large-arching-cloud-2",
+        "role": "large-arching-cloud",
+        "x": -1,
+        "y": 0,
+        "z": -0.99,
+        "scale": 1.25,
+        "tilt": 0
+      },
+      {
+        "id": "tree-a-2",
+        "role": "tree-a",
+        "x": -2.996299151740578,
+        "y": 0.02086195044244077,
+        "z": 3.552713678800501e-15,
+        "scale": 1.15,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "tree-b-2",
+        "role": "tree-b",
+        "x": 1.2,
+        "y": 0,
+        "z": 0,
+        "scale": 1,
+        "tilt": 0
+      },
+      {
+        "id": "tree-a-3",
+        "role": "tree-a",
+        "x": -6.255221388851706,
+        "y": 0.0017244334326456112,
+        "z": -0.1,
+        "scale": 1.15,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "round-daisy-patch-3",
+        "role": "round-daisy-patch",
+        "x": 2.8131859468831744,
+        "y": -1.610097456763775,
+        "z": 0,
+        "scale": 1,
+        "tilt": 0
+      },
+      {
+        "id": "round-daisy-patch-4",
+        "role": "round-daisy-patch",
+        "x": 2.36071112891029,
+        "y": 0.03748877676117779,
+        "z": 10.700000000000001,
+        "scale": 2.75,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "tree-a-4",
+        "role": "tree-a",
+        "x": -2.1118369844376628,
+        "y": 0.020545783647591076,
+        "z": 20,
+        "scale": 1.65,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      },
+      {
+        "id": "flowers-b-2",
+        "role": "flowers-b",
+        "x": -17.39539345216282,
+        "y": -0.040937586875328336,
+        "z": -6.9,
+        "scale": 0.25,
+        "tilt": 0
+      },
+      {
+        "id": "grass-a-2",
+        "role": "grass-a",
+        "x": -3.1,
+        "y": 1.7763568394002505e-15,
+        "z": -7.5,
+        "scale": 0.6,
+        "tilt": 0
+      },
+      {
+        "id": "flowers-b-3",
+        "role": "flowers-b",
+        "x": 2.1635769527649478,
+        "y": 0.0020271632411468232,
+        "z": 8.900000000000004,
+        "scale": 1.45,
+        "tilt": 0,
+        "cutout": {
+          "padding": 0,
+          "depth": 0,
+          "paddingColor": "#9aae6f",
+          "depthColor": "#ccb493"
+        }
+      }
+    ],
+    "overlays": {
+      "background": {
+        "color": "#fffaf0",
+        "opacity": 0
+      },
+      "foreground": {
+        "color": "#fffaf0",
+        "opacity": 0
+      }
+    },
+    "anchors": {}
+  }
+}

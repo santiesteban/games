@@ -92,7 +92,86 @@
         "sha256": "bd94f2c8ed30cf2760a1e96ef6f18680c6ccabd5238560ea13cb53836b32ddd3",
         "bytes": 52418
       }
+    },
+    "daisy-meadow": {
+      "distant-hills.webp": {
+        "sha256": "8d2be33426185f3f7aae55b9de6f60d478ec77c69d7bb2d357b32b8eeb82fb28",
+        "bytes": 68774
+      },
+      "flat-background.webp": {
+        "sha256": "cbd0bfeabc29df9280c634f491cb0bca1c0928b2aa44d32777b030e83c622373",
+        "bytes": 214780
+      },
+      "flowers-a.webp": {
+        "sha256": "27d9f15b31baf03ce41552540a5ef7ffa094140b2ca1bbdbc2d5fad32e990620",
+        "bytes": 97168
+      },
+      "flowers-b.webp": {
+        "sha256": "98752f6e3ad1a4224b3fc316120edbb2f7130121985f35b16fe14c9efca57988",
+        "bytes": 114470
+      },
+      "grass-a.webp": {
+        "sha256": "a92c83396d43dfc9c2b728bb5568b34c4b482b26e6f2ac30530c95702c6298d8",
+        "bytes": 54720
+      },
+      "grass-b.webp": {
+        "sha256": "831198b8411cb07526a73788402b5e09fa5f07352b2cb3d08d71833db23563fa",
+        "bytes": 100072
+      },
+      "ground-tile.webp": {
+        "sha256": "2ab88c0bfd26e674357a940c196d9ef7cf9a4825c23f4ca548a48693731c1ab0",
+        "bytes": 2995898
+      },
+      "hanging-cloud-a.webp": {
+        "sha256": "99ee70c9fdd81bdd210cdf3ced1065c4a30d4593f2d92fb2e07f08fc9b5432b4",
+        "bytes": 79158
+      },
+      "hanging-cloud-b.webp": {
+        "sha256": "ac6c62ffabe1dad50d37ea5cda849f5b8f3195acb327279a8580717c80a74d9a",
+        "bytes": 85962
+      },
+      "large-arching-cloud.webp": {
+        "sha256": "6936b8035f8a5fa3df2acd00d30cb1a1c3c1b27aed3b9512932e003b35ece171",
+        "bytes": 67780
+      },
+      "low-fog-a.webp": {
+        "sha256": "065944d285b99fba12068d3af7353800891dc41f5821255ad01a8a450fbf3477",
+        "bytes": 124000
+      },
+      "low-fog-b.webp": {
+        "sha256": "22e67d40ea00842d3b1cdf220b5398d107994196d3683b43bea73eb5b3e694a9",
+        "bytes": 148956
+      },
+      "round-daisy-patch.webp": {
+        "sha256": "b5a2c45617ce27f0d4c62535a3fe096ee423d9dca38c182a6c5a5535fe25568f",
+        "bytes": 1443252
+      },
+      "shrub-a.webp": {
+        "sha256": "4cd3ff7df8dc94b31ff3d9403dd16ed89c2717a53c11e10e5fa4093ccaaffa39",
+        "bytes": 52918
+      },
+      "shrub-b.webp": {
+        "sha256": "2aec4fcb16b8ae8ddb4dc70ecf078d7b3a1d0c4c939274001b3fe204a5aeac03",
+        "bytes": 98544
+      },
+      "sky.webp": {
+        "sha256": "d37e20093f5cfe69b3725955601ac146924163bcb79caa320dbf63b616203730",
+        "bytes": 188558
+      },
+      "static-background.webp": {
+        "sha256": "d53c060e970c94535711c694d6d63093ce9a0e597137e8ab7add699402ddde23",
+        "bytes": 1908832
+      },
+      "tree-a.webp": {
+        "sha256": "400e9a1eedd59e3e905d46790f17a3b80505ab3738cda07eda3dc51990b874c3",
+        "bytes": 327814
+      },
+      "tree-b.webp": {
+        "sha256": "7420e8e2480c6bf743a2a61ba961ede13d61256004fe6844bcc06f5d61ea692b",
+        "bytes": 148806
+      }
     }
   },
-  "runtimeRevision": "optimized-2026-10-27"
+  "runtimeRevision": "optimized-2026-10-27",
+  "daisyMeadowRevision": "art-rework-v7-over-integration-v6"
 }

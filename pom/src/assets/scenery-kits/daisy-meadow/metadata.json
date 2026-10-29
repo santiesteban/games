@@ -1,0 +1,382 @@
+{
+  "theme": "daisy-meadow",
+  "assets": [
+    {
+      "role": "tree-a",
+      "file": "tree-a.png",
+      "webp": "tree-a.webp",
+      "width": 2048,
+      "height": 2048,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        199,
+        64,
+        1863,
+        1984
+      ],
+      "pivotPixels": [
+        1024,
+        1984
+      ],
+      "visibleHeightWorldUnits": 4.4
+    },
+    {
+      "role": "tree-b",
+      "file": "tree-b.png",
+      "webp": "tree-b.webp",
+      "width": 2048,
+      "height": 2048,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        791,
+        64,
+        1253,
+        1984
+      ],
+      "pivotPixels": [
+        1024,
+        1984
+      ],
+      "visibleHeightWorldUnits": 4.4
+    },
+    {
+      "role": "shrub-a",
+      "file": "shrub-a.png",
+      "webp": "shrub-a.webp",
+      "width": 1024,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        37,
+        644,
+        885,
+        992
+      ],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "visibleHeightWorldUnits": 0.9
+    },
+    {
+      "role": "shrub-b",
+      "file": "shrub-b.png",
+      "webp": "shrub-b.webp",
+      "width": 1024,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        36,
+        384,
+        866,
+        992
+      ],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "visibleHeightWorldUnits": 1.2
+    },
+    {
+      "role": "grass-a",
+      "file": "grass-a.png",
+      "webp": "grass-a.webp",
+      "width": 1024,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        51,
+        577,
+        986,
+        992
+      ],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "visibleHeightWorldUnits": 0.45
+    },
+    {
+      "role": "grass-b",
+      "file": "grass-b.png",
+      "webp": "grass-b.webp",
+      "width": 1024,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        92,
+        55,
+        987,
+        992
+      ],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "visibleHeightWorldUnits": 0.65
+    },
+    {
+      "role": "flowers-a",
+      "file": "flowers-a.png",
+      "webp": "flowers-a.webp",
+      "width": 1024,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        150,
+        358,
+        987,
+        992
+      ],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "visibleHeightWorldUnits": 0.6
+    },
+    {
+      "role": "flowers-b",
+      "file": "flowers-b.png",
+      "webp": "flowers-b.webp",
+      "width": 1024,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        94,
+        161,
+        987,
+        992
+      ],
+      "pivotPixels": [
+        512,
+        992
+      ],
+      "visibleHeightWorldUnits": 0.85
+    },
+    {
+      "role": "hanging-cloud-a",
+      "file": "hanging-cloud-a.png",
+      "webp": "hanging-cloud-a.webp",
+      "width": 2048,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        72,
+        130,
+        1976,
+        893
+      ],
+      "originPixels": [
+        1024,
+        512
+      ],
+      "visibleHeightWorldUnits": 3.0,
+      "attachmentPixels": [
+        [
+          548,
+          316
+        ],
+        [
+          1024,
+          135
+        ],
+        [
+          1500,
+          400
+        ]
+      ],
+      "frame": "backdrop-local",
+      "orientation": "upright"
+    },
+    {
+      "role": "hanging-cloud-b",
+      "file": "hanging-cloud-b.png",
+      "webp": "hanging-cloud-b.webp",
+      "width": 2048,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        72,
+        149,
+        1976,
+        875
+      ],
+      "originPixels": [
+        1024,
+        512
+      ],
+      "visibleHeightWorldUnits": 2.5,
+      "attachmentPixels": [
+        [
+          548,
+          333
+        ],
+        [
+          1024,
+          186
+        ],
+        [
+          1500,
+          508
+        ]
+      ],
+      "frame": "backdrop-local",
+      "orientation": "upright"
+    },
+    {
+      "role": "low-fog-a",
+      "file": "low-fog-a.png",
+      "webp": "low-fog-a.webp",
+      "width": 2048,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        72,
+        555,
+        1976,
+        952
+      ],
+      "originPixels": [
+        1024,
+        960
+      ],
+      "visibleHeightWorldUnits": 1.0,
+      "frame": "backdrop-local",
+      "orientation": "upright"
+    },
+    {
+      "role": "low-fog-b",
+      "file": "low-fog-b.png",
+      "webp": "low-fog-b.webp",
+      "width": 2048,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        75,
+        562,
+        1973,
+        952
+      ],
+      "originPixels": [
+        1024,
+        960
+      ],
+      "visibleHeightWorldUnits": 0.8,
+      "frame": "backdrop-local",
+      "orientation": "upright"
+    },
+    {
+      "role": "sky",
+      "file": "sky.png",
+      "webp": "sky.webp",
+      "width": 4096,
+      "height": 2048,
+      "tileAxes": [
+        "x"
+      ],
+      "alphaBoundsPixels": [
+        0,
+        0,
+        4096,
+        2048
+      ],
+      "visibleHeightWorldUnits": null
+    },
+    {
+      "role": "distant-hills",
+      "file": "distant-hills.png",
+      "webp": "distant-hills.webp",
+      "width": 4096,
+      "height": 1024,
+      "tileAxes": [
+        "x"
+      ],
+      "alphaBoundsPixels": [
+        0,
+        349,
+        4096,
+        1024
+      ],
+      "visibleHeightWorldUnits": null
+    },
+    {
+      "role": "ground-tile",
+      "file": "ground-tile.png",
+      "webp": "ground-tile.webp",
+      "width": 2048,
+      "height": 2048,
+      "tileAxes": [
+        "x",
+        "y"
+      ],
+      "alphaBoundsPixels": [
+        0,
+        0,
+        2048,
+        2048
+      ],
+      "visibleHeightWorldUnits": null
+    },
+    {
+      "role": "flat-background",
+      "file": "flat-background.png",
+      "webp": "flat-background.webp",
+      "width": 4096,
+      "height": 2048,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        0,
+        0,
+        4096,
+        2048
+      ]
+    },
+    {
+      "role": "round-daisy-patch",
+      "file": "round-daisy-patch.png",
+      "webp": "round-daisy-patch.webp",
+      "width": 2048,
+      "height": 2048,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        317,
+        1198,
+        1977,
+        1984
+      ],
+      "pivotPixels": [
+        1024,
+        1984
+      ],
+      "visibleHeightWorldUnits": 1.2
+    },
+    {
+      "role": "large-arching-cloud",
+      "file": "large-arching-cloud.png",
+      "webp": "large-arching-cloud.webp",
+      "width": 2048,
+      "height": 1024,
+      "tileAxes": [],
+      "alphaBoundsPixels": [
+        157,
+        72,
+        1891,
+        952
+      ],
+      "originPixels": [
+        1024,
+        512
+      ],
+      "visibleHeightWorldUnits": 5.0,
+      "frame": "backdrop-local",
+      "orientation": "upright"
+    },
+    {
+      "file": "static-background.png",
+      "webp": "static-background.webp",
+      "width": 2192,
+      "height": 1072,
+      "tileAxes": []
+    }
+  ]
+}
