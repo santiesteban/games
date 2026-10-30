@@ -28,3 +28,10 @@ test('legacy layer size exceptions remain supported',async()=>{
   const loader=createEnvironmentTextureLoader('meadow',[],{loadImage:async url=>({width:3072,height:url==='bg'?1023:1024}),createTexture:image=>image});
   assert.deepEqual((await loader.load(legacy)).map(image=>image.height),[1023,1024]);
 });
+
+
+test('an unseeded loader fetches Meadow on demand instead of caching empty startup textures',async()=>{
+ const calls=[],loader=createEnvironmentTextureLoader('meadow',undefined,{loadImage:async url=>{calls.push(url);return image},createTexture:image=>image});
+ assert.equal(loader.cached({id:'meadow'}),undefined);assert.deepEqual(calls,[]);
+ await loader.load({...art,id:'meadow',variant:undefined});assert.deepEqual(calls,['bg','fg']);
+});

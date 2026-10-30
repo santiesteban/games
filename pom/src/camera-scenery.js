@@ -11,7 +11,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     if(retry&&kitError){kitError=undefined;kitPromise=undefined}
     return kitPromise??=import('./modular-scenery.js').then(({createModularScenery})=>{kit=createModularScenery({onChange,onStatus});onChange();return kit}).catch(error=>{kitError=error;onStatus('New kit renderer unavailable.');throw error});
   }
-  async function prepare(state,{retry=false}={}){if(usesKit(state)){const renderer=await loadKit(retry);await renderer.prepare(state.environment,{retry})}}
+  async function prepare(state,{retry=false}={}){if(usesKit(state)){const renderer=await loadKit(retry);await renderer.prepare(state,{retry})}}
 
   const color=hex=>new Color(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
   function add(mesh,tileInfo,tint=new Color(1)){

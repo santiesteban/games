@@ -1,4 +1,5 @@
 import {TextureInfo,glContext} from 'littlejsengine';
+import {createScenerySelectionCache} from './scenery-assets.js';
 import daisyMetadata from './assets/scenery-kits/daisy-meadow/metadata.json';
 import meadowMetadata from './assets/scenery-kits/meadow/metadata.json';
 import japanMetadata from './assets/scenery-kits/japan-spring/metadata.json';
@@ -16,12 +17,7 @@ function canvasAt(image,max){
   canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);return canvas;
 }
 export function createSceneryKitLoader(){
-  const cache=new Map;
-  function load(id,{retry=false}={}){
-    if(retry&&cache.get(id)?.status==='error')cache.delete(id);
-    if(cache.has(id))return cache.get(id);
-    const record={status:'loading',assets:null,error:null};cache.set(id,record);
-    record.promise=Promise.allSettled(metadata[id].assets.map(async meta=>{
+  return createScenerySelectionCache(metadata,async(id,meta)=>{
       const name=meta.file.replace(/\.png$/,''),url=urls[`./assets/scenery-kits/${id}/${meta.webp}`];
       if(!url)throw new Error(`Missing scenery image: ${name}`);
       const image=await decode(url);
@@ -36,13 +32,6 @@ export function createSceneryKitLoader(){
         const source=canvasAt(canvas,name.startsWith('tree-')||name==='round-daisy-patch'||name==='large-arching-cloud'?1024:512),context=source.getContext('2d',{willReadFrequently:true});
         mask={width:source.width,height:source.height,rgba:context.getImageData(0,0,source.width,source.height).data};
       }
-      return [name,{meta,texture,mask,uploadWidth:canvas.width,uploadHeight:canvas.height}];
-    })).then(results=>{
-      const failed=results.find(result=>result.status==='rejected');
-      if(failed){for(const result of results)if(result.status==='fulfilled')result.value[1].texture.destroyWebGLTexture();throw failed.reason}
-      record.assets=Object.fromEntries(results.map(result=>result.value));record.status='ready';return record.assets;
-    }).catch(error=>{record.error=error;record.status='error';return null});
-    return record;
-  }
-  return {load};
+      return {meta,texture,mask,uploadWidth:canvas.width,uploadHeight:canvas.height};
+  });
 }

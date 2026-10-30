@@ -4,7 +4,7 @@ import {limitStagePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
   timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
-  Color, render3D, textureInfos, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
+  Color, render3D, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
 } from 'littlejsengine';
 import catalog from '#level-catalog';
 import { createPieceDrag, pickPieceFront, pieceInteractionAnchor } from './piece-drag.js';
@@ -16,6 +16,7 @@ import { puzzleFloorBounds } from './floor-grid.js';
 import { outsidePolygonSegments } from './surface-patterns.js';
 import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro, initialCameraUnit } from './camera-intro.js';
+import { boundedCameraAxis } from './camera-follow.js';
 import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
@@ -40,8 +41,6 @@ import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from '.
 import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
-import skyBackground from '../sky-background.webp';
-import meadowForeground from '../meadow-foreground.webp';
 
 const buildLabel=document.querySelector('#buildNumber');
 if(buildLabel)buildLabel.textContent=`Build ${__BUILD_INFO__.number} · ${__BUILD_INFO__.revision}${__BUILD_INFO__.development?' (development)':''}`;
@@ -190,7 +189,7 @@ const levelAssetGate=createLevelLoadGate((state,error,id)=>{
 });
 function loadLevelAssets(retry=false){
   return levelAssetGate.run(async()=>{
-    const environment=requestLevelEnvironment(retry),state={...cameraState};
+    const environment=requestLevelEnvironment(retry),configuration=currentBackgroundConfiguration(),state={...cameraState,...(configuration?{sceneryLayout:configuration.sceneryLayout,scenicAtmosphere:configuration.scenicAtmosphere===true,background:configuration.layers!=='foreground',foreground:configuration.layers!=='background'}:{})};
     if(!await environment)throw new Error('The scenery could not be loaded.');
     if(worldPresentation()){await cameraScenery.prepare(state,{retry});syncBackground()}
     await document.fonts.ready;
@@ -1077,9 +1076,23 @@ function resetStudyFollow({paused=true}={}){
 function resumeStudyFollow(){
   if(!studyStraight()||(!cameraState.followX&&!cameraState.followY&&!cameraState.autoTilt))return;
   // A gameplay move ends inspection. Do not retain a pan or tracking offset as
-  // Pom's new screen position; ease the enabled axes back to the canvas center.
+  // Pom's new screen position; resume following within the puzzle bounds.
   if(cameraState.motion==='track'&&cameraState.truck)viewTarget=cameraFocus.copy();
   cameraState.truck=0;resetStudyFollow({paused:false});
+}
+function boundedStudyTarget(desired,position,span=viewSpan()){
+  const camera=render3D.camera,right=camera.getRight(),up=camera.getUp(),forward=camera.getForward(),width=wrap.clientWidth,height=wrap.clientHeight;
+  if(!width||!height)return desired;
+  const unit=height/span,distance=studyPerspective()?Math.max(2,span/(2*Math.tan(camera.fov/2))):15;
+  const visual=puzzleVisualBounds(),depth=Math.max(0,...groups.map(g=>g.depth)),points=[];
+  // Use the puzzle's complete footprint, including the flag, rather than the
+  // scenery or its floor guide. A small margin keeps outlines off the edges.
+  for(const x of [visual.left-.25,visual.right+.25])for(const y of [-.15,visual.height+.7])for(const z of [0,depth])points.push(worldPoint(x,y,z));
+  const project=p=>{const offset=p.subtract(desired),scale=studyPerspective()?distance/Math.max(.1,distance+offset.dot(forward)):1;return{x:{position:offset.dot(right),scale},y:{position:offset.dot(up),scale}}};
+  const projected=points.map(project),pom=project(position),top=64,bottom=Math.min(132,height*.28),margin=Math.min(24,width*.06);
+  const dx=cameraState.followX?boundedCameraAxis({points:projected.map(p=>p.x),min:(margin-width/2)/unit,max:(width/2-margin)/unit,subject:pom.x,padding:.45}):0;
+  const dy=cameraState.followY?boundedCameraAxis({points:projected.map(p=>p.y),min:(bottom-height/2)/unit,max:(height/2-top)/unit,subject:pom.y,padding:.4}):0;
+  return desired.add(right.scale(dx)).add(up.scale(dy));
 }
 function updateStudyFollow(){
   if(isBackgroundStudio()&&!studioCameraFollow)return;
@@ -1091,7 +1104,7 @@ function updateStudyFollow(){
   // Follow in the camera plane so depth and downward pitch cannot introduce a
   // screen-space offset. Translation leaves camera direction and zoom intact.
   const desired=viewTarget.add(right.scale(cameraState.followX?offset.dot(right):0)).add(up.scale(cameraState.followY?offset.dot(up):0));
-  const next=viewTarget.lerp(desired,1-Math.exp(-dt/.18));
+  const framed=boundedStudyTarget(desired,position),next=viewTarget.lerp(framed,1-Math.exp(-dt/.18));
   if(next.subtract(viewTarget).length()<.0001)return;
   viewTarget=next;applyBoardView(false);
 }
@@ -1168,6 +1181,7 @@ function startBoardView(animate=true){
   const needsZoom=unit>fitUnit*1.01;
   if(cameraLab){viewUnit=fitUnit;viewTarget=f.target;applyBoardView(false);resetStudyFollow();finishIntro();return}
   viewUnit=unit;viewTarget=needsZoom?(worldPresentation()?pom.copy():pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0))):from.copy();clampBoardView();
+  if(worldPresentation()&&studyStraight())viewTarget=boundedStudyTarget(viewTarget,pom,viewHeight/viewUnit);
   const target=viewTarget.copy(),endUnit=viewUnit;
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
   if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
@@ -1297,11 +1311,11 @@ function gameInit(){
   // Keep the horizon on the wall's base line; pulled pieces then extend down
   // toward Pom in the camera projection without moving the scenery.
   render3D.updateMatrices(bounds.width/bounds.height);
-  const makeBackdrop=(texture,color)=>{const o=new EngineObject3D(vec3(),box,texture,color);o.rotation3D=render3D.camera.rotation.copy();o.lighting=false;o.receiveShadow=false;o.castShadow=false;o.emissive=1;o.transparent=texture===textureInfos[1];backgroundObjects.push(o);return o};
-  makeBackdrop(textureInfos[0],new Color(1));makeBackdrop(textureInfos[1],new Color(1));
+  const makeBackdrop=(texture,color)=>{const o=new EngineObject3D(vec3(),box,texture,color);o.rotation3D=render3D.camera.rotation.copy();o.lighting=false;o.receiveShadow=false;o.castShadow=false;o.emissive=1;o.transparent=backgroundObjects.length===1;backgroundObjects.push(o);return o};
+  makeBackdrop(undefined,new Color(1));makeBackdrop(undefined,new Color(1));
   const overlays=makeBackdrop(undefined,new Color(1));overlays.transparent=true;overlays.mesh=undefined;
   makeBackdrop(undefined,new Color(1));syncFloorGrid();
-  environmentLoader=createEnvironmentLoader([textureInfos[0],textureInfos[1]]);activeEnvironmentTextures=[textureInfos[0],textureInfos[1]];
+  environmentLoader=createEnvironmentLoader();activeEnvironmentTextures=[];
   syncBackground();
   makeGroups();rebuildBlockMeshes();
   hoverObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));hoverObject.transparent=true;hoverObject.render3D=()=>{};
@@ -1451,7 +1465,7 @@ function renderPieceControls(){
   pieceDrag.sync();
 
 }
-await engineInit(gameInit,gameUpdate,undefined,undefined,renderPieceControls,[skyBackground,meadowForeground],wrap);
+await engineInit(gameInit,gameUpdate,undefined,undefined,renderPieceControls,[],wrap);
 new ResizeObserver(()=>{
   const r={width:wrap.clientWidth,height:wrap.clientHeight};setCanvasFixedSize(vec2(Math.max(1,r.width),Math.max(1,r.height)));if(!backgroundObjects.length)return;
   if(levelLoading||r.width===viewWidth&&r.height===viewHeight)return;

@@ -9,7 +9,7 @@ function decodeImage(url){
 }
 
 export function createEnvironmentTextureLoader(defaultId,defaultTextures,{createTexture,loadImage=decodeImage}){
-  const cache=new Map([[defaultId,{textures:defaultTextures}]]);
+  const cache=new Map(defaultTextures?.length?[[defaultId,{textures:defaultTextures}]]:[]);
   return{
     cached(environment){return cache.get(environmentCacheKey(environment))?.textures},
     load(environment){

@@ -55,3 +55,5 @@ Normal gameplay uses the approved Daisy Meadow scene outside Japan. Japan levels
 Apply to non-Japan levels saves an explicit local gameplay override. Further edits stay in Studio until you apply again. Use game defaults restores the approved gameplay scene and keeps Studio drafts and saved configurations.
 
 Reset preview resets the working preview. It does not delete your named configurations.
+
+Scene images load as needed. Adding a cloud, fog bank or plant may briefly load its image the first time; subsequent placements reuse it. The published Daisy Meadow backdrop replaces the retired static background and separate sky/hill layers. Original artwork remains preserved outside the runtime build.

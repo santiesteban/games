@@ -266,40 +266,6 @@
       "orientation": "upright"
     },
     {
-      "role": "sky",
-      "file": "sky.png",
-      "webp": "sky.webp",
-      "width": 4096,
-      "height": 2048,
-      "tileAxes": [
-        "x"
-      ],
-      "alphaBoundsPixels": [
-        0,
-        0,
-        4096,
-        2048
-      ],
-      "visibleHeightWorldUnits": null
-    },
-    {
-      "role": "distant-hills",
-      "file": "distant-hills.png",
-      "webp": "distant-hills.webp",
-      "width": 4096,
-      "height": 1024,
-      "tileAxes": [
-        "x"
-      ],
-      "alphaBoundsPixels": [
-        0,
-        349,
-        4096,
-        1024
-      ],
-      "visibleHeightWorldUnits": null
-    },
-    {
       "role": "ground-tile",
       "file": "ground-tile.png",
       "webp": "ground-tile.webp",
@@ -315,7 +281,11 @@
         2048,
         2048
       ],
-      "visibleHeightWorldUnits": null
+      "visibleHeightWorldUnits": null,
+      "runtimeEncoding": "q92",
+      "runtimeBytes": 290758,
+      "webpBytes": 290758,
+      "webpSha256": "b46b8ef117b1e9a3f0982f14e0b9ae087910855c88eac7c2a2109308272b6307"
     },
     {
       "role": "flat-background",
@@ -348,7 +318,11 @@
         1024,
         1984
       ],
-      "visibleHeightWorldUnits": 1.2
+      "visibleHeightWorldUnits": 1.2,
+      "runtimeEncoding": "q92",
+      "runtimeBytes": 289444,
+      "webpBytes": 289444,
+      "webpSha256": "cb034e9e9d5cb636d549c46d6c5189749d298d861ad928abc618a4499225b75e"
     },
     {
       "role": "large-arching-cloud",
@@ -370,13 +344,6 @@
       "visibleHeightWorldUnits": 5.0,
       "frame": "backdrop-local",
       "orientation": "upright"
-    },
-    {
-      "file": "static-background.png",
-      "webp": "static-background.webp",
-      "width": 2192,
-      "height": 1072,
-      "tileAxes": []
     }
   ]
 }

@@ -108,7 +108,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
       clear();return null;
     }
     const nextStyle=JSON.stringify(state.cutoutStyle??{});if(nextStyle!==styleKey){styleKey=nextStyle;cutoutStyle=state.cutoutStyle??{};for(const texture of backingTextures)texture.destroyWebGLTexture();backingTextures.clear();meshCache=new WeakMap;clippedCache=new WeakMap}
-    const record=loader.load(state.environment);
+    const record=loader.load(state.environment,{state});
     if(!notified.has(record)){notified.add(record);record.promise.then(()=>onChange())}
     if(record.status!=='ready'){
       clear();onStatus(record.status==='error'?`New kit unavailable: ${record.error.message}`:'Loading the new image kit…');return null;
@@ -195,5 +195,5 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     reference={source:'modular-kit',distance:-back,theme:state.environment,environmentShadowStrength:shadowStrength,groundShadowBlur:shadowBlur,shadowReceivers:shadowPlanes.length,curved:false,points:[wall(-1,0,.08),wall(0,0,.08),wall(1,0,.08)]};
     return reference;
   }
-  return {async prepare(id,options){const record=loader.load(id,options);await record.promise;if(record.status!=='ready')throw record.error??new Error('The scenery kit could not be loaded.')},update,clear,get bounds(){return bounds},get pickRecords(){return pickRecords},get contacts(){return contacts},get ready(){return !!reference}};
+  return {async prepare(state,options){const record=loader.load(state.environment,{...options,state});await record.promise;if(record.status!=='ready')throw record.error??new Error('The scenery kit could not be loaded.')},update,clear,get bounds(){return bounds},get pickRecords(){return pickRecords},get contacts(){return contacts},get ready(){return !!reference}};
 }
