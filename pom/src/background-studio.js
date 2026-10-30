@@ -80,7 +80,7 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
   const strengthRow=field('Environment shadow strength',shadowStrength),strengthValue=document.createElement('output');strengthValue.htmlFor=shadowStrength.id;strengthRow.append(strengthValue);
   shadowStrength.oninput=()=>{values.environmentShadowStrength=Number(shadowStrength.value)/100;strengthValue.value=`${shadowStrength.value}%`;changed()};
   const shadowBlur=document.createElement('input');shadowBlur.id='groundShadowBlur';shadowBlur.type='range';shadowBlur.min=0;shadowBlur.max=2;shadowBlur.step=.05;
-  const blurRow=field('Ground shadow blur',shadowBlur),blurValue=document.createElement('output');blurValue.htmlFor=shadowBlur.id;blurRow.append(blurValue);
+  const blurRow=field('Ground & backdrop shadow blur',shadowBlur),blurValue=document.createElement('output');blurValue.htmlFor=shadowBlur.id;blurRow.append(blurValue);
   shadowBlur.oninput=()=>{values.groundShadowBlur=Number(shadowBlur.value);blurValue.value=Number(shadowBlur.value).toFixed(2);changed()};
   const centerPom=document.createElement('button');centerPom.type='button';centerPom.className='btn';centerPom.textContent='Center on Pom';centerPom.onclick=onCenterPom;body.append(centerPom);
   const editor=document.createElement('fieldset');const legend=document.createElement('legend');legend.textContent='Scenery elements';editor.append(legend);body.append(editor);
@@ -133,7 +133,7 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
     color.oninput=()=>{values.overlays[id].color=color.value;changed()};opacity.oninput=()=>{values.overlays[id].opacity=Number(opacity.value)/100;sync();changed()};
     overlayControls.push({id,color,opacity,value,section});body.append(section);
   }
-  const instructions=document.createElement('p');instructions.className='design-copy';instructions.textContent='Drag to pan, pinch or scroll to zoom, and use the view cube to compare angles. Transparent areas appear on lavender when viewing the foreground alone.';body.append(instructions);
+  const instructions=document.createElement('p');instructions.className='design-copy';instructions.textContent='Drag to pan, or pinch or scroll to zoom. Camera angles adjust automatically. Transparent areas appear on lavender when viewing the foreground alone.';body.append(instructions);
   const reset=document.createElement('button');reset.type='button';reset.className='btn';reset.textContent='Reset preview';const actions=document.createElement('div');actions.className='design-actions';
   const apply=document.createElement('button');apply.type='button';apply.className='btn';apply.textContent='Apply to non-Japan levels';
   const clear=document.createElement('button');clear.type='button';clear.className='btn';clear.textContent='Use game defaults';clear.hidden=!(applied&&appliedRevision===ENVIRONMENT_REVISION);

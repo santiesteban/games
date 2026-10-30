@@ -25,3 +25,20 @@ test('scenery shadow projects onto ground and wall with continuous UVs',()=>{
  const soft=projectStageShadow(quad,sun,{origin:{x:0,y:0,z:0},normal:{x:0,y:1,z:0}},.3);
  assert.ok(soft.polygon.some(p=>p.u<0));
 });
+
+// The approved cloud can be only 0.01 units from the wall. Its shadow must
+// survive camera bearings and wide blur without projecting behind the source.
+test('near-wall silhouettes remain on the receiving plane at side bearings',()=>{
+ const sun={x:.3535533906,y:.7071067812,z:.6123724357};
+ for(const degrees of [-35,0,35])for(const blur of [0,.35,2]){
+  const yaw=degrees*Math.PI/180,n={x:Math.sin(yaw),y:0,z:Math.cos(yaw)},r={x:Math.cos(yaw),y:0,z:-Math.sin(yaw)},origin={x:0,y:0,z:-3};
+  const point=(x,y)=>({x:origin.x+n.x*.01+r.x*x,y,z:origin.z+n.z*.01+r.z*x});
+  const source=[point(-1,4),point(1,4),point(1,2),point(-1,2)];
+  const shadow=projectStageShadow(source,sun,{origin,normal:n},blur);
+  assert.ok(shadow?.polygon.length>=3,`${degrees} degrees, blur ${blur}`);
+  for(const p of shadow.polygon){
+   const depth=(p.x-origin.x)*n.x+(p.z-origin.z)*n.z;
+   assert.ok(Math.abs(depth)<1e-8);assert.ok(p.t>=-1e-8);
+  }
+ }
+});

@@ -15,7 +15,7 @@ import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds } from './floor-grid.js';
 import { outsidePolygonSegments } from './surface-patterns.js';
 import { createLevelLoadGate } from './level-loading.js';
-import { sampleCameraIntro } from './camera-intro.js';
+import { sampleCameraIntro, initialCameraUnit } from './camera-intro.js';
 import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
@@ -39,7 +39,7 @@ import { deploymentUrls } from '../shared/deployment.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
 import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
-import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW, createViewController } from './camera-view.js';
+import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 import skyBackground from '../sky-background.webp';
 import meadowForeground from '../meadow-foreground.webp';
 
@@ -228,7 +228,6 @@ useLevelPalette(activeLevel);
 let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const inkColor=new Color(.157,.145,.122);
-const viewControls=createViewController(document.querySelector('#viewController'),position=>changeView(position.horizontal,position.vertical));
 function squareFace(m,map,bounds,color,normal){const [u0,u1,v0,v1]=bounds,pts=[[u0,v0],[u1,v0],[u1,v1],[u0,v1]],center=map((u0+u1)/2,(v0+v1)/2),vertices=[center,...pts.map(([u,v])=>map(u,v))],indices=[];for(let i=1;i<=4;i++)indices.push(0,i,i===4?1:i+1);m.addTriangles(vertices,indices,normal,undefined,color);return m}
 function frontTileMesh(){const m=new Mesh();squareFace(m,(x,y)=>vec3(x,y,0),[-.5,.5,-.5,.5],new Color(1),vec3(0,0,1));m.doubleSided=true;return m}
 function makeFanMesh(perimeter){const points=[vec3() ,...perimeter.map(([x,y])=>vec3(x,y,0))],indices=[];for(let i=1;i<points.length;i++)indices.push(0,i,i===points.length-1?1:i+1);const mesh=new Mesh().addTriangles(points,indices,vec3(0,0,1));mesh.doubleSided=true;return mesh}
@@ -809,7 +808,7 @@ function updateUI(){
   cameraLab?.setBusy(busy||won||introPlaying||levelLoading);
   wrap.classList.toggle('no-piece-selected',!selected);
   document.querySelector('#levelSettings').disabled=busy||won||introPlaying||levelLoading;
-  document.querySelector('.control-deck').inert=won;
+  document.querySelector('#gameActions').inert=won;
   document.querySelector('#level-number').textContent=activeLevel.userPuzzle?'★':String(activeLevel.number).padStart(2,'0');document.querySelector('#levelBadge').setAttribute('aria-label',`Level ${activeLevel.number}`);document.querySelector('#level-title').textContent=isBackgroundStudio()?'Environment Studio':activeLevel.name;document.querySelector('#exitLevel').disabled=false;
   document.querySelector('#pull').disabled=busy||won||introPlaying||levelLoading||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
   document.querySelector('#push').disabled=busy||won||introPlaying||levelLoading||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
@@ -822,7 +821,6 @@ function updateUI(){
   pieceDrag.sync();
   syncStackedControls();
   syncInteractionHelp();
-  viewControls.update(viewSide,viewHeightStep);viewControls.setDisabled(busy||won||introPlaying||levelLoading);
   const color=selected?palette[selected.color]:null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
   wrap.style.setProperty('--block-ink',color?blockActionText(color):'#292537');
   syncBlocks();syncPlayer();syncFlag();syncMovementMarkers();
@@ -859,7 +857,7 @@ function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=fals
   if(!preserveVictoryTransition)victoryEffects.reset();
   let cardReady=Promise.resolve(null);
   syncScreenAppearance(panel==='title'?'home':panel);
-  hideHelp();interactionHelpKey=null;stopIntro();celebration=null;viewControls.close();
+  hideHelp();interactionHelpKey=null;stopIntro();celebration=null;
   const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
   for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
   document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='';
@@ -919,9 +917,9 @@ function recordCompletedLevel(){if(cameraLab||interactionLab)return;if(activeLev
 function resetLevelState(level){
   levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
-  pieceDragAnchor=null;activeLevel=level;if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('has-overlay-deck',!cameraLab&&!isPreviewLevel(level));document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  pieceDragAnchor=null;activeLevel=level;if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
-  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();viewControls.close();cameraLab?.setLevel(level.id);celebration=null;
+  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
 }
 function playUserPuzzle(level){if(!gameReady)return;syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
@@ -1023,7 +1021,7 @@ function studyFrame(width,height){
     const project=(x,y,z)=>{x=x+skew*z-cx;y-=cy;z-=cz;return [Math.cos(yaw)*x-Math.sin(yaw)*z,Math.cos(pitch)*y-Math.sin(pitch)*(Math.sin(yaw)*x+Math.cos(yaw)*z)]};
     for(const x of [Math.min(floor.left,visual.left),Math.max(floor.right,visual.right)])for(const y of [0,visual.height+.85])for(const z of [0,4])points.push(project(x,y,z));
   }
-  const halfX=Math.max(...points.map(p=>Math.abs(p[0]))),halfY=Math.max(...points.map(p=>Math.abs(p[1]))),top=24,bottom=82+overlayDeckHeight(),margin=20;
+  const halfX=Math.max(...points.map(p=>Math.abs(p[0]))),halfY=Math.max(...points.map(p=>Math.abs(p[1]))),top=64,bottom=82,margin=20;
   const unit=Math.max(1,Math.min(80,(width-margin*2)/(halfX*2),(height-top-bottom)/(halfY*2)));
   const yaw=cameraYaw(),up=vec3(-Math.sin(yaw)*Math.sin(viewPitch),Math.cos(viewPitch),-Math.cos(yaw)*Math.sin(viewPitch));
   return{height:height/unit,target:vec3(cx,cy,cz).add(up.scale((top-bottom)/(2*unit))),minX:-halfX,maxX:halfX,minY:-halfY,maxY:halfY,top,bottom,margin};
@@ -1158,17 +1156,15 @@ function applyBoardView(clamp=true){
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
   if(worldPresentation()){cameraLab?.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraMotion=cameraState.motion;wrap.dataset.cameraTruck=String(cameraState.truck);wrap.dataset.cameraFollowing=String(cameraState.followX||cameraState.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraState.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
 }
-function overlayDeckHeight(){return document.querySelector('.stage').classList.contains('has-overlay-deck')?document.querySelector('.control-deck').getBoundingClientRect().height:0}
 function startBoardView(animate=true){
   if(levelLoading)return;
-  document.querySelector('.stage').style.setProperty('--control-deck-height',`${overlayDeckHeight()}px`);
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
   const f=sceneFrame(viewWidth,viewHeight);
   if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
   const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
   if(isPreviewLevel(activeLevel)||activeLevel.studioExample||!document.querySelector('#menuScreen').hidden){finishIntro();return}
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const token=introFrame,from=viewTarget.copy(),unit=Math.max(fitUnit,viewMobile?tappingUnit():64),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
+  const token=introFrame,from=viewTarget.copy(),unit=initialCameraUnit({fitUnit,width:viewWidth,height:viewHeight,mobile:viewMobile}),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
   const needsZoom=unit>fitUnit*1.01;
   if(cameraLab){viewUnit=fitUnit;viewTarget=f.target;applyBoardView(false);resetStudyFollow();finishIntro();return}
   viewUnit=unit;viewTarget=needsZoom?(worldPresentation()?pom.copy():pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0))):from.copy();clampBoardView();
@@ -1381,27 +1377,13 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
 }
 function manipulate(dir){const g=selected;if(levelLoading||busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
 function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
-function changeView(horizontal,vertical=viewHeightStep){
-  if(pieceDrag.active)return;
-  if(levelLoading||busy||won||!viewReady)return;enterPlayFromIntro();
-  if(cameraLab){if(horizontal!==viewSide)cameraLab.orbitBy(-5*(horizontal-viewSide));return}
-  if(worldPresentation()){const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;viewSide=next.horizontal;viewHeightStep=next.vertical;cameraState.yaw=-35*viewSide;cameraState.pitch=viewHeightStep?10:20;applyCameraStudy({orbit:true});updateUI();return}
-  const next=cameraPosition(horizontal,vertical);if(next.horizontal===viewSide&&next.vertical===viewHeightStep)return;
-  stopIntro();clearBoardHover();
-  // Keep the wall plane in the same screen position, rather than following Pom's sheared depth.
-  const projectedTarget=viewTarget.y*Math.cos(viewPitch)-viewTarget.z*Math.sin(viewPitch);
-  viewSide=next.horizontal;viewHeightStep=next.vertical;viewPitch=cameraPitch();
-  viewTarget.y=(projectedTarget+viewTarget.z*Math.sin(viewPitch))/Math.cos(viewPitch);
-  if(!activeLevel.studioExample)baseCameraHeight=fitCamera(wrap.clientWidth,wrap.clientHeight);
-  applyBoardView(!activeLevel.studioExample);updateUI();
-}
-
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
 wrap.addEventListener('wheel',e=>{if(pieceDrag.active){e.preventDefault();return}if(levelLoading||won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
 // Overlay controls must never select or move a ground spot underneath them.
+const gameActions=document.querySelector('#gameActions');for(const event of ['pointerdown','pointermove','pointerup','click'])gameActions.addEventListener(event,e=>e.stopPropagation());gameActions.addEventListener('pointerenter',clearBoardHover);
 const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',clearBoardHover);
 const studioControls=document.querySelector('#studioControls'),movementCase=document.querySelector('#movementCase');for(const example of movementExamples){const option=document.createElement('option');option.value=example.id;option.textContent=example.label;movementCase.append(option)}movementCase.onchange=()=>{if(!busy)resetLevelState(studioLevel(levels,movementExamples.find(example=>example.id===movementCase.value)))};
-const previewClimb=document.querySelector('#previewClimb');for(const event of ['pointerdown','pointerup','pointermove'])studioControls.addEventListener(event,e=>e.stopPropagation());previewClimb.onclick=()=>{if(busy||!activeLevel.previewMove)return;const side=viewSide,height=viewHeightStep;resetLevelState(activeLevel);changeView(side,height);moveTo(activeLevel.previewMove)};
+const previewClimb=document.querySelector('#previewClimb');for(const event of ['pointerdown','pointerup','pointermove'])studioControls.addEventListener(event,e=>e.stopPropagation());previewClimb.onclick=()=>{if(busy||!activeLevel.previewMove)return;resetLevelState(activeLevel);moveTo(activeLevel.previewMove)};
 
 // A temporary lab reuses catalog geometry without changing IDs or saved puzzles.
 let interactionCase,interactionLevel;
@@ -1454,9 +1436,9 @@ window.addEventListener('keydown',e=>{
     else if(e.key==='End'){levelList.scrollTop=levelList.scrollHeight;e.preventDefault()}
     return;
   }
-  if(document.querySelector('.stage').inert||busy||won||e.target.closest('#viewController')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
-  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','z','Z','r','R'].includes(e.key))enterPlayFromIntro();
-  if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click();const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(delta){e.preventDefault();changeView(viewSide+delta[0],viewHeightStep+delta[1])}
+  if(document.querySelector('.stage').inert||busy||won||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(['z','Z','r','R'].includes(e.key))enterPlayFromIntro();
+  if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click()
 });
 setCanvasPixelRatio(Math.min(window.devicePixelRatio||1,2));
 glSetAntialias(true);

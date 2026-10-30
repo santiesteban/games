@@ -51,14 +51,13 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
       <label class="camera-lab-check"><input type="checkbox" data-props checked> Landscape depth elements</label>
       <label class="camera-lab-check"><input type="checkbox" data-guides checked> Playable ground grid</label></fieldset>
       <button type="button" data-fit>Fit entire puzzle</button>
-      <p class="camera-lab-copy">Try pulling pieces to depths 1, 2 and 3 and walking behind them. Left/right arrow keys orbit by 5° or track by 5% of the puzzle width. Front artwork is for inspection: its floor is edge-on.</p>
+      <p class="camera-lab-copy">Try pulling pieces to depths 1, 2 and 3 and walking behind them. Use the camera sliders to inspect other angles. Front artwork is for inspection: its floor is edge-on.</p>
     </div>`;
   const stage=document.querySelector('.stage');stage.append(panel);stage.classList.add('has-camera-lab');
   // LittleJS's document wheel/touch handlers cancel scrolling outside form
   // fields. Keep native panel gestures local without cancelling their defaults.
   for(const type of ['wheel','touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','mousedown','mousemove','mouseup'])panel.addEventListener(type,event=>event.stopPropagation(),{passive:true});
   panel.addEventListener('keydown',event=>event.stopPropagation());
-  document.querySelector('#viewController').hidden=true;
   const guide=document.createElement('div');guide.className='camera-horizon-guide';guide.setAttribute('aria-hidden','true');document.querySelector('#canvasWrap').append(guide);
   const levelSelect=panel.querySelector('[data-level]');
   for(const level of levels.filter(level=>level.compatibility.playable&&level.kind==='puzzle'))levelSelect.add(new Option(`${level.number} · ${level.name}`,level.id));

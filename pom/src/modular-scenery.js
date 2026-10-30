@@ -57,7 +57,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
   const loader=createSceneryKitLoader(),notified=new Set;
   let meshCache=new WeakMap,clippedCache=new WeakMap,styleKey,cutoutStyle={};
   const backingTextures=new Set();
-  let shadowStyleKey,groundShader=pieceShadowShader,floorProjection,wallProjection,shadowPlanes=[],shadowBlur=0,shadowStrength=1,shadowsEnabled=true;
+  let shadowStyleKey,groundShader=pieceShadowShader,projectionShader,shadowPlanes=[],shadowBlur=0,shadowStrength=1,shadowsEnabled=true;
   const tint=hex=>new Color(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
   let key,objects=[],reference,bounds,contacts=[],pickRecords=[];
   function clear(){for(const object of objects)object.destroy();objects=[];key=reference=bounds=undefined;contacts=[];pickRecords=[]}
@@ -69,13 +69,13 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
   function projectShadow(corners,texture){
     if(!shadowsEnabled||shadowStrength<=0)return;
     for(const plane of shadowPlanes){
-      const projection=projectStageShadow(corners,render3D.sunDirection,plane,plane.floor?shadowBlur:.08);if(!projection)continue;
+      const projection=projectStageShadow(corners,render3D.sunDirection,plane,shadowBlur);if(!projection)continue;
       const mesh=new Mesh(),p=projection.polygon,center=p.reduce((sum,v)=>sum.add(vec3(v.x,v.y,v.z)),vec3()).scale(1/p.length);
       for(let i=1;i<p.length-1;i++){
         const triangle=[p[0],p[i],p[i+1]],points=triangle.map(v=>vec3(v.x+plane.normal.x*.0005-center.x,v.y+plane.normal.y*.0005-center.y,v.z+plane.normal.z*.0005-center.z));
         mesh.addTriangles(points,[0,1,2],undefined,triangle.map(v=>vec2(v.u,v.v)));
       }
-      mesh.doubleSided=true;const o=object(mesh,texture);o.pos3D=center;o.transparent=true;o.emissive=1;o.shader=plane.floor?floorProjection:wallProjection;o.castShadow=false;
+      mesh.doubleSided=true;const o=object(mesh,texture);o.pos3D=center;o.transparent=true;o.emissive=1;o.shader=projectionShader;o.castShadow=false;
     }
   }
   function card(asset,x,z,y=0,scale=1,tilt=0,material=cutoutStyle,scenic=false){
@@ -125,21 +125,26 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     const shadowRange=Math.max(width+24,10-Math.min(-12,back),height)+6;
     const shadowKey=JSON.stringify([shadowStrength,shadowBlur,shadowRange]);
     if(shadowKey!==shadowStyleKey){
-      if(groundShader!==pieceShadowShader)groundShader.dispose();floorProjection?.dispose();wallProjection?.dispose();
-      groundShader=createGroundSurfaceShader(shadowBlur,shadowRange);floorProjection=createSceneryProjectionShader(shadowStrength,shadowBlur);wallProjection=createSceneryProjectionShader(shadowStrength,.08);shadowStyleKey=shadowKey;
+      if(groundShader!==pieceShadowShader)groundShader.dispose();projectionShader?.dispose();
+      groundShader=createGroundSurfaceShader(shadowBlur,shadowRange);projectionShader=createSceneryProjectionShader(shadowStrength,shadowBlur);shadowStyleKey=shadowKey;
     }
     const wallHeight=Math.max(24,height+16),wallWidth=wallHeight*(a['flat-background']??a['static-background'])?.meta.width/(a['flat-background']??a['static-background'])?.meta.height;
     shadowPlanes=[{floor:true,origin:vec3(),normal:vec3(0,1,0)}];
     if(state.background)shadowPlanes.push({origin:wall(0,0),normal:vec3(Math.sin(yaw),0,Math.cos(yaw)),top:wallHeight,halfWidth:Number.isFinite(wallWidth)?wallWidth/2:span/2});
+    // Keep the painted backing behind its shadow plane, as the ground already
+    // is. A sub-millimetre decal lift loses depth precision at distant views;
+    // lifting the shadow farther forward would cover near-wall cloud cutouts.
+    // Recess only the backing, leaving projections and cutouts registered.
+    const wallBacking=(x,y,offset=0)=>wall(x,y,offset-.02);
     const backdrop=a['flat-background']??a['static-background'];
     if(state.background&&backdrop){
       const h=Math.max(24,height+16),w=h*backdrop.meta.width/backdrop.meta.height;
-      quad([wall(-w/2,h),wall(w/2,h),wall(w/2,0),wall(-w/2,0)],backdrop.texture,[vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,1)],{receive:true});
+      quad([wallBacking(-w/2,h),wallBacking(w/2,h),wallBacking(w/2,0),wallBacking(-w/2,0)],backdrop.texture,[vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,1)],{receive:true}).shader=groundShader;
     }else if(state.background){
       const paintHeight=Math.max(24,height+16),paintTop=paintHeight-3,paintWidth=paintHeight*2,top=Math.max(100,height*3),bottom=-80;
-      quad([wall(-span/2,top),wall(span/2,top),wall(span/2,bottom),wall(-span/2,bottom)],a.sky.texture,[vec2(.5-span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-bottom)/paintHeight),vec2(.5-span/2/paintWidth,(paintTop-bottom)/paintHeight)],{receive:true});
+      quad([wallBacking(-span/2,top),wallBacking(span/2,top),wallBacking(span/2,bottom),wallBacking(-span/2,bottom)],a.sky.texture,[vec2(.5-span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-bottom)/paintHeight),vec2(.5-span/2/paintWidth,(paintTop-bottom)/paintHeight)],{receive:true}).shader=groundShader;
       const ridgeHeight=5.5,ridgeWidth=ridgeHeight*4;
-      quad([wall(-span/2,ridgeHeight,.08),wall(span/2,ridgeHeight,.08),wall(span/2,0,.08),wall(-span/2,0,.08)],a['distant-hills'].texture,[vec2(-span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,1),vec2(-span/2/ridgeWidth,1)],{receive:true});
+      quad([wall(-span/2,ridgeHeight,.08),wall(span/2,ridgeHeight,.08),wall(span/2,0,.08),wall(-span/2,0,.08)],a['distant-hills'].texture,[vec2(-span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,1),vec2(-span/2/ridgeWidth,1)],{receive:true}).shader=groundShader;
     }
     // Exact world UV scale: one repeat covers 16 x 16 puzzle cells. Horizontal
     // geometry supplies perspective; no painted foreground is stretched onto it.

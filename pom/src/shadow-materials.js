@@ -56,7 +56,7 @@ export const solidPieceShadowShader=new Shader(`${receiverShadow}
   }
 `);
 
-// Ground receivers get their own filter width; puzzle-face shading is unchanged.
+// Ground and backdrop receivers share this filter; puzzle-face shading is unchanged.
 export function createGroundSurfaceShader(blur,range){
   if(!blur)return pieceShadowShader;
   const radius=(blur/Math.max(1,range)).toFixed(8);
@@ -84,7 +84,7 @@ export function createGroundSurfaceShader(blur,range){
 }
 
 // Scenery uses separate projected silhouettes, so its opacity does not change
-// puzzle shadows. UV derivatives convert the ground blur from world units.
+// puzzle shadows. UV derivatives convert the shared surface blur from world units.
 export function createSceneryProjectionShader(strength,blur){
   if(!blur)return new Shader(`void mainImage(out vec4 color,vec2 uv){
     if(any(lessThan(uv,vec2(0)))||any(greaterThan(uv,vec2(1)))){color=vec4(0);return;}

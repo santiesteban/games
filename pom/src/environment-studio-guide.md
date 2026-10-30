@@ -1,10 +1,10 @@
 # Environment Studio guide
 
-Use Environment Studio to arrange scenery and compare saved environments. Changes save automatically to your current browser’s working draft.
+Use Environment Studio to arrange scenery and compare saved environments. Undo and Start over sit at the top right of the game area. Changes save automatically to your current browser’s working draft.
 
 ## Find your controls
 
-Open or close each section independently. Saved configurations manages your alternatives. Scene & camera controls the environment, layers, floor guide and backdrop distance. Selected element contains position, size, tilt, material and support controls. Shadows controls scenery strength and ground softness.
+Open or close each section independently. Saved configurations manages your alternatives. Scene & camera controls the environment, layers, floor guide and backdrop distance. Selected element contains position, size, tilt, material and support controls. Shadows controls scenery strength and ground and backdrop softness.
 
 ## Arrange scenery
 
@@ -18,7 +18,7 @@ Pom is approximately dog-sized as a visual reference. Individual daisies should 
 
 ## Camera and backdrop
 
-Drag empty scene space to pan, scroll or pinch to zoom, and use the view control to compare angles. Panning is bounded around the stage. Center on Pom resumes the game’s camera follow; panning or dragging scenery pauses it.
+Drag empty scene space to pan, scroll or pinch to zoom. The game manages the camera angle automatically. Panning is bounded around the stage. Center on Pom resumes the game’s camera follow; panning or dragging scenery pauses it.
 
 Backdrop distance accepts 0.5–80. Automatic distance restores spacing based on puzzle size. Side views may require more distance to keep the wall clear of the puzzle. Scenery placed behind a nearby wall may become hidden.
 
@@ -38,7 +38,7 @@ Padding and edge geometry stop at ground level independently of the painted fron
 
 Environment shadow strength controls scenery shadows independently from puzzle shadows. Zero hides projected scenery shadows; painted shading in the artwork remains visible.
 
-Ground shadow blur softens both puzzle and scenery shadows falling on the ground. It does not change puzzle-face shading. Scenery projects onto the ground and backdrop wall; overlapping shadows may darken. Supports do not currently add projected silhouettes.
+Ground & backdrop shadow blur softens both puzzle and scenery shadows on the ground and backdrop wall, using the same setting on both surfaces. It does not change puzzle-face shading. Scenery projects onto the ground and backdrop wall; overlapping shadows may darken. Supports do not currently add projected silhouettes.
 
 ## Save and compare
 

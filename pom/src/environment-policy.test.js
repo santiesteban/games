@@ -8,7 +8,7 @@ test('approved scene covers the catalog except every Japan level',()=>{
  let japan=0,others=0;
  for(const level of catalog.levels){const actual=gameplayEnvironmentConfiguration(level,catalog.groups,approved,null,null);if(level.group==='japan-challenges'){assert.equal(actual,null);japan++}else{assert.equal(actual,approved);others++}}
  assert.equal(japan,16);assert.equal(others,76);
- assert.equal(approved.backgroundDistance,3);assert.equal(approved.environmentShadowStrength,.45);assert.equal(approved.groundShadowBlur,.35);assert.equal(approved.sceneryLayout.length,18);
+ assert.equal(approved.showGuides,true);assert.equal(approved.backgroundDistance,3);assert.equal(approved.environmentShadowStrength,.45);assert.equal(approved.groundShadowBlur,.35);assert.equal(approved.sceneryLayout.length,18);
 });
 test('legacy applied scene is preserved but cannot mask shipped adoption; explicit later Apply works',()=>{
  const level=catalog.levels[0],old={environment:'highway-desert'};

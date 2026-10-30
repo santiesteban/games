@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sampleCameraIntro,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
+import {sampleCameraIntro,initialCameraUnit,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
 
 test('overview holds, then pans without zoom, then zooms to the exact endpoint',()=>{
   assert.deepEqual(sampleCameraIntro(hold-1,20,80),{phase:'overview',pan:0,unit:20,done:false});
@@ -19,4 +19,12 @@ test('pan and zoom joins are continuous with no final snap',()=>{
 test('views that already fit end after the overview hold',()=>{
   assert.equal(sampleCameraIntro(hold-1,80,80).done,false);
   assert.deepEqual(sampleCameraIntro(hold,80,80),{phase:'ready',pan:1,unit:80,done:true});
+});
+
+test('small-screen opening zoom leaves room around Pom without restricting manual zoom',()=>{
+  assert.equal(initialCameraUnit({fitUnit:20,width:390,height:600,mobile:true}),48.75);
+  assert.equal(initialCameraUnit({fitUnit:20,width:320,height:480,mobile:true}),40);
+  assert.equal(initialCameraUnit({fitUnit:20,width:700,height:200,mobile:true}),40);
+  assert.equal(initialCameraUnit({fitUnit:70,width:390,height:600,mobile:true}),70);
+  assert.equal(initialCameraUnit({fitUnit:20,width:1280,height:600,mobile:false}),64);
 });

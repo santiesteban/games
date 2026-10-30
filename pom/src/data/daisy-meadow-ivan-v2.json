@@ -5,7 +5,7 @@
     "environment": "daisy-meadow",
     "composition": "auto",
     "layers": "both",
-    "showGuides": false,
+    "showGuides": true,
     "backgroundDistance": 3,
     "environmentShadowStrength": 0.45,
     "groundShadowBlur": 0.35,

@@ -9,3 +9,10 @@ export function sampleCameraIntro(elapsed,fromUnit,toUnit){
   if(elapsed<end){const t=smooth((elapsed-panEnd)/INTRO_ZOOM_MS);return{phase:'zoom',pan:1,unit:Math.exp(Math.log(fromUnit)+(Math.log(toUnit)-Math.log(fromUnit))*t),done:false}}
   return{phase:'ready',pan:1,unit:toUnit,done:true};
 }
+
+// Opening framing is separate from the maximum interactive zoom. Small screens
+// should show at least eight cells across and five vertically around Pom.
+export function initialCameraUnit({fitUnit,width,height,mobile}){
+  const target=mobile?Math.min(56,width/8,height/5):64;
+  return Math.max(fitUnit,target);
+}

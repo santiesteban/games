@@ -91,7 +91,7 @@ export function createDesignPlayground(panel,onChange,onApply){
     collapse.onclick=()=>{const hidden=panel.classList.toggle('is-collapsed');collapse.textContent=hidden?'Show':'Hide';collapse.setAttribute('aria-expanded',String(!hidden))};
     header.append(title,collapse);panel.append(header);
     const body=document.createElement('div');body.id='designControlsBody';body.className='design-controls-body';body.tabIndex=0;body.setAttribute('role','region');body.setAttribute('aria-label','Design settings');panel.append(body);
-    const copy=document.createElement('p');copy.className='design-copy';copy.textContent='Shooting Star, in our standard palette. Adjust the scene live, or turn the view cube.';body.append(copy);
+    const copy=document.createElement('p');copy.className='design-copy';copy.textContent='Shooting Star, in our standard palette. Adjust the scene live.';body.append(copy);
     const geometry=section(body,'Cell geometry');
     const squareness=range(geometry,'Cell squareness',values.cellSquareness,0,1,.05,n=>values.cellSquareness=n,n=>n.toFixed(2),DEFAULT_DESIGN.cellSquareness);
     const presets=document.createElement('div');presets.className='design-actions';
