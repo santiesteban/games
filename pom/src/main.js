@@ -17,6 +17,7 @@ import { outsidePolygonSegments } from './surface-patterns.js';
 import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro, initialCameraUnit } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
+import { installViewportSafety } from './viewport-safety.js';
 import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
@@ -1222,19 +1223,29 @@ function sceneryRay(e){const p=boardPoint(e);return render3D.screenToRay(vec2(p.
 function boardDown(e){
   if(pieceDrag.active)return;
   if(levelLoading||won||!viewReady||e.button>0)return;enterPlayFromIntro();stopIntro();
-  if(isBackgroundStudio()&&cameraState.environment==='daisy-meadow'){
+  if(!viewportUI.pageZoomed&&isBackgroundStudio()&&cameraState.environment==='daisy-meadow'){
     const hit=pickScenery(sceneryRay(e),cameraScenery.pickRecords);
     if(hit&&backgroundStudio.selectElement(hit.record.id)){
       const item=backgroundStudio.values.sceneryLayout.find(item=>item.id===hit.record.id);
       sceneryGesture={pointer:e.pointerId,hit,startX:item.x,startY:item.y,startZ:item.z};wrap.setPointerCapture(e.pointerId);resetStudyFollow();e.preventDefault();return;
     }
   }
-  const piece=draggableFrontPiece(e);
+  const piece=viewportUI.pageZoomed?null:draggableFrontPiece(e);
   if(piece){selected=piece.piece;pieceDragAnchor=piece;updateUI();if(pieceDrag.beginFace(e))return}
-  const p=boardPoint(e);boardPointers.set(e.pointerId,p);wrap.setPointerCapture(e.pointerId);
+  const p=boardPoint(e);boardPointers.set(e.pointerId,p);if(!viewportUI.pageZoomed)wrap.setPointerCapture(e.pointerId);
   if(boardPointers.size===1)boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};else{boardGesture.multi=true;clearBoardHover()}
 }
 function boardMove(e){
+  if(viewportUI.pageZoomed){
+    // Leave browser pan/pinch available once the page itself is magnified.
+    // Track movement only to distinguish a tap from native panning.
+    if(sceneryGesture?.pointer===e.pointerId||pieceDrag.active){boardUp(e,true);return}
+    if(boardPointers.has(e.pointerId)){
+      const p=boardPoint(e);boardPointers.set(e.pointerId,p);
+      if(boardGesture){boardGesture.moved||=Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6;boardGesture.multi||=boardPointers.size>1}
+    }
+    return;
+  }
   if(sceneryGesture?.pointer===e.pointerId){
     const g=sceneryGesture,p=scenePlanePoint(sceneryRay(e),g.hit.record);
     if(p){const delta={x:p.point.x-g.hit.point.x,y:p.point.y-g.hit.point.y,z:p.point.z-g.hit.point.z},axis=g.hit.record.axis;backgroundStudio.moveElement(g.hit.record.id,g.startX+delta.x*axis.x+delta.z*axis.z,g.startY+delta.y,g.startZ+delta.x*g.hit.record.depthAxis.x+delta.z*g.hit.record.depthAxis.z)}
@@ -1392,7 +1403,7 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
 function manipulate(dir){const g=selected;if(levelLoading||busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
 function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
-wrap.addEventListener('wheel',e=>{if(pieceDrag.active){e.preventDefault();return}if(levelLoading||won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
+wrap.addEventListener('wheel',e=>{if(viewportUI.pageZoomed&&e.ctrlKey)return;if(pieceDrag.active){e.preventDefault();return}if(levelLoading||won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
 // Overlay controls must never select or move a ground spot underneath them.
 const gameActions=document.querySelector('#gameActions');for(const event of ['pointerdown','pointermove','pointerup','click'])gameActions.addEventListener(event,e=>e.stopPropagation());gameActions.addEventListener('pointerenter',clearBoardHover);
 const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',clearBoardHover);
@@ -1465,6 +1476,7 @@ function renderPieceControls(){
   pieceDrag.sync();
 
 }
+const viewportUI=installViewportSafety(document.querySelector('.app'),wrap,window.visualViewport);
 await engineInit(gameInit,gameUpdate,undefined,undefined,renderPieceControls,[],wrap);
 new ResizeObserver(()=>{
   const r={width:wrap.clientWidth,height:wrap.clientHeight};setCanvasFixedSize(vec2(Math.max(1,r.width),Math.max(1,r.height)));if(!backgroundObjects.length)return;

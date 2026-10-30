@@ -465,3 +465,8 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
 .stage.is-won .game-actions,.stage.is-level-loading .game-actions{display:none}
 .canvas-actions{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 .stacked-piece-controls{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+
+/* Keep controls inside a magnified browser viewport without disabling zoom. */
+.app.is-page-zoomed{position:absolute;left:0;top:0;width:var(--visual-width);height:var(--visual-height);transform:translate(var(--visual-x),var(--visual-y));transform-origin:0 0}
+.app.is-page-zoomed .canvas-wrap,.app.is-page-zoomed .canvas-wrap canvas,.app.is-page-zoomed .piece-drag-handle{touch-action:auto}
+.app.is-page-zoomed #menuScreen,.app.is-page-zoomed #menuScreen #levelsPanel,.app.is-page-zoomed #menuScreen #settingsPanel{height:100%;min-height:0}
