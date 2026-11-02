@@ -1,3 +1,4 @@
+import {createSceneryGeometryCache} from './scenery-geometry-cache.js';
 import {paddedCutout} from './cutout-padding.js';
 import {defaultSceneryLayout,cutoutMaterial} from './scenery-layout.js';
 import {EngineObject3D,Mesh,Color,vec2,vec3,render3D,TextureInfo} from 'littlejsengine';
@@ -55,8 +56,9 @@ function cardGeometry(asset,style={},ground=-Infinity){
 }
 export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
   const loader=createSceneryKitLoader(),notified=new Set;
-  let meshCache=new WeakMap,clippedCache=new WeakMap,styleKey,cutoutStyle={};
+  let meshCache=new WeakMap,styleKey,cutoutStyle={};
   const backingTextures=new Set();
+  const clippedCache=createSceneryGeometryCache(g=>{if(g.borderTexture){g.borderTexture.destroyWebGLTexture();backingTextures.delete(g.borderTexture)}});
   let shadowStyleKey,groundShader=pieceShadowShader,projectionShader,shadowPlanes=[],shadowBlur=0,shadowStrength=1,shadowsEnabled=true;
   const tint=hex=>new Color(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
   let key,objects=[],reference,bounds,contacts=[],pickRecords=[];
@@ -79,10 +81,10 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     }
   }
   function card(asset,x,z,y=0,scale=1,tilt=0,material=cutoutStyle,scenic=false){
-    if(!clippedCache.has(asset))clippedCache.set(asset,new Map());
-    const cache=clippedCache.get(asset),ground=-y/scale,cacheKey=JSON.stringify([ground,material]);
-    if(!cache.has(cacheKey)){if(cache.size>2){for(const g of cache.values())if(g.borderTexture){g.borderTexture.destroyWebGLTexture();backingTextures.delete(g.borderTexture)}cache.clear()}const g=cardGeometry(asset,material,ground);if(g.borderTexture)backingTextures.add(g.borderTexture);cache.set(cacheKey,g)}
-    const geometry=cache.get(cacheKey);
+    const ground=-y/scale,cacheKey=JSON.stringify([ground,material]);
+    const geometry=clippedCache.get(asset,cacheKey,()=>{
+      const g=cardGeometry(asset,material,ground);if(g.borderTexture)backingTextures.add(g.borderTexture);return g;
+    });
     const front=object(geometry.front,asset.texture,white,{shadow:false});front.pos3D=vec3(x,y,z);
     const back=(material.depth??CARDBOARD_THICKNESS)>0?object(geometry.back,asset.texture,scenic?white:new Color(.6,.56,.48),{shadow:false}):null;if(back)back.pos3D=front.pos3D.copy();
     const border=geometry.borderTexture?object(geometry.border,geometry.borderTexture,tint(material.paddingColor??'#fffaf0'),{shadow:false}):null;if(border){border.pos3D=front.pos3D.add(render3D.camera.getForward().scale(.002));border.transparent=true}
@@ -107,7 +109,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     if(state.artworkSet!=='kit'||state.setting!=='landscape'||!hasSceneryKit(state.environment)){
       clear();return null;
     }
-    const nextStyle=JSON.stringify(state.cutoutStyle??{});if(nextStyle!==styleKey){styleKey=nextStyle;cutoutStyle=state.cutoutStyle??{};for(const texture of backingTextures)texture.destroyWebGLTexture();backingTextures.clear();meshCache=new WeakMap;clippedCache=new WeakMap}
+    const nextStyle=JSON.stringify(state.cutoutStyle??{});if(nextStyle!==styleKey){styleKey=nextStyle;cutoutStyle=state.cutoutStyle??{};clippedCache.clear();meshCache=new WeakMap}
     const record=loader.load(state.environment,{state});
     if(!notified.has(record)){notified.add(record);record.promise.then(()=>onChange())}
     if(record.status!=='ready'){
@@ -117,7 +119,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     const pivot=state.horizonLock?{x:target.x,z:target.z}:{x:originX+width/2,z:0};
     const next=JSON.stringify([state.environment,originX,width,height,yaw,pivot,state.backgroundDistance,state.background,state.foreground,state.props,state.scenicAtmosphere,state.sceneryLayout,state.cutoutStyle,state.environmentShadowStrength,state.groundShadowBlur,state.sceneryShadows,render3D.sunDirection,state.scenicAtmosphere?render3D.camera.getUp():null]);
     if(next===key)return reference;
-    clear();key=next;
+    clear();key=next;clippedCache.begin();
     const a=record.assets,cx=originX+width/2,span=Math.max(192,width*6);
     const back=-Math.max(state.backgroundDistance??puzzleBackgroundDistance(width),minimumBackdropDistance(width,yaw));
     const wall=(x,y,offset=0)=>vec3(pivot.x+Math.sin(yaw)*(back+offset)+Math.cos(yaw)*x,y,pivot.z+Math.cos(yaw)*(back+offset)-Math.sin(yaw)*x);
@@ -191,6 +193,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
         }
       }
     }
+    clippedCache.end();
     bounds={left:originX-12,right:originX+width+12,back:Math.min(-12,back),front:10};
     reference={source:'modular-kit',distance:-back,theme:state.environment,environmentShadowStrength:shadowStrength,groundShadowBlur:shadowBlur,shadowReceivers:shadowPlanes.length,curved:false,points:[wall(-1,0,.08),wall(0,0,.08),wall(1,0,.08)]};
     return reference;
