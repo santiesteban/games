@@ -1,0 +1,746 @@
+/* Approved little_ledges_layout styles for Home, Collection and Settings.
+   Scoped to menu pages so gameplay presentation stays unchanged. */
+/* The menu owns scrolling; the existing canvas layout stays untouched. */
+:root[data-screen="home"], :root[data-screen="levels"], :root[data-screen="settings"] { --screen-top-color: #f5f5f5; }
+
+/* Scrolling menu pages paint their own background and real safe-area padding.
+   The gameplay chrome-sampling strip must not cover their moving content. */
+:root:is([data-screen="home"], [data-screen="levels"], [data-screen="settings"]) .screen-safe-area {
+  display: none;
+}
+
+#menuScreen.is-menu {
+  display: block;
+  height: 100%;
+  padding: 0;
+  overflow: hidden auto;
+  background: #f5f5f5;
+  touch-action: pan-y;
+}
+
+#menuScreen.is-menu .menu-page {
+  height: auto;
+  min-height: 100%;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  background: #f5f5f5;
+  box-shadow: none;
+  color: #111;
+  font: 16px/normal var(--font-base);
+  padding: 15px;
+  padding-top: max(15px, env(safe-area-inset-top));
+  padding-bottom: max(15px, env(safe-area-inset-bottom));
+}
+
+#menuScreen.is-menu .menu-page[hidden] { display: none; }
+
+#menuScreen.is-menu #levelsPanel {
+  display: flex;
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
+#menuScreen.is-menu #levelList {
+  display: block;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  overflow: visible;
+  scrollbar-gutter: auto;
+}
+
+#menuScreen .menu-page a:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+#menuScreen .menu-page .level-card {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  white-space: normal;
+  transform: none;
+  filter: none;
+}
+
+#menuScreen .menu-page .level-card:hover { background: #fff; transform: none; filter: none; }
+
+#menuScreen .menu-page .level-card .level-card__art {
+  position: static;
+  transform: none;
+}
+
+#menuScreen .menu-page .completion-mark {
+  top: 8px;
+  right: 8px;
+}
+
+#menuScreen .menu-page .collection-issue {
+  position: absolute;
+  bottom: 36px;
+  font-size: 12px;
+  color: var(--color-ink-soft);
+}
+
+#menuScreen .menu-page .collection-actions { padding: 24px 4px 10px; }
+#menuScreen .menu-page .collection-actions h2 { margin: 0 0 14px; font-size: 1rem; }
+#menuScreen .menu-page .collection-tools { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+#menuScreen .menu-page .collection-tools .action { text-decoration: underline dotted; text-underline-offset: 4px; }
+#menuScreen .menu-page .collection-empty { font-size: .875rem; color: var(--color-ink-soft); }
+/* Shared by all screens */
+
+#menuScreen .menu-page {
+  --color-paper: #f5f5f5;
+  --color-ink: #111111;
+  --color-ink-soft: #666666;
+  --color-board: #e6e6e6;
+  --color-yellow: #ffd84a;
+  --color-lavender: #eee8fa;
+  --color-mint: #cdebd8;
+  --border: 2px solid var(--color-ink);
+  --radius: 10px;
+  --space: 10px;
+  --font-base: var(--interface-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+}
+
+#menuScreen .menu-page button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+#menuScreen .menu-page button:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+#menuScreen .menu-page button:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+#menuScreen .menu-page svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#menuScreen .menu-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space);
+  width: 100%;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 15px;
+}
+
+#menuScreen .menu-page .topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+}
+
+#menuScreen .menu-page .topbar--standard {
+  min-height: 34px;
+}
+
+#menuScreen .menu-page .topbar__back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: var(--color-paper);
+  border: var(--border);
+  border-radius: var(--radius);
+  transform: rotate(8deg);
+  color: inherit;
+  text-decoration: none;
+}
+
+#menuScreen .menu-page .topbar__back-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.6;
+}
+
+#menuScreen .menu-page .topbar__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+#menuScreen .menu-page .action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+#menuScreen .menu-page .action__icon {
+  width: 22px;
+  height: 22px;
+}
+
+#menuScreen .menu-page .action__label {
+  font-size: 0.875rem;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+
+/* Home screen */
+
+#menuScreen .menu-page .topbar--home {
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+#menuScreen .menu-page .brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  color: inherit;
+  text-decoration: none;
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: normal;
+}
+
+#menuScreen .menu-page .brand__mark {
+  width: 92px;
+  height: 92px;
+  flex: none;
+}
+
+#menuScreen .menu-page .home-footer {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  margin-top: auto;
+}
+
+#menuScreen .menu-page .home-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space);
+  min-height: auto;
+  overflow: visible;
+}
+
+#menuScreen .menu-page .packs + .packs {
+  margin-top: 24px;
+}
+
+#menuScreen .menu-page .packs {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-height: auto;
+  overflow: visible;
+}
+
+#menuScreen .menu-page .tagline {
+  margin: 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+#menuScreen .menu-page .section-heading {
+  margin: 0 4px 14px;
+}
+
+#menuScreen .menu-page .section-heading h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-base);
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+#menuScreen .menu-page .pack-list {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+#menuScreen .menu-page .pack-list li {
+  min-width: 0;
+  flex: none;
+  min-height: 100px;
+}
+
+#menuScreen .menu-page .pack-list li + li {
+  border-top: var(--border);
+}
+
+#menuScreen .menu-page .pack-card {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 28px;
+  align-items: center;
+  width: 100%;
+  min-height: 100px;
+  gap: 8px;
+  padding: 4px 16px 4px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+#menuScreen .menu-page .pack-card__art {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 90px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+#menuScreen .menu-page .pack-card__art-image {
+  display: block;
+  width: 88px;
+  height: 90px;
+  object-fit: contain;
+  object-position: center;
+}
+
+#menuScreen .menu-page .pack-card__art-squares {
+  position: relative;
+  display: block;
+}
+
+#menuScreen .menu-page .pack-card__art-squares span {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-ink);
+}
+
+#menuScreen .menu-page .pack-card__art-squares span:nth-child(1) {
+  left: 20%;
+  top: 38%;
+  background: var(--swatch-one);
+}
+
+#menuScreen .menu-page .pack-card__art-squares span:nth-child(2) {
+  left: 39%;
+  top: 24%;
+  background: var(--swatch-two);
+}
+
+#menuScreen .menu-page .pack-card__art-squares span:nth-child(3) {
+  left: 59%;
+  top: 40%;
+  background: var(--swatch-three);
+}
+
+#menuScreen .menu-page .pack-card__art-squares--mind {
+  --swatch-one: #f27b35;
+  --swatch-two: var(--color-yellow);
+  --swatch-three: #70a877;
+}
+
+#menuScreen .menu-page .pack-card__art-squares--special {
+  --swatch-one: #45a9ca;
+  --swatch-two: #7f9ee7;
+  --swatch-three: #f0705a;
+}
+
+#menuScreen .menu-page .pack-card__copy {
+  min-width: 0;
+}
+
+#menuScreen .menu-page .pack-card__title {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--color-ink);
+  font-family: var(--font-base);
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 400;
+}
+
+#menuScreen .menu-page .pack-card__copy .pack-card__progress {
+  display: inline-block;
+  margin-top: 4px;
+}
+
+#menuScreen .menu-page .pack-card__progress {
+  align-self: start;
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-board);
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+#menuScreen .menu-page .pack-card__arrow,
+#menuScreen .menu-page .pack-card__lock {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-paper);
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+#menuScreen .menu-page .pack-card__arrow-icon,
+#menuScreen .menu-page .pack-card__lock-icon {
+  width: 18px;
+  height: 18px;
+}
+
+#menuScreen .menu-page .pack-card__lock {
+  background: var(--color-yellow);
+  transform: rotate(8deg);
+}
+
+@media (max-width: 390px) {
+  #menuScreen .menu-page .pack-list li {
+    min-height: 84px;
+  }
+
+  #menuScreen .menu-page .pack-card {
+    grid-template-columns: 72px minmax(0, 1fr) 28px;
+    min-height: 84px;
+    gap: 6px;
+  }
+
+  #menuScreen .menu-page .pack-card__art {
+    width: 72px;
+    height: 74px;
+  }
+
+  #menuScreen .menu-page .pack-card__art-image {
+    width: 72px;
+    height: 74px;
+  }
+}
+
+/* Collection screen */
+
+#menuScreen .menu-page .collection-progress {
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-board);
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+#menuScreen .menu-page .level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 50%), 1fr));
+  grid-auto-rows: minmax(200px, auto);
+  align-content: start;
+}
+
+#menuScreen .menu-page .level-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr 30px;
+  min-width: 0;
+  min-height: 200px;
+  overflow: hidden;
+  border: var(--border);
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+
+#menuScreen .menu-page .level-grid[data-grid-ready] .level-card {
+  border-top: 0;
+  border-left: 0;
+}
+
+#menuScreen .menu-page .level-grid[data-grid-ready] .level-card--first-row {
+  border-top: var(--border);
+}
+
+#menuScreen .menu-page .level-grid[data-grid-ready] .level-card--row-start {
+  border-left: var(--border);
+}
+
+#menuScreen .menu-page .level-card--top-left {
+  border-top-left-radius: var(--radius);
+}
+
+#menuScreen .menu-page .level-card--top-right {
+  border-top-right-radius: var(--radius);
+}
+
+#menuScreen .menu-page .level-card--bottom-left {
+  border-bottom-left-radius: var(--radius);
+}
+
+#menuScreen .menu-page .level-card--bottom-right {
+  border-bottom-right-radius: var(--radius);
+}
+
+#menuScreen .menu-page .level-card:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid var(--color-ink);
+  outline-offset: -5px;
+}
+
+#menuScreen .menu-page .level-card__number {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  min-width: 30px;
+  padding: 5px 8px 7px;
+  border-radius: 0 0 10px 0;
+  background: var(--color-board);
+  font: 400 0.875rem/normal var(--font-base);
+}
+
+#menuScreen .menu-page .level-card__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 14px 8px 4px;
+}
+
+#menuScreen .menu-page .level-card__art {
+  width: 88px;
+  height: 64px;
+  max-width: 100%;
+}
+
+#menuScreen .menu-page .level-card__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0px 8px 12px 8px;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 400;
+  text-align: center;
+}
+
+@media (max-width: 390px) {
+  #menuScreen .menu-page .level-card__art {
+    width: 74px;
+    height: 54px;
+  }
+
+  #menuScreen .menu-page .level-card__title {
+    font-size: 0.8rem;
+  }
+}
+
+
+/* Settings screen — approved prototype rules. */
+
+
+#menuScreen .menu-page .settings {
+  width: 100%;
+  padding: 10px 0 20px;
+}
+
+#menuScreen .menu-page .settings-section {
+  padding: 18px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+#menuScreen .menu-page .settings-section + .settings-section {
+  margin-top: var(--space);
+}
+
+#menuScreen .menu-page .settings-section h2 {
+  margin: 0 0 18px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+#menuScreen .menu-page .settings-section__intro,
+#menuScreen .menu-page .setting__description,
+#menuScreen .menu-page .settings-section__description {
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+#menuScreen .menu-page .settings-section__intro {
+  margin-bottom: 20px;
+}
+
+#menuScreen .menu-page .setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+#menuScreen .menu-page .setting + .setting {
+  margin-top: 24px;
+}
+
+#menuScreen .menu-page .setting__copy {
+  min-width: 0;
+}
+
+#menuScreen .menu-page .setting__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+#menuScreen .menu-page .switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 50px;
+  height: 30px;
+  margin: 0;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--color-lavender);
+  cursor: pointer;
+}
+
+#menuScreen .menu-page .switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-ink);
+}
+
+#menuScreen .menu-page .switch:checked {
+  background: var(--color-mint);
+}
+
+#menuScreen .menu-page .switch:checked::after {
+  left: 23px;
+}
+
+#menuScreen .menu-page .settings select {
+  flex: none;
+  max-width: 45%;
+  padding: 4px 8px;
+  border: var(--border);
+  border-radius: 6px;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font: 700 0.875rem var(--font-base);
+}
+
+#menuScreen .menu-page.screen--settings a:focus-visible,
+#menuScreen .menu-page.screen--settings input:focus-visible,
+#menuScreen .menu-page.screen--settings select:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+#menuScreen .menu-page .prototype-note {
+  margin: 0 0 24px;
+  color: var(--color-ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+#menuScreen .menu-page .unavailable {
+  margin: 24px 0 0;
+  font-size: 0.875rem;
+  color: var(--color-ink-soft);
+}
+
+@media (max-width: 480px) {
+  #menuScreen .menu-page .setting {
+    gap: 12px;
+  }
+
+  #menuScreen .menu-page .setting--select {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #menuScreen .menu-page .settings select {
+    max-width: 100%;
+  }
+}
+
+/* Integration: Settings uses the same page scroller as the other menus. */
+#menuScreen.is-menu #settingsPanel {
+  height: auto;
+  min-height: 100%;
+  padding: 15px;
+  padding-top: max(15px, env(safe-area-inset-top));
+  padding-bottom: max(15px, env(safe-area-inset-bottom));
+  background: var(--color-paper);
+}
+
+#menuScreen .menu-page .settings-message:empty { display: none; }
+#menuScreen .menu-page .settings-message {
+  margin: 18px 0 0;
+  color: var(--color-ink-soft);
+  font-size: .875rem;
+  line-height: 1.5;
+}
+#menuScreen .menu-page .settings-lab-link { margin-top: 24px; }
+#menuScreen .menu-page .settings .action {
+  font-size: .875rem;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+  white-space: normal;
+}
+#menuScreen .menu-page .settings-clear { margin-top: 18px; }
+#menuScreen .menu-page .settings-confirmation { margin-top: 18px; }
+#menuScreen .menu-page .settings-confirmation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin-top: 10px;
+}
+#menuScreen .menu-page .settings-confirmation__actions .settings-clear { margin-top: 0; }
+#menuScreen .menu-page .settings-version {
+  margin: 24px 0 0;
+  color: var(--color-ink-soft);
+  font-size: .75rem;
+}

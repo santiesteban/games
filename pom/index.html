@@ -2,7 +2,7 @@
 <html lang="en" data-screen="home">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#b4f5de"><title>Little Ledges</title>
+  <meta name="theme-color" content="#f5f5f5"><title>Little Ledges</title>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Little Ledges">
@@ -11,50 +11,286 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
   <!-- Load layout before the first paint, including while the game module loads. -->
   <link rel="stylesheet" href="./src/style.css">
+  <link rel="stylesheet" href="./src/menu-screens.css">
+  <link rel="stylesheet" href="./src/level-screen.css">
+  <link rel="stylesheet" href="./src/interface-fonts.css">
 </head>
 <body>
   <div class="screen-safe-area" aria-hidden="true"></div>
-  <main class="app"><section class="stage" aria-label="Little Ledges game" inert>
+  <div class="app"><section class="stage screen screen--level" aria-label="Little Ledges game" inert>
 
-    <header class="game-header"><button class="brandmark game-back" id="exitLevel" aria-label="Back to levels"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><path d="M30 21H14m6-6-6 6 6 6" stroke="#292537" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button><div class="heading"><h1><svg class="level-number" id="levelBadge" viewBox="0 0 42 42" role="img" aria-label="Level 7" focusable="false"><g transform="rotate(4 21 21)"><rect x="3" y="3" width="36" height="36" rx="10" fill="#c9e9d5" stroke="#292537" stroke-width="2.5"/><text id="level-number" x="21" y="26" text-anchor="middle" fill="#292537">07</text></g></svg><span id="level-title">Pull out a path</span></h1></div><button class="level-settings" id="levelSettings" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><g transform="translate(11 11) scale(.875)" stroke="#292537" stroke-width="1.8" stroke-linejoin="round"><polygon points="19.69,9.79 22.34,10.18 22.34,13.82 19.69,14.21 19.00,15.88 20.60,18.02 18.02,20.60 15.88,19.00 14.21,19.69 13.82,22.34 10.18,22.34 9.79,19.69 8.12,19.00 5.98,20.60 3.40,18.02 5.00,15.88 4.31,14.21 1.66,13.82 1.66,10.18 4.31,9.79 5.00,8.12 3.40,5.98 5.98,3.40 8.12,5.00 9.79,4.31 10.18,1.66 13.82,1.66 14.21,4.31 15.88,5.00 18.02,3.40 20.60,5.98 19.00,8.12"/><circle cx="12" cy="12" r="3.4"/></g></g></svg></button></header>
-    <div class="canvas-wrap" id="canvasWrap"><div class="compact-actions game-actions" id="gameActions" role="group" aria-label="Game actions"><button class="btn" id="undo" disabled>↻ Undo</button><button class="btn" id="reset" disabled>Start over</button></div><div class="level-loading" id="levelLoading" hidden><p id="levelLoadingMessage" role="status" aria-live="polite">Loading puzzle…</p><button class="btn" id="retryLevelAssets" type="button" hidden>Try again</button></div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div><div class="canvas-actions" aria-label="Move selected block"><button class="btn block-action" id="push" disabled><span aria-hidden="true">←</span> Push in</button><button class="btn block-action" id="pull" disabled>Pull out <span aria-hidden="true">→</span></button></div></div>
+    <header class="topbar game-header level-header">
+      <a class="topbar__back" href="#collection" id="exitLevel" aria-label="Back to levels">
+        <svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 12H5M11 6l-6 6 6 6" />
+        </svg>
+      </a>
+
+      <h1 class="topbar__title" id="level-title">Level 1</h1>
+
+      <div class="topbar__actions" id="gameActions" role="group" aria-label="Game actions">
+        <button class="action" id="undo" type="button" disabled>
+          <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 7 5 11l4 4" />
+            <path d="M5 11h9a5 5 0 0 1 0 10h-3" />
+          </svg>
+          <span class="action__label">Undo</span>
+        </button>
+
+        <button class="action" id="reset" type="button" disabled>
+          <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H8l-5-7z" />
+            <path d="m11 10 5 4m0-4-5 4" />
+          </svg>
+          <span class="action__label">Clear</span>
+        </button>
+        <button class="action" id="levelSettings" type="button" aria-label="Settings" title="Settings">
+          <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.5v2m0 13v2m8.5-8.5h-2m-13 0h-2m14.5-6-1.5 1.5m-9 9L6 18m12 0-1.5-1.5m-9-9L6 6" />
+            <circle cx="12" cy="12" r="5.5" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="game-board canvas-wrap" id="canvasWrap" aria-label="Game board"><div class="level-loading" id="levelLoading" hidden><p id="levelLoadingMessage" role="status" aria-live="polite">Loading puzzle…</p><button class="btn" id="retryLevelAssets" type="button" hidden>Try again</button></div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
+    <footer class="dock" id="pieceDock" data-active-piece="none">
+      <div class="dock__tabs">
+        <button class="dock__tab" type="button" disabled data-piece="left" data-state="disabled" aria-label="Left piece" aria-pressed="false">
+          <svg class="dock__tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.5 3.5H14.5L16.3 5.3H5.3Z" />
+            <path d="M3.5 3.5L5.3 5.3V16.3L3.5 14.5Z" />
+            <path d="M5.3 5.3h11v11h-11Z" />
+            <text class="piece-pull-count" x="10.8" y="10.8" aria-hidden="true"></text>
+          </svg>
+        </button>
+        <button class="dock__tab" type="button" disabled data-piece="center" data-state="disabled" aria-label="Center piece" aria-pressed="false">
+          <svg class="dock__tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.5 3.5H14.5L16.3 5.3H5.3Z" />
+            <path d="M3.5 3.5L5.3 5.3V16.3L3.5 14.5Z" />
+            <path d="M5.3 5.3h11v11h-11Z" />
+            <text class="piece-pull-count" x="10.8" y="10.8" aria-hidden="true"></text>
+          </svg>
+        </button>
+        <button class="dock__tab" type="button" disabled data-piece="right" data-state="disabled" aria-label="Right piece" aria-pressed="false">
+          <svg class="dock__tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.5 3.5H14.5L16.3 5.3H5.3Z" />
+            <path d="M3.5 3.5L5.3 5.3V16.3L3.5 14.5Z" />
+            <path d="M5.3 5.3h11v11h-11Z" />
+            <text class="piece-pull-count" x="10.8" y="10.8" aria-hidden="true"></text>
+          </svg>
+        </button>
+      </div>
+
+      <div class="dock__bar">
+        <div class="mode" role="group" aria-label="Move mode">
+          <button class="mode__option" id="push" type="button" data-mode="push" disabled>
+            <svg class="mode__icon" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M10 16V4m-4 4 4-4 4 4" />
+            </svg>
+            <span>Push</span>
+          </button>
+          <button class="mode__option" id="pull" type="button" data-mode="pull" disabled>
+            <svg class="mode__icon" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M10 4v12m4-4-4 4-4-4" />
+            </svg>
+            <span>Pull</span>
+          </button>
+        </div>
+
+      </div>
+    </footer>
     <aside class="design-panel" id="designPanel" aria-label="Design Playground controls" hidden></aside>
     <aside class="design-panel" id="backgroundPanel" aria-label="Environment Studio controls" hidden></aside>
   </section>
-  <div class="menu-screen" id="menuScreen" role="dialog" aria-modal="true" aria-label="Little Ledges menu" tabindex="0">
-    <section class="title-panel home-screen" id="titlePanel" aria-labelledby="homeTitle">
-      <img class="home-paper" src="./src/assets/home/paper.svg" alt="" aria-hidden="true" draggable="false">
-        <div class="home-pieces" aria-hidden="true">
-          <img class="home-piece home-piece-yellow-corner" src="./src/assets/home/yellow-corner.svg" alt="" draggable="false">
-          <img class="home-piece home-piece-column" src="./src/assets/home/coral-yellow-column.svg" alt="" draggable="false">
-          <img class="home-piece home-piece-sage" src="./src/assets/home/sage-step.svg" alt="" draggable="false">
-          <img class="home-piece home-piece-cream" src="./src/assets/home/cream-step.svg" alt="" draggable="false">
-          <img class="home-piece home-piece-coral-step" src="./src/assets/home/coral-step.svg" alt="" draggable="false">
-          <img class="home-piece home-piece-yellow-step" src="./src/assets/home/yellow-step.svg" alt="" draggable="false">
-          <img class="home-piece home-piece-perch" src="./src/assets/home/pom-perch.svg" alt="" draggable="false">
-        </div>
-      <div class="home-canvas">
-        <div class="home-center">
-          <img class="home-logo" src="./src/assets/home/logo.svg" alt="" aria-hidden="true" draggable="false">
-          <h1 class="home-wordmark" id="homeTitle"><span>little</span> <span>ledges</span></h1>
-          <button class="btn menu-primary home-start" id="openLevels" type="button" disabled>Loading puzzles…</button>
-        </div>
+  <div class="menu-screen is-menu" id="menuScreen" role="dialog" aria-modal="true" aria-label="Little Ledges menu" tabindex="0">
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="gear-icon" viewBox="0 0 24 24">
+      <path d="M12 3.5v2m0 13v2m8.5-8.5h-2m-13 0h-2m14.5-6-1.5 1.5m-9 9L6 18m12 0-1.5-1.5m-9-9L6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="12" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="pack-card__arrow" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" transform="rotate(180 12 12)" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+  <section class="screen menu-page" id="titlePanel" aria-label="Home">
+    <header class="topbar topbar--home">
+      <a class="brand" href="#home" data-home aria-label="Little Ledges home">
+        <img class="brand__mark" src="./src/assets/interface/ll_logo_yellow.svg" alt="">
+        <span>Little Ledges</span>
+      </a>
+      <p class="tagline">Pull out a path and reach the flag.</p>
+    </header>
+    <main class="home-main">
+      <section class="packs" aria-labelledby="packs-title">
+        <div class="section-heading"><h2 id="packs-title">Level packs</h2></div>
+        <ul class="pack-list" id="packList" aria-busy="true"></ul>
+      </section>
+      <section class="packs" aria-labelledby="my-puzzles-title">
+        <div class="section-heading"><h2 id="my-puzzles-title">My Puzzles</h2></div>
+        <ul class="pack-list" id="personalPackList"></ul>
+      </section>
+    </main>
+    <footer class="home-footer">
+      <a class="action" href="#settings" id="openSettings" aria-label="Settings">
+        <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#gear-icon"/></svg>
+        <span class="action__label">Settings</span>
+      </a>
+    </footer>
+  </section>
+    <section class="screen menu-page" id="levelsPanel" aria-labelledby="collectionTitle" hidden>
+      <header class="topbar topbar--standard">
+        <a class="topbar__back" href="#home" id="backTitle" aria-label="Back to home">
+          <svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+        </a>
+        <h1 class="topbar__title" id="collectionTitle">Basic Lessons</h1>
+        <span class="collection-progress" id="collectionProgress"></span>
+      </header>
+      <div class="collection-content" id="levelList" tabindex="0">
+        <main class="level-grid" id="collectionGrid" aria-label="Collection levels"></main>
+        <p class="collection-empty" id="collectionEmpty" role="status" hidden></p>
+        <section class="collection-actions" id="collectionActions" aria-label="My Puzzles tools" hidden></section>
       </div>
-      <button class="home-settings" id="openSettings" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><g transform="translate(11 11) scale(.875)" stroke="#292537" stroke-width="1.8" stroke-linejoin="round"><polygon points="19.69,9.79 22.34,10.18 22.34,13.82 19.69,14.21 19.00,15.88 20.60,18.02 18.02,20.60 15.88,19.00 14.21,19.69 13.82,22.34 10.18,22.34 9.79,19.69 8.12,19.00 5.98,20.60 3.40,18.02 5.00,15.88 4.31,14.21 1.66,13.82 1.66,10.18 4.31,9.79 5.00,8.12 3.40,5.98 5.98,3.40 8.12,5.00 9.79,4.31 10.18,1.66 13.82,1.66 14.21,4.31 15.88,5.00 18.02,3.40 20.60,5.98 19.00,8.12"/><circle cx="12" cy="12" r="3.4"/></g></g></svg></button>
     </section>
-    <section class="menu-panel levels-panel" id="levelsPanel" hidden><header class="levels-topbar"><button class="brandmark menu-home" id="backTitle" aria-label="Back to home"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><path d="M30 21H14m6-6-6 6 6 6" stroke="#292537" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button><div class="levels-brand"><img class="levels-logo" src="./src/assets/home/header-logo.svg" alt="" aria-hidden="true" draggable="false"><span>little ledges</span></div></header><div class="level-list" id="levelList" aria-label="All levels" tabindex="0"></div></section>
-    <section class="menu-panel settings-panel" id="settingsPanel" aria-labelledby="settingsTitle" hidden>
-      <header class="settings-header screen-topbar"><button class="brandmark menu-home" id="settingsHome" type="button" aria-label="Back to home"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false"><g transform="rotate(6 24 24)"><rect x="7" y="8" width="35" height="35" rx="12" fill="#292537"/><rect x="4" y="4" width="35" height="35" rx="12" fill="#fffaf0" stroke="#292537" stroke-width="2.5"/><path d="M30 21H14m6-6-6 6 6 6" stroke="#292537" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button><h1 id="settingsTitle">Settings</h1></header>
-      <div class="settings-content"><section class="display-settings" aria-labelledby="displayTitle"><h2 id="displayTitle">Level list</h2>
-        <label class="setting-toggle"><span>Hide levels with known issues<small id="hideIssuesHelp">Show only levels without reported issues.</small></span><input id="hideKnownIssues" type="checkbox" role="switch" aria-label="Hide levels with known issues" aria-describedby="hideIssuesHelp"></label>
-        <p class="progress-message" id="preferenceMessage" role="status" aria-live="polite"></p>
-      </section><section class="display-settings" aria-labelledby="gameplayTitle"><h2 id="gameplayTitle">Gameplay</h2><label class="setting-toggle"><span>Hide help text<small id="hideHelpTextHelp">Hide the hint banner above the puzzle.</small></span><input id="hideHelpText" type="checkbox" role="switch" aria-label="Hide help text" aria-describedby="hideHelpTextHelp"></label><div id="gameplayFeatureToggles"></div><p class="progress-message" id="pieceHighlightMessage" role="status" aria-live="polite"></p></section><section class="experimental-controls" aria-labelledby="controlFeaturesTitle"><h2 id="controlFeaturesTitle">Experimental controls</h2><p class="settings-copy">Try optional controls. Turn them off to return to the original controls.</p><div id="controlFeatureToggles"></div><p class="progress-message" id="controlFeatureMessage" role="status" aria-live="polite"></p>
-      </section><section class="progress-settings" aria-labelledby="progressTitle"><h2 id="progressTitle">Your progress</h2><p class="progress-count" id="progressCount">0 levels completed</p><p class="settings-copy">Completed levels are saved in this browser on this device.</p><button class="btn clear-progress" id="clearProgress" type="button">Clear progress</button>
-        <div class="clear-progress-confirm" id="clearProgressConfirm" hidden><p>Clear all completed levels? This cannot be undone.</p><div class="confirm-actions"><button class="btn" id="cancelClearProgress" type="button">Keep progress</button><button class="btn clear-progress" id="confirmClearProgress" type="button">Yes, clear progress</button></div></div>
-        <p class="progress-message" id="progressMessage" role="status" aria-live="polite"></p>
-      </section><p class="settings-build" id="buildNumber"></p></div>
-    </section>
+    <template id="packCardTemplate">
+      <li><a class="pack-card" href="#collection">
+        <span class="pack-card__art"><img class="pack-card__art-image" alt=""></span>
+        <span class="pack-card__copy"><span class="pack-card__title"></span><span class="pack-card__progress"></span></span>
+        <span class="pack-card__arrow" aria-hidden="true"><svg class="pack-card__arrow-icon" viewBox="0 0 24 24"><use href="#pack-card__arrow"/></svg></span>
+      </a></li>
+    </template>
+    <template id="levelCardTemplate">
+      <a class="level-card" href="#level">
+        <span class="level-card__number"></span>
+        <div class="level-card__preview"></div>
+        <div class="level-card__title"></div>
+      </a>
+    </template>
+  <section class="screen screen--settings menu-page" id="settingsPanel" aria-labelledby="settingsTitle" hidden>
+    <header class="topbar topbar--standard">
+      <a class="topbar__back" href="#home" id="settingsHome" aria-label="Back to home">
+        <svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+      </a>
+      <h1 class="topbar__title" id="settingsTitle">Settings</h1>
+    </header>
+    <main class="settings">
+      <section class="settings-section" aria-labelledby="level-list-title">
+        <h2 id="level-list-title">Level list</h2>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="hideKnownIssues">Hide levels with known issues</label>
+            <p class="setting__description" id="hideKnownIssues-description">Show only levels without reported issues.</p>
+          </div>
+          <input class="switch" id="hideKnownIssues" type="checkbox" role="switch" aria-describedby="hideKnownIssues-description">
+        </div>
+        <p class="settings-message" id="preferenceMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="settings-section" aria-labelledby="gameplay-title">
+        <h2 id="gameplay-title">Gameplay</h2>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="hideHelpText">Hide help text</label>
+            <p class="setting__description" id="hideHelpText-description">Hide the hint banner above the puzzle.</p>
+          </div>
+          <input class="switch" id="hideHelpText" type="checkbox" role="switch" aria-describedby="hideHelpText-description">
+        </div>
+        <div class="setting setting--select">
+          <div class="setting__copy">
+            <label class="setting__label" for="pieceHighlight">Piece highlight</label>
+            <p class="setting__description" id="pieceHighlight-description">Choose a pulsing inner light or the classic outline and tint.</p>
+          </div>
+          <select id="pieceHighlight" aria-describedby="pieceHighlight-description">
+            <option value="lightbox">Pulsing light box</option>
+            <option value="original">Classic outline and tint</option>
+          </select>
+        </div>
+        <p class="settings-message" id="pieceHighlightMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="settings-section" aria-labelledby="experimental-title">
+        <h2 id="experimental-title">Experimental controls</h2>
+        <p class="settings-section__intro">Try optional controls. Turn them off to return to the original controls.</p>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="stackedPieceButtons">Piece control dock</label>
+            <p class="setting__description" id="stackedPieceButtons-description">Choose a nearby piece using tabs above Push and Pull. Turn off to use only the selected piece.</p>
+          </div>
+          <input class="switch" id="stackedPieceButtons" type="checkbox" role="switch" aria-describedby="stackedPieceButtons-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="pieceDragArrows">Drag arrows on pieces</label>
+            <p class="setting__description" id="pieceDragArrows-description">Drag an arrow to slide the selected piece with your pointer. Release to snap to a legal step. Turn off to compare with the screen buttons.</p>
+          </div>
+          <input class="switch" id="pieceDragArrows" type="checkbox" role="switch" aria-describedby="pieceDragArrows-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="allPieceDragArrows">Arrows on all movable pieces</label>
+            <p class="setting__description" id="allPieceDragArrows-description">With drag arrows enabled, show centered arrows on every piece Pom can move. Turn off to show arrows only on the selected piece.</p>
+          </div>
+          <input class="switch" id="allPieceDragArrows" type="checkbox" role="switch" aria-describedby="allPieceDragArrows-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="movementStuds">Reachable platform studs</label>
+            <p class="setting__description" id="movementStuds-description">Show small raised bumps on platforms Pom can reach. Tap a bump to press it down and move there.</p>
+          </div>
+          <input class="switch" id="movementStuds" type="checkbox" role="switch" aria-describedby="movementStuds-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="autoSelectPieces">Automatically select nearby pieces</label>
+            <p class="setting__description" id="autoSelectPieces-description">After Pom moves, select a piece he can push or pull: behind him first, then right, then left.</p>
+          </div>
+          <input class="switch" id="autoSelectPieces" type="checkbox" role="switch" aria-describedby="autoSelectPieces-description">
+        </div>
+        <div class="setting setting--select">
+          <div class="setting__copy">
+            <label class="setting__label" for="topFaceAppearance">Top-face appearance</label>
+            <p class="setting__description" id="topFaceAppearance-description">Choose checkerboard, pull-distance colors, or a grid with diagonal lines on platforms Pom cannot reach.</p>
+          </div>
+          <select id="topFaceAppearance" aria-describedby="topFaceAppearance-description">
+            <option value="pull-depth">Pull-distance colors</option>
+            <option value="checkerboard">Checkerboard</option>
+            <option value="walkability">Grid with diagonal lines</option>
+          </select>
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="pieceShadows">Cast shadows</label>
+            <p class="setting__description" id="pieceShadows-description">Pieces and Pom cast shadows from a light at the top right. Unshadowed colors stay unchanged.</p>
+          </div>
+          <input class="switch" id="pieceShadows" type="checkbox" role="switch" aria-describedby="pieceShadows-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="floorGrid">Custom floor grid</label>
+            <p class="setting__description" id="floorGrid-description">Customize the existing flat floor in Design Playground: walkable fill, foreground wash, and grid-line color, opacity, and width.</p>
+          </div>
+          <input class="switch" id="floorGrid" type="checkbox" role="switch" aria-describedby="floorGrid-description">
+        </div>
+        <a class="action settings-lab-link" id="interactionLabLink" href="?interaction-lab" hidden>Open Interaction Lab</a>
+        <p class="settings-message" id="controlFeatureMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="settings-section" aria-labelledby="progress-title">
+        <h2 id="progress-title">Your progress</h2>
+        <p class="settings-section__description" id="progressCount">0 levels completed</p>
+        <p class="settings-section__description">Completed levels are saved in this browser on this device.</p>
+        <button class="action settings-clear" id="clearProgress" type="button">Clear progress</button>
+        <div class="settings-confirmation" id="clearProgressConfirm" hidden>
+          <p class="settings-section__description">Clear all completed levels? This cannot be undone.</p>
+          <div class="settings-confirmation__actions">
+            <button class="action" id="cancelClearProgress" type="button">Keep progress</button>
+            <button class="action settings-clear" id="confirmClearProgress" type="button">Yes, clear progress</button>
+          </div>
+        </div>
+        <p class="settings-message" id="progressMessage" role="status" aria-live="polite"></p>
+      </section>
+      <p class="settings-version" id="buildNumber"></p>
+    </main>
+  </section>
   </div>
-  </main>
+  </div>
   <script type="module" src="./src/game-entry.js"></script>
 </body></html>

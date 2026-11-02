@@ -5,12 +5,13 @@ import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
   timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
   Color, render3D, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
+  setInputPreventDefault, inputClear,
 } from 'littlejsengine';
 import catalog from '#level-catalog';
 import { createPieceDrag, pickPieceFront, pieceInteractionAnchor } from './piece-drag.js';
 import { createLevelProgress } from './level-progress.js';
 import { createLevelPreferences } from './level-preferences.js';
-import { CONTROL_FEATURES, TOP_FACE_STYLES, createControlFeatures } from './control-features.js';
+import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds } from './floor-grid.js';
 import { outsidePolygonSegments } from './surface-patterns.js';
@@ -18,6 +19,7 @@ import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro, initialCameraUnit } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
 import { installViewportSafety } from './viewport-safety.js';
+import { installSafariZoom } from './safari-zoom.js';
 import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
@@ -32,9 +34,9 @@ import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import { createVictoryEffects, victoryLandingOffset, victoryArrival } from './victory-effects.js';
 import { pieceShadowShader, solidPieceShadowShader, groundShadowShader } from './shadow-materials.js';
-import { createLevelGridObserver } from './level-grid.js';
-import { puzzleThumbnail } from './puzzle-thumbnail.js';
+import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
+import {createPieceDock,pieceDockState} from './piece-dock.js';
 import { canReachPiece, safePieceChange } from '../shared/rules.js';
 import { decodePuzzle, puzzleLevel } from '../shared/puzzle.js';
 import { deploymentUrls } from '../shared/deployment.js';
@@ -44,6 +46,8 @@ import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 
 const buildLabel=document.querySelector('#buildNumber');
+// The initial screen is Home; only a level may claim browser input defaults.
+setInputPreventDefault(false);
 if(buildLabel)buildLabel.textContent=`Build ${__BUILD_INFO__.number} · ${__BUILD_INFO__.revision}${__BUILD_INFO__.development?' (development)':''}`;
 
 const makerPlaytestToken=new URLSearchParams(location.hash.slice(1)).get('playtest');
@@ -64,9 +68,18 @@ function showPlaytestResult(){
   if(!playtestResult){playtestResult=document.createElement('dialog');playtestResult.className='puzzle-import playtest-result';playtestResult.setAttribute('aria-label','Playtest complete');playtestResult.innerHTML='<h2>Little world, big success!</h2><p>Pom reached your flag.</p><div class="import-actions"><button class="btn menu-primary" data-retry>Play again</button><button class="btn" data-return>Back to editor</button></div>';document.body.append(playtestResult);playtestResult.querySelector('[data-retry]').onclick=()=>{playtestResult.close();resetLevelState(activeLevel)};playtestResult.querySelector('[data-return]').onclick=returnToMaker;playtestResult.addEventListener('cancel',e=>{e.preventDefault();returnToMaker()})}
   playtestResult.showModal();
 }
-const settingsContent=document.querySelector('.settings-content');
-for(const type of ['wheel','touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','mousedown','mousemove','mouseup'])settingsContent.addEventListener(type,event=>event.stopPropagation(),{passive:true});
-settingsContent.addEventListener('keydown',event=>event.stopPropagation());
+// LittleJS cancels document-level wheel/touch input while the window is focused.
+// Menu gestures keep their native defaults and never reach gameplay input.
+function keepNativeInputLocal(element){
+  for(const type of ['wheel','touchstart','touchmove','touchend','touchcancel','pointerdown','pointermove','pointerup','mousedown','mousemove','mouseup']){
+    element.addEventListener(type,event=>event.stopPropagation(),{passive:true});
+  }
+  element.addEventListener('keydown',event=>event.stopPropagation());
+}
+const menuScreen=document.querySelector('#menuScreen');
+keepNativeInputLocal(menuScreen);
+keepNativeInputLocal(document.querySelector('.level-header'));
+keepNativeInputLocal(document.querySelector('#pieceDock'));
 const wrap = document.querySelector('#canvasWrap');
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
@@ -75,8 +88,10 @@ let viewUnit=0,viewTarget,viewReady=false,viewMobile=false,viewTouched=false,int
 const boardPointers=new Map();let boardGesture=null,introTick=null,keepInterruptedView=false;
 const pageUrl=new URL(location.href);if(pageUrl.searchParams.has('style')){pageUrl.searchParams.delete('style');window.history.replaceState(null,'',pageUrl)}
 function syncScreenAppearance(screen){
+  if(document.documentElement.dataset.screen!==screen)inputClear();
+  setInputPreventDefault(screen==='game');
   document.documentElement.dataset.screen=screen;
-  document.querySelector('meta[name="theme-color"]').content=screen==='home'?'#b4f5de':'#eee8fa';
+  document.querySelector('meta[name="theme-color"]').content='#f5f5f5';
 }
 window.addEventListener('pageshow',()=>syncScreenAppearance(document.documentElement.dataset.screen));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncScreenAppearance(document.documentElement.dataset.screen)});
@@ -105,7 +120,7 @@ syncHelpVisibility();
 const controlFeatures=createControlFeatures({persistent:!isMakerPlaytest&&!cameraLab&&!interactionLab});
 if(interactionLab){controlFeatures.set('stackedPieceButtons',false);controlFeatures.set('pieceDragArrows',true)}
 let movementMarkers;
-const levelGridObserver=createLevelGridObserver();
+let catalogScreens;
 let progressSaved=true;
 let activeLevel=levels.find(level=>level.compatibility.playable);
 if(!activeLevel)throw new Error('The level catalog has no playable puzzles.');
@@ -299,7 +314,7 @@ function save(){history.push({player:{...player},depths:groups.map(g=>g.depth),s
 function safeManipulation(g,next,dir){return safePieceChange(movementBoard(),movementBoard().groups[g.id],player,next,dir)}
 function canInteract(g){return g&&canReach(g)&&((g.depth<3&&safeManipulation(g,g.depth+1,1))||(g.depth>0&&safeManipulation(g,g.depth-1,-1)))}
 function autoSelectNearbyPiece(){
-  if(!controlFeatures.enabled('autoSelectPieces')||busy||won||introPlaying)return;
+  if(!controlFeatures.enabled('autoSelectPieces')||busy||won)return;
   const row=byCell[player.y-1];
   // Board coordinates keep right/left consistent at every camera angle.
   const candidates=[row?.[player.x],row?.[player.x+1],row?.[player.x-1]];
@@ -768,50 +783,26 @@ const pieceDrag={
   }
 };
 
-const stackedControls=document.createElement('div');
-stackedControls.className='stacked-piece-controls';stackedControls.setAttribute('role','group');stackedControls.setAttribute('aria-label','Move nearby pieces');wrap.append(stackedControls);
-const stackedColumns=new Map();
-for(const event of ['pointerdown','pointermove','pointerup','click'])stackedControls.addEventListener(event,e=>e.stopPropagation());
-function syncStackedControls(){
-  const enabled=controlFeatures.enabled('stackedPieceButtons');
-  stackedControls.hidden=!enabled||!gameReady||won||introPlaying||levelLoading;
-  wrap.classList.toggle('uses-stacked-buttons',enabled);
-  for(const [piece,column] of stackedColumns)if(!groups.includes(piece)){column.remove();stackedColumns.delete(piece)}
-  for(const piece of groups){
-    let column=stackedColumns.get(piece);
-    if(!column){
-      column=document.createElement('div');column.className='stacked-piece-column';
-      for(const [dir,label] of [[-1,'Push'],[1,'Pull']]){
-        const button=document.createElement('button');button.type='button';button.className='btn stacked-piece-button';button.textContent=label;
-        button.onclick=()=>{selected=piece;manipulate(dir)};column.append(button);
-      }
-      stackedControls.append(column);stackedColumns.set(piece,column);
-    }
-    const available=canInteract(piece);column.classList.toggle('is-unavailable',!available);column.inert=!available;
-    const pigment=palette[piece.color];column.style.setProperty('--block-color',`rgb(${Math.round(pigment.r*255)} ${Math.round(pigment.g*255)} ${Math.round(pigment.b*255)})`);
-    for(const [index,dir] of [-1,1].entries()){
-      const button=column.children[index];button.disabled=busy||!available||piece.depth+dir<0||piece.depth+dir>3||!safeManipulation(piece,piece.depth+dir,dir);
-      button.setAttribute('aria-label',`${dir<0?'Push':'Pull'} ${piece.color} piece`);
-    }
-  }
-  // Match Pom's interaction neighbors: left, behind, then right. Use the
-  // same board cells as automatic selection, independent of camera angle.
-  const row=byCell[player.y-1];
-  const neighbors=[row?.[player.x-1],row?.[player.x],row?.[player.x+1]];
-  const ordered=[...new Set([...neighbors.filter(Boolean),...groups])].filter(piece=>stackedColumns.has(piece));
-  ordered.forEach((piece,index)=>{
-    const column=stackedColumns.get(piece);
-    if(stackedControls.children[index]!==column)stackedControls.insertBefore(column,stackedControls.children[index]??null);
-  });
+const pieceDock=createPieceDock(document.querySelector('#pieceDock'),id=>{
+  enterPlayFromIntro();selected=groups[id];hideHelp();updateUI();
+});
+function syncPieceDock(){
+  const dock=document.querySelector('#pieceDock');
+  const tabs=controlFeatures.enabled('stackedPieceButtons');
+  dock.hidden=controlFeatures.enabled('pieceDragArrows')&&!tabs;
+  document.querySelector('.stage').classList.toggle('uses-drag-controls',dock.hidden);
+  const paused=!gameReady||!viewReady||busy||won||levelLoading||document.querySelector('.stage').inert;
+  pieceDock.sync(pieceDockState(movementBoard(),player,selected?.id,{paused,tabs}),activeLevel.palette);
 }
 function updateUI(){
   cameraLab?.setBusy(busy||won||introPlaying||levelLoading);
   wrap.classList.toggle('no-piece-selected',!selected);
   document.querySelector('#levelSettings').disabled=busy||won||introPlaying||levelLoading;
   document.querySelector('#gameActions').inert=won;
-  document.querySelector('#level-number').textContent=activeLevel.userPuzzle?'★':String(activeLevel.number).padStart(2,'0');document.querySelector('#levelBadge').setAttribute('aria-label',`Level ${activeLevel.number}`);document.querySelector('#level-title').textContent=isBackgroundStudio()?'Environment Studio':activeLevel.name;document.querySelector('#exitLevel').disabled=false;
-  document.querySelector('#pull').disabled=busy||won||introPlaying||levelLoading||!selected||!canReach(selected)||selected.depth>=3||!safeManipulation(selected,selected.depth+1,1);
-  document.querySelector('#push').disabled=busy||won||introPlaying||levelLoading||!selected||!canReach(selected)||selected.depth<=0||!safeManipulation(selected,selected.depth-1,-1);
+  const title=document.querySelector('#level-title');
+  title.textContent=isBackgroundStudio()?'Environment Studio':activeLevel.userPuzzle||activeLevel.kind!=='puzzle'?activeLevel.name:`Level ${activeLevel.number}`;
+  title.title=activeLevel.name;
+  title.setAttribute('aria-label',activeLevel.userPuzzle||activeLevel.kind!=='puzzle'?title.textContent:`Level ${activeLevel.number}: ${activeLevel.name}`);
   document.querySelector('#undo').disabled=busy||!history.length;
   document.querySelector('#reset').disabled=busy||(!history.length&&!won&&!groups.some(g=>g.depth));
   document.querySelector('#studioControls').hidden=!activeLevel.previewMove;document.querySelector('#previewClimb').disabled=busy;document.querySelector('#movementCase').disabled=busy;
@@ -819,7 +810,7 @@ function updateUI(){
   if(studioTargetObject){studioTargetObject.color=new Color(1,.95,.73,activeLevel.previewMove ? .85 : 0);if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}
   wrap.classList.toggle('uses-piece-drag',controlFeatures.enabled('pieceDragArrows'));
   pieceDrag.sync();
-  syncStackedControls();
+  syncPieceDock();
   syncInteractionHelp();
   const color=selected?palette[selected.color]:null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
   wrap.style.setProperty('--block-ink',color?blockActionText(color):'#292537');
@@ -862,51 +853,28 @@ function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=fals
   for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
   document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='';
   if(panel==='levels'){
-    renderLevelList(completedLevelId);document.querySelector('#levelList').scrollTop=0;
+    renderLevelList(completedLevelId);
     if(completedLevelId)cardReady=new Promise(resolve=>requestAnimationFrame(()=>{
       if(menu.hidden||!menu.classList.contains('is-levels')){resolve(null);return}
-      const list=document.querySelector('#levelList'),card=[...list.querySelectorAll('.level-card')].find(card=>card.dataset.levelId===completedLevelId);
+      const card=[...menu.querySelectorAll('.level-card')].find(card=>card.dataset.levelId===completedLevelId);
       if(!card){resolve(null);return}
-      const rect=card.getBoundingClientRect(),listRect=list.getBoundingClientRect();
-      list.scrollTop+=rect.top-listRect.top-(list.clientHeight-rect.height)/2;
+      const rect=card.getBoundingClientRect(),menuRect=menu.getBoundingClientRect();
+      menu.scrollTop+=rect.top-menuRect.top-(menu.clientHeight-rect.height)/2;
       if(!deferCheck){card.focus({preventScroll:true});card.classList.add('is-just-completed')}
       resolve(card);
     }));
   }
-  if(panel==='settings'){document.querySelector('#settingsHome').setAttribute('aria-label',settingsReturnToLevel?'Back to level':'Back to home');updateProgressSettings()}
+  if(panel==='title'){catalogScreens?.renderHome();menu.scrollTop=0}
+  if(panel==='settings'){document.querySelector('#settingsHome').setAttribute('aria-label',settingsReturnToLevel?'Back to level':'Back to home');updateProgressSettings();menu.scrollTop=0}
   document.querySelector('.stage').classList.remove('is-won');document.querySelector('.stage').inert=true;
   if(panel==='settings')document.querySelector('#settingsHome').focus();
+  else if(!completedLevelId)document.querySelector(panel==='levels'?'#backTitle':'#titlePanel .brand').focus({preventScroll:true});
   return cardReady;
 }
 function levelIsAvailable(level){return level.compatibility.playable&&(!levelPreferences.hideKnownIssues||!level.knownIssues)}
 function renderLevelList(revealLevelId){
   if(isMakerPlaytest)return;
-  levelGridObserver.disconnect();
-  const list=document.querySelector('#levelList'),scroll=list.scrollTop,gallery=document.createElement('div');gallery.className='level-gallery';list.replaceChildren(gallery);
-  for(const [index,group]of levelGroups.entries()){
-    const groupLevels=levels.filter(level=>level.group===group.id);
-    const section=document.createElement('section');section.className='level-group';section.setAttribute('aria-labelledby',`levelGroup${index}`);
-    const header=document.createElement('header');header.className='level-group-header';
-    const heading=document.createElement('h2');heading.id=`levelGroup${index}`;heading.textContent=group.name;
-    const range=document.createElement('span');range.className='level-group-range';range.textContent=group.rangeLabel??(groupLevels.length?`${String(groupLevels[0].number).padStart(2,'0')}–${groupLevels.at(-1).number}`:'');header.append(heading,range);
-    const items=document.createElement('div');items.className='level-group-items';
-    for(const level of groupLevels.filter(level=>level.id===revealLevelId||levelIsAvailable(level))){
-      const issues=level.knownIssues,completed=levelProgress.has(level.id);
-      const button=document.createElement('button');button.type='button';button.className='level-card';button.dataset.levelId=level.id;button.classList.toggle('has-known-issues',issues);button.setAttribute('aria-label',`Level ${level.number}: ${level.name}`);
-      const number=document.createElement('span');number.className='card-number';number.textContent=String(level.number).padStart(2,'0');number.setAttribute('aria-hidden','true');
-      const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);const preview=document.createElement('span');preview.className='level-preview';preview.append(puzzleThumbnail(level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level),number);const caption=document.createElement('span');caption.className='level-card-caption';caption.append(details);button.append(preview,caption);
-      if(completed){const check=document.createElement('span');check.className='completion-mark';check.classList.toggle('is-pending',level.id===revealLevelId);check.textContent='✓';check.setAttribute('aria-hidden','true');preview.append(check)}
-      if(issues||completed){
-        const badges=document.createElement('span');badges.className='level-badges';badges.id=`levelStatus${level.id}`;
-        for(const [show,label,tone]of [[completed,'Completed','completed'],[issues,'Known issues','issues']])if(show){const status=document.createElement('span');status.className=`level-status is-${tone}`;status.textContent=label;badges.append(status)}
-        button.setAttribute('aria-describedby',badges.id);preview.append(badges);
-      }
-      button.addEventListener('click',()=>startLevel(level.id));items.append(button);
-    }
-    if(items.childElementCount){const frame=document.createElement('div');frame.className='level-grid';const outline=document.createElementNS(svgNS,'svg');outline.setAttribute('class','level-grid-outline');outline.setAttribute('aria-hidden','true');outline.setAttribute('focusable','false');frame.append(items,outline);section.append(header,frame);gallery.append(section);levelGridObserver.observe(items)}
-  }
-  myPuzzles.render(gallery,revealLevelId,levelGridObserver);
-  list.scrollTop=scroll;
+  catalogScreens?.render(revealLevelId);
 }
 function updateProgressSettings(){
   document.querySelector('#progressCount').textContent=`${levelProgress.count} of ${levels.filter(level=>!isPreviewLevel(level)).length} levels completed`;
@@ -922,43 +890,42 @@ function resetLevelState(level){
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
 }
-function playUserPuzzle(level){if(!gameReady)return;syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
-function startLevel(id){if(!gameReady||isMakerPlaytest)return;let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);showOpeningHelp()}
-document.querySelector('#openLevels').addEventListener('click',()=>showMenu('levels'));
-document.querySelector('#openSettings').addEventListener('click',()=>{settingsReturnToLevel=false;showMenu('settings')});
+function playUserPuzzle(level){if(!gameReady)return;catalogScreens?.selectForLevel(level);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
+function startLevel(id){if(!gameReady||isMakerPlaytest)return;let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;catalogScreens?.selectForLevel(level);if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);showOpeningHelp()}
+document.querySelector('#openSettings').addEventListener('click',event=>{event.preventDefault();settingsReturnToLevel=false;showMenu('settings')});
 document.querySelector('#levelSettings').addEventListener('click',()=>{if(busy||won||introPlaying)return;settingsReturnToLevel=true;showMenu('settings')});
 function syncControlFeatureInputs(){
   for(const feature of CONTROL_FEATURES){const input=document.querySelector(`#${feature.id}`);if(input)input.checked=controlFeatures.enabled(feature.id)}
   const highlight=document.querySelector('#pieceHighlight');if(highlight)highlight.value=controlFeatures.enabled('selectionLightbox')?'lightbox':'original';
   const appearance=document.querySelector('#topFaceAppearance');if(appearance)appearance.value=controlFeatures.topFaceStyle;
 }
+// Bind the prototype's static Settings markup to the existing preference model.
+const pieceHighlight=document.querySelector('#pieceHighlight');
+pieceHighlight.addEventListener('change',()=>{
+  const saved=controlFeatures.set('selectionLightbox',pieceHighlight.value==='lightbox');
+  refreshControlFeatures();
+  document.querySelector('#pieceHighlightMessage').textContent=saved?'':'This setting applies now, but could not be saved on this device.';
+});
+const topFaceAppearance=document.querySelector('#topFaceAppearance');
+topFaceAppearance.addEventListener('change',()=>{
+  const saved=controlFeatures.setTopFaceStyle(topFaceAppearance.value);
+  refreshControlFeatures();
+  document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';
+});
 for(const feature of CONTROL_FEATURES){
-  if(feature.id==='walkabilityTopFaces')continue;
-  if(feature.id==='selectionLightbox'){
-    const row=document.createElement('label');row.className='setting-toggle';
-    const text=document.createElement('span');text.textContent='Piece highlight';
-    const help=document.createElement('small');help.id='pieceHighlightHelp';help.textContent='Choose a pulsing inner light or the classic outline and tint.';text.append(help);
-    const choice=document.createElement('select');choice.id='pieceHighlight';choice.setAttribute('aria-label','Piece highlight');choice.setAttribute('aria-describedby',help.id);
-    for(const [id,name]of [['lightbox','Pulsing light box'],['original','Classic outline and tint']])choice.add(new Option(name,id));choice.value=controlFeatures.enabled('selectionLightbox')?'lightbox':'original';
-    choice.onchange=()=>{const saved=controlFeatures.set('selectionLightbox',choice.value==='lightbox');refreshControlFeatures();document.querySelector('#pieceHighlightMessage').textContent=saved?'':'This setting applies now, but could not be saved on this device.'};
-    row.append(text,choice);document.querySelector('#gameplayFeatureToggles').append(row);continue;
-  }
-  if(feature.id==='pullDepthColors'){
-    const row=document.createElement('label');row.className='setting-toggle';
-    const text=document.createElement('span');text.textContent='Top-face appearance';
-    const help=document.createElement('small');help.id='topFaceAppearanceHelp';help.textContent='Choose checkerboard, pull-distance colors, or a grid with diagonal lines on platforms Pom cannot reach.';text.append(help);
-    const choice=document.createElement('select');choice.id='topFaceAppearance';choice.setAttribute('aria-label','Top-face appearance');choice.setAttribute('aria-describedby',help.id);
-    for(const [id,name]of TOP_FACE_STYLES){const option=document.createElement('option');option.value=id;option.textContent=name;choice.append(option)}choice.value=controlFeatures.topFaceStyle;
-    choice.onchange=()=>{const saved=controlFeatures.setTopFaceStyle(choice.value);refreshControlFeatures();document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.'};
-    row.append(text,choice);document.querySelector('#controlFeatureToggles').append(row);continue;
-  }
-  const label=document.createElement('label');label.className='setting-toggle';
-  const text=document.createElement('span');text.textContent=feature.label;
-  const help=document.createElement('small');help.id=`${feature.id}Help`;help.textContent=feature.description;text.append(help);
-  const toggle=document.createElement('input');toggle.type='checkbox';toggle.id=feature.id;toggle.setAttribute('role','switch');toggle.setAttribute('aria-label',feature.label);toggle.setAttribute('aria-describedby',help.id);toggle.checked=controlFeatures.enabled(feature.id);
-  toggle.addEventListener('change',()=>{const saved=controlFeatures.set(feature.id,toggle.checked);if(toggle.checked&&['stackedPieceButtons','pieceDragArrows'].includes(feature.id))for(const id of ['stackedPieceButtons','pieceDragArrows'])if(id!==feature.id)controlFeatures.set(id,false);syncControlFeatureInputs();refreshControlFeatures(feature.id==='autoSelectPieces'&&toggle.checked);document.querySelector('#controlFeatureMessage').textContent=saved?'':'This control applies now, but could not be saved in this browser.'});
-  label.append(text,toggle);document.querySelector('#controlFeatureToggles').append(label);
+  const toggle=document.querySelector(`#${feature.id}`);
+  if(!toggle)continue;
+  toggle.addEventListener('change',()=>{
+    const saved=controlFeatures.set(feature.id,toggle.checked);
+    if(toggle.checked&&['stackedPieceButtons','pieceDragArrows'].includes(feature.id)){
+      for(const id of ['stackedPieceButtons','pieceDragArrows'])if(id!==feature.id)controlFeatures.set(id,false);
+    }
+    syncControlFeatureInputs();
+    refreshControlFeatures(feature.id==='autoSelectPieces'&&toggle.checked);
+    document.querySelector('#controlFeatureMessage').textContent=saved?'':'This control applies now, but could not be saved in this browser.';
+  });
 }
+syncControlFeatureInputs();
 function refreshControlFeatures(selectNearby=false){
   clearBoardHover();if(!gameReady)return;
   if(selectNearby&&!busy){autoSelectNearbyPiece();updateUI()}
@@ -970,7 +937,8 @@ for(const name of ['hideKnownIssues','hideHelpText']){
   toggle.addEventListener('change',()=>{const saved=levelPreferences.set(name,toggle.checked);document.querySelector('#preferenceMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';syncHelpVisibility();if(name==='hideKnownIssues')renderLevelList()});
 }
 window.addEventListener('storage',event=>{if(event.key===levelPreferences.key||event.key===null){levelPreferences.reload();for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=levelPreferences[name];syncHelpVisibility();renderLevelList()}});
-document.querySelector('#settingsHome').addEventListener('click',()=>{
+document.querySelector('#settingsHome').addEventListener('click',event=>{
+  event.preventDefault();
   if(!settingsReturnToLevel){showMenu('title');return}
   settingsReturnToLevel=false;document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;syncScreenAppearance('game');updateUI();document.querySelector('#levelSettings').focus();
 });
@@ -982,20 +950,19 @@ document.querySelector('#confirmClearProgress').addEventListener('click',()=>{
   progressSaved=true;renderLevelList();updateProgressSettings();document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;message.textContent='Your progress has been cleared.';document.querySelector('#settingsHome').focus();
 });
 window.addEventListener('storage',event=>{if(event.key===levelProgress.key||event.key===null){levelProgress.reload();renderLevelList();updateProgressSettings();if(levelProgress.count===0){document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false}}});
-document.querySelector('#backTitle').addEventListener('click',()=>showMenu('title'));
-document.querySelector('#exitLevel').addEventListener('click',()=>isMakerPlaytest?returnToMaker():showMenu('levels',won?activeLevel.id:undefined));
-const menuScreen=document.querySelector('#menuScreen'),levelList=document.querySelector('#levelList');
-window.addEventListener('wheel',e=>{
-  if(menuScreen.hidden||!menuScreen.classList.contains('is-levels'))return;
-  const unit=e.deltaMode===1?16:e.deltaMode===2?levelList.clientHeight:1;
-  if(e.deltaY)levelList.scrollTop+=e.deltaY*unit;
-  e.preventDefault();e.stopPropagation();
-},{capture:true,passive:false});
+document.querySelector('#backTitle').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
+document.querySelector('[data-home]').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
+document.querySelector('#exitLevel').addEventListener('click',event=>{event.preventDefault();isMakerPlaytest?returnToMaker():showMenu('levels',won?activeLevel.id:undefined)});
 const creatorUrl=deploymentUrls().creator;
-const myPuzzles=isMakerPlaytest?{render(){},complete(){},openPending(){
+const myPuzzles=isMakerPlaytest?{renderCollection(){},complete(){},openPending(){
   try{const level={...puzzleLevel(decodePuzzle(makerPlaytestToken)),temporaryPlaytest:true};playUserPuzzle(level);playtestLoading.remove()}
   catch{playtestLoading.replaceChildren(document.createTextNode('This playtest could not be opened. '));const back=document.createElement('button');back.className='btn';back.textContent='Back to editor';back.onclick=returnToMaker;playtestLoading.append(back)}
-}}:createMyPuzzles({play:playUserPuzzle,onChange:()=>{if(document.querySelector('#levelsPanel').hidden===false)renderLevelList()},creatorUrl});
+}}:createMyPuzzles({play:playUserPuzzle,onChange:()=>{if(document.querySelector('#levelsPanel').hidden===false)renderLevelList();else catalogScreens?.renderHome()},creatorUrl});
+if(!isMakerPlaytest)catalogScreens=createCatalogScreens({
+  levels,groups:levelGroups,progress:levelProgress,isAvailable:levelIsAvailable,myPuzzles,
+  thumbnailLevel:level=>level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level,
+  open:()=>showMenu('levels'),play:level=>startLevel(level.id),
+});
 renderLevelList();
 function puzzleVisualBounds(){
   if(!activeLevel.userPuzzle)return{left:0,right:W,height:H};
@@ -1047,8 +1014,8 @@ function sceneFrame(width,height,side=viewSide){
     for(const x of [visual.left,visual.right])for(const y of [0,visual.height+.85])for(const z of [0,3])points.push([x+slant*DEPTH_SKEW*z,cs*y-sn*z]);
   }
   const centerX=(visual.left+visual.right)/2,halfWidth=Math.max(...points.map(p=>Math.abs(p[0]-centerX))),minX=centerX-halfWidth,maxX=centerX+halfWidth,minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
-  const action=document.querySelector('.canvas-actions'),actionHeight=action.getBoundingClientRect().height,buttonBottom=parseFloat(getComputedStyle(action).bottom)||12;
-  const top=Math.min(64,height*.16),bottom=Math.min(actionHeight+buttonBottom+22,height*.34),margin=width<600?14:24;
+  // The dock is outside the canvas, so it no longer needs an overlay inset.
+  const top=Math.min(64,height*.16),bottom=Math.min(22,height*.34),margin=width<600?14:24;
   const unit=Math.max(1,Math.min(80,(width-2*margin)/(maxX-minX),(height-top-bottom)/(maxY-minY)));
   const targetY=(minY+maxY)/2+(top-bottom)/(2*unit);
   return {height:height/unit,target:vec3((minX+maxX)/2,(targetY+s)/c,1),minX,maxX,minY,maxY,top,bottom,margin};
@@ -1186,7 +1153,7 @@ function startBoardView(animate=true){
   const target=viewTarget.copy(),endUnit=viewUnit;
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
   if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
-  introPlaying=true;selected=null;document.querySelector('.stage').classList.add('is-introducing');wrap.dataset.introPhase='overview';updateUI();
+  autoSelectNearbyPiece();introPlaying=true;document.querySelector('.stage').classList.add('is-introducing');wrap.dataset.introPhase='overview';updateUI();
   let start,lastFrame;
   introTick=now=>{
     if(token!==introFrame||celebration)return;
@@ -1349,7 +1316,7 @@ function gameInit(){
   flagCloth=new EngineObject3D(vec3(),flagMesh,undefined,new Color(1,.443,.22));flagCloth.lighting=false;
   flagVase=new EngineObject3D(vec3(),vase,undefined,new Color(.56,.33,.20));
   flagCap=new EngineObject3D(vec3(),flagMeshes.cap,undefined,new Color(.72,.51,.28));
-  autoSelectNearbyPiece();updateUI();startBoardView();gameReady=true;document.querySelector('.stage').classList.add('is-ready');document.querySelector('#openLevels').disabled=false;document.querySelector('#openLevels').textContent='Start playing';myPuzzles.openPending();if(interactionLab)openInteractionCase();if(!isMakerPlaytest&&(new URLSearchParams(location.search).has('background-studio')||new URLSearchParams(location.search).has('environment-studio')))startLevel(levels.find(level=>level.kind==='background-studio').id);if(cameraLab)startLevel(levels.find(level=>level.compatibility.playable&&level.kind==='puzzle').id);
+  autoSelectNearbyPiece();updateUI();startBoardView();gameReady=true;document.querySelector('.stage').classList.add('is-ready');catalogScreens?.ready();myPuzzles.openPending();if(interactionLab)openInteractionCase();if(!isMakerPlaytest&&(new URLSearchParams(location.search).has('background-studio')||new URLSearchParams(location.search).has('environment-studio')))startLevel(levels.find(level=>level.kind==='background-studio').id);if(cameraLab)startLevel(levels.find(level=>level.compatibility.playable&&level.kind==='puzzle').id);
 }
 function gameUpdate(){
   introTick?.(timeReal*1000);
@@ -1400,13 +1367,18 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
     if(x>=-1&&x<W&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }
 }
-function manipulate(dir){const g=selected;if(levelLoading||busy||introPlaying||!g||!canReach(g)||won)return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
+function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
 function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
-wrap.addEventListener('wheel',e=>{if(viewportUI.pageZoomed&&e.ctrlKey)return;if(pieceDrag.active){e.preventDefault();return}if(levelLoading||won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
+const safariZoom=installSafariZoom(wrap,{
+  enabled:()=>!viewportUI.pageZoomed&&!levelLoading&&!won&&viewReady&&!pieceDrag.active&&boardPointers.size<2&&document.querySelector('#menuScreen').hidden,
+  onStart(){enterPlayFromIntro();viewTouched=true;if(boardGesture)boardGesture.multi=true;clearBoardHover()},
+  onZoom(ratio,x,y){zoomBoard(viewUnit*ratio,x,y);applyBoardView();resetStudyFollow()},
+});
+wrap.addEventListener('wheel',e=>{if(safariZoom.active){e.preventDefault();return}if(viewportUI.pageZoomed&&e.ctrlKey)return;if(pieceDrag.active){e.preventDefault();return}if(levelLoading||won||!viewReady)return;e.preventDefault();enterPlayFromIntro();stopIntro();viewTouched=true;const p=boardPoint(e);zoomBoard(viewUnit*Math.exp(-e.deltaY*(e.ctrlKey?.01:.002)),p.x,p.y);clearBoardHover();applyBoardView();resetStudyFollow()},{passive:false});
 // Overlay controls must never select or move a ground spot underneath them.
 const gameActions=document.querySelector('#gameActions');for(const event of ['pointerdown','pointermove','pointerup','click'])gameActions.addEventListener(event,e=>e.stopPropagation());gameActions.addEventListener('pointerenter',clearBoardHover);
-const canvasActions=document.querySelector('.canvas-actions');for(const event of ['pointerdown','pointermove'])canvasActions.addEventListener(event,e=>e.stopPropagation());canvasActions.addEventListener('pointerenter',clearBoardHover);
+
 const studioControls=document.querySelector('#studioControls'),movementCase=document.querySelector('#movementCase');for(const example of movementExamples){const option=document.createElement('option');option.value=example.id;option.textContent=example.label;movementCase.append(option)}movementCase.onchange=()=>{if(!busy)resetLevelState(studioLevel(levels,movementExamples.find(example=>example.id===movementCase.value)))};
 const previewClimb=document.querySelector('#previewClimb');for(const event of ['pointerdown','pointerup','pointermove'])studioControls.addEventListener(event,e=>e.stopPropagation());previewClimb.onclick=()=>{if(busy||!activeLevel.previewMove)return;resetLevelState(activeLevel);moveTo(activeLevel.previewMove)};
 
@@ -1438,7 +1410,7 @@ if(interactionLab){
   for(const [value,label] of [['0','Fully in · pull only'],['1','One step out · push and pull'],['3','Fully out · push only'],['choices','Two movable pieces'],['three','Three movable pieces'],['overlap','Overlapping pieces']])interactionCase.add(new Option(label,value));
   interactionCase.onchange=openInteractionCase;
   const compare=document.createElement('select');compare.setAttribute('aria-label','Interaction style');
-  for(const [value,label] of [['arrows','Drag arrows'],['stacked','Stacked buttons'],['classic','Original buttons']])compare.add(new Option(label,value));
+  for(const [value,label] of [['arrows','Drag arrows'],['stacked','Piece dock'],['classic','Selected piece only']])compare.add(new Option(label,value));
   compare.value=controlFeatures.enabled('stackedPieceButtons')?'stacked':controlFeatures.enabled('pieceDragArrows')?'arrows':'classic';
   compare.onchange=()=>{controlFeatures.set('pieceDragArrows',compare.value==='arrows');controlFeatures.set('stackedPieceButtons',compare.value==='stacked');syncControlFeatureInputs();refreshControlFeatures()};
   const reset=document.createElement('button');reset.className='btn';reset.textContent='Reset level';reset.onclick=openInteractionCase;
@@ -1447,20 +1419,14 @@ if(interactionLab){
   arrowsMode.onchange=()=>{controlFeatures.set('allPieceDragArrows',arrowsMode.value==='all');syncControlFeatureInputs();updateUI()};
   panel.append(title,interactionLevel,interactionCase,arrowsMode,compare,reset);document.querySelector('.stage').append(panel);
 }else if(!isMakerPlaytest){
-  const link=document.createElement('a');link.className='interaction-lab-link';link.href='?interaction-lab';link.textContent='Open Interaction Lab';document.querySelector('.experimental-controls').append(link);
+  document.querySelector('#interactionLabLink').hidden=false;
 }
 
+// A pointer gesture stops the opening camera motion even on a disabled action.
+document.querySelector('#pieceDock').addEventListener('pointerdown',()=>{if(!levelLoading&&gameReady&&viewReady)enterPlayFromIntro()},{capture:true});
 document.querySelector('#pull').onclick=()=>manipulate(1);document.querySelector('#push').onclick=()=>manipulate(-1);
 document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(history.pop())};document.querySelector('#reset').onclick=()=>{if(busy)return;hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;autoSelectNearbyPiece();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView()};
 window.addEventListener('keydown',e=>{
-  if(!menuScreen.hidden&&menuScreen.classList.contains('is-levels')){
-    const step=Math.max(120,levelList.clientHeight*.72);
-    if(e.key==='ArrowDown'||e.key==='PageDown'){levelList.scrollBy({top:e.key==='PageDown'?step:48});e.preventDefault()}
-    else if(e.key==='ArrowUp'||e.key==='PageUp'){levelList.scrollBy({top:e.key==='PageUp'?-step:-48});e.preventDefault()}
-    else if(e.key==='Home'){levelList.scrollTop=0;e.preventDefault()}
-    else if(e.key==='End'){levelList.scrollTop=levelList.scrollHeight;e.preventDefault()}
-    return;
-  }
   if(document.querySelector('.stage').inert||busy||won||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(['z','Z','r','R'].includes(e.key))enterPlayFromIntro();
   if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click()

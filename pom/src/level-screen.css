@@ -1,0 +1,449 @@
+/* Approved level_static.html interface. Puzzle rendering remains in main.js. */
+:root[data-screen="game"] { --screen-top-color: #f5f5f5; }
+@font-face {
+  font-family: "Silkscreen";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/interface/silkscreen-regular.ttf') format('truetype');
+}
+
+/* Shared by all screens */
+
+.stage.screen--level {
+  --color-paper: #f5f5f5;
+  --color-ink: #111111;
+  --color-ink-soft: #666666;
+  --color-board: #e6e6e6;
+  --color-yellow: #ffd84a;
+  --color-lavender: #eee8fa;
+  --color-mint: #cdebd8;
+  --border: 2px solid var(--color-ink);
+  --radius: 10px;
+  --space: 10px;
+  --font-base: var(--interface-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+}
+
+.stage.screen--level button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.stage.screen--level button:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.stage.screen--level svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stage.screen--level {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space);
+  width: 100%;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 15px;
+}
+
+.stage.screen--level .topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+}
+
+.stage.screen--level .topbar--standard {
+  min-height: 34px;
+}
+
+.stage.screen--level .topbar__back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: var(--color-paper);
+  border: var(--border);
+  border-radius: var(--radius);
+  transform: rotate(8deg);
+  color: inherit;
+  text-decoration: none;
+}
+
+.stage.screen--level .topbar__back-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.6;
+}
+
+.stage.screen--level .topbar__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.stage.screen--level .action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.stage.screen--level .action__icon {
+  width: 22px;
+  height: 22px;
+}
+
+.stage.screen--level .action__label {
+  font-size: 0.875rem;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+
+.stage.screen--level .topbar__actions {
+  display: flex;
+  gap: var(--space);
+  margin-left: auto;
+}
+
+.stage.screen--level .game-board {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #fff;
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+.stage.screen--level .dock {
+  position: relative;
+  --dock-tab-height: 44px;
+  --dock-tab-overlap: 8px;
+  margin-top: calc(var(--dock-tab-height) - var(--dock-tab-overlap));
+  --active-piece-background: var(--color-dock);
+  --active-piece-control: var(--color-dock);
+  --active-piece-control-text: var(--color-ink);
+}
+
+.stage.screen--level .dock[data-active-piece="center"] {
+  --active-piece-background: var(--color-piece-center-background, var(--color-piece-center-fill));
+  --active-piece-control: var(--color-piece-center);
+  --active-piece-control-text: var(--color-piece-center-control-text);
+}
+
+.stage.screen--level .dock[data-active-piece="left"] {
+  --active-piece-background: var(--color-piece-left-background, var(--color-piece-left-fill));
+  --active-piece-control: var(--color-piece-left);
+  --active-piece-control-text: var(--color-piece-left-control-text);
+}
+
+.stage.screen--level .dock[data-active-piece="right"] {
+  --active-piece-background: var(--color-piece-right-background, var(--color-piece-right-fill));
+  --active-piece-control: var(--color-piece-right);
+  --active-piece-control-text: var(--color-piece-right-control-text);
+}
+
+.stage.screen--level .dock[data-active-piece="none"] {
+  --active-piece-background: transparent;
+}
+
+.stage.screen--level .dock__tabs {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - var(--dock-tab-overlap));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+}
+
+.stage.screen--level .dock__tab {
+  display: grid;
+  position: relative;
+  place-items: center;
+  flex: none;
+  width: 82px;
+  height: var(--dock-tab-height);
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: var(--piece-color);
+  transition: color 360ms ease;
+}
+
+.stage.screen--level .dock__tab[data-piece="center"] {
+  --piece-color: var(--color-piece-center);
+  --piece-fill: var(--color-piece-center-fill);
+}
+
+.stage.screen--level .dock__tab[data-piece="left"] {
+  --piece-color: var(--color-piece-left);
+  --piece-fill: var(--color-piece-left-fill);
+}
+
+.stage.screen--level .dock__tab[data-piece="right"] {
+  --piece-color: var(--color-piece-right);
+  --piece-fill: var(--color-piece-right-fill);
+}
+
+.stage.screen--level .dock__tab::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--active-piece-background);
+  content: "";
+  opacity: 0;
+  transform: scale(0.72, 0);
+  transform-origin: center bottom;
+  transition: background-color 360ms ease, opacity 140ms ease, transform 520ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+.stage.screen--level .dock__tab[aria-pressed="true"]::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.stage.screen--level .dock__tab-icon {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.7;
+  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stage.screen--level .dock__tab-icon path {
+  transition: fill 360ms ease;
+}
+
+.stage.screen--level .dock__tab[data-state="active"] .dock__tab-icon path {
+  fill: var(--piece-fill);
+}
+
+.stage.screen--level .dock__tab:not([data-state="disabled"]) {
+  color: var(--reference-outline, #282536);
+}
+
+.stage.screen--level .dock__tab:not([data-state="disabled"]) .dock__tab-icon path {
+  fill: var(--piece-fill);
+}
+
+.stage.screen--level .dock__tab:disabled {
+  visibility: hidden;
+}
+
+.stage.screen--level .piece-pull-count {
+  fill: currentColor;
+  stroke: none;
+  font-family: "Silkscreen", "Courier New", monospace;
+  font-size: 7px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.stage.screen--level .dock__bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: var(--dock-tab-overlap) 0 0;
+  background: transparent;
+}
+
+.stage.screen--level .mode {
+  display: flex;
+  flex: 1;
+  height: 44px;
+  gap: 4px;
+  padding: 4px;
+  background: var(--active-piece-background);
+  border-radius: var(--radius);
+  transition: background-color 360ms ease, border-radius 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stage.screen--level .mode__option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 2px solid var(--active-piece-control);
+  border-radius: 6px;
+  background: var(--active-piece-control);
+  color: var(--active-piece-control-text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  transition: background-color 0.36s, border-color 0.36s, color 0.36s, opacity 0.2s;
+}
+
+.stage.screen--level .mode__option:enabled {
+  border-color: #000000;
+}
+
+.stage.screen--level .mode__icon {
+  position: absolute;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  opacity: 0.72;
+  stroke-width: 1.5;
+}
+
+.stage.screen--level .mode__option[data-mode="pull"] .mode__icon {
+  right: 12px;
+  left: auto;
+}
+
+.stage.screen--level .mode__option:disabled {
+  border-color: color-mix(in srgb, var(--active-piece-control) 80%, #000000);
+  background: var(--active-piece-background);
+  color: color-mix(in srgb, var(--active-piece-control) 80%, #000000);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.stage.screen--level .dock[data-active-piece="none"] .mode__option:disabled {
+  border-color: var(--color-piece-disabled);
+  background: transparent;
+  color: var(--color-piece-disabled);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage.screen--level .mode__option {
+    transition: none;
+  }
+
+  .stage.screen--level .dock__tab,
+.stage.screen--level .dock__tab::before,
+.stage.screen--level .dock__tab-icon,
+.stage.screen--level .dock__tab-icon path,
+.stage.screen--level .mode {
+    transition: none;
+  }
+}
+
+
+/* Integration: the board and its renderer retain their existing canvas host.
+   Grid keeps Studio panels in their established columns beside the puzzle. */
+.stage.screen--level {
+  --color-dock: var(--color-board);
+  --color-piece-disabled: #c7c7c7;
+  --reference-outline: #282536;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+  font: 16px/normal var(--font-base);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  padding: 15px;
+  padding-top: max(15px, env(safe-area-inset-top));
+  padding-right: max(15px, env(safe-area-inset-right));
+  padding-bottom: max(15px, env(safe-area-inset-bottom));
+  padding-left: max(15px, env(safe-area-inset-left));
+}
+
+.stage.screen--level .topbar {
+  contain: none;
+  padding: 0;
+  min-width: 0;
+  justify-content: flex-start;
+  background: transparent;
+}
+.stage.screen--level .topbar__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage.screen--level .topbar__actions { flex: none; }
+.stage.screen--level #exitLevel {
+  width: 28px;
+  height: 28px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+  transform: rotate(8deg);
+  translate: none;
+}
+.stage.screen--level #exitLevel .topbar__back-icon { width: 18px; height: 18px; }
+.stage.screen--level #levelSettings {
+  display: flex;
+  width: auto;
+  height: auto;
+  padding: 6px 2px;
+}
+.stage.screen--level #levelSettings .action__icon { width: 22px; height: 22px; }
+.stage.screen--level #exitLevel:active { transform: rotate(8deg); translate: none; }
+.stage.screen--level button:active:not(:disabled) { transform: none; translate: none; box-shadow: none; }
+.stage.screen--level button:disabled { cursor: default; opacity: 1; }
+.stage.screen--level .level-header button:disabled { opacity: .4; }
+.stage.screen--level a:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; }
+.stage.screen--level .game-board {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  overflow: hidden;
+}
+.stage.screen--level .dock { grid-column: 1; grid-row: 3; }
+.stage.screen--level.uses-drag-controls { grid-template-rows: auto minmax(0, 1fr); }
+.stage.screen--level .dock.is-selected-only { margin-top: 0; }
+.stage.screen--level .dock.is-selected-only .dock__tabs { display: none; }
+.stage.screen--level .dock__tab:disabled:not([data-state="disabled"]) { visibility: visible; }
+.stage.screen--level .dock__tab .piece-pull-count { fill: var(--piece-label-color, #111); }
+.stage.screen--level .dock[data-active-piece="none"] .mode__option:disabled { opacity: 1; }
+.stage.screen--level.is-won .dock { visibility: hidden; }
+
+@media (max-width: 360px) {
+  .stage.screen--level .level-header { gap: 8px; }
+  .stage.screen--level .level-header .topbar__actions { gap: 4px; }
+}
+
+/* The visual viewport can be narrower than the normal mobile breakpoints. */
+.app.is-page-zoomed .level-header { flex-wrap: wrap; }
+.app.is-page-zoomed .level-header .topbar__actions {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.app.is-page-zoomed .dock__tabs { width: min(250px, 100%); }
+.app.is-page-zoomed .dock__tab { flex: 1 1 0; width: auto; min-width: 0; }
+.app.is-page-zoomed .mode__icon { display: none; }
+
+@media (max-width: 760px) {
+  .stage.screen--level.has-studio-panel { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+  .stage.screen--level.has-studio-panel > .design-panel { grid-row: 4; }
+  .stage.screen--level.has-studio-panel.uses-drag-controls { grid-template-rows: auto minmax(0, 1fr) auto; }
+  .stage.screen--level.has-studio-panel.uses-drag-controls > .design-panel { grid-row: 3; }
+}
+@media (max-width: 760px) {
+  .stage.screen--level.has-camera-lab { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+  .stage.screen--level.has-camera-lab > .camera-lab { grid-row: 4; }
+  .stage.screen--level.has-camera-lab.uses-drag-controls { grid-template-rows: auto minmax(0, 1fr) auto; }
+  .stage.screen--level.has-camera-lab.uses-drag-controls > .camera-lab { grid-row: 3; }
+}
+
+/* Walking pauses the whole dock in one update, including the cube colors. */
+.stage.screen--level .dock__tab[data-state="paused"] {
+  color: var(--color-piece-disabled);
+}
+.stage.screen--level .dock__tab[data-state="paused"] .dock__tab-icon path {
+  fill: transparent;
+}
+.stage.screen--level .dock__tab[data-state="paused"] .piece-pull-count {
+  fill: var(--color-piece-disabled);
+}

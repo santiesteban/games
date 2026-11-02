@@ -4,6 +4,7 @@ import {deploymentUrls} from '../shared/deployment.js';
 import {openExternal,canPickPuzzleFile,pickPuzzleFile,subscribePuzzleImports} from '../shared/platform.js';
 import {puzzleFromTransfer,puzzleFromLink} from '../shared/puzzle-transfer.js';
 import { puzzleThumbnail } from './puzzle-thumbnail.js';
+import { collectionCard } from './collection-view.js';
 import './my-puzzles.css';
 
 export function createMyPuzzles({play,onChange,creatorUrl}){
@@ -54,21 +55,21 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     }
   }
   manager.addEventListener('close',()=>{if(message.parentElement===manager){document.body.append(message);message.classList.remove('in-manager')}});
-  function render(parent,revealLevelId,gridObserver){
-    const section=document.createElement('section');section.className='level-group my-puzzles';const head=document.createElement('header');head.className='level-group-header';const heading=document.createElement('h2');heading.textContent='My Puzzles';head.append(heading);
-    const actions=document.createElement('div');actions.className='my-puzzles-actions';const create=document.createElement('a');create.href=creatorUrl;create.target='_blank';create.rel='noopener';create.className='btn';create.textContent='＋ Create a puzzle';create.onclick=event=>{event.preventDefault();openExternal(creatorUrl).catch(error=>notice(error.message))};const upload=document.createElement('button');upload.type='button';upload.className='btn';upload.textContent='Import JSON';upload.onclick=importFile;const manage=document.createElement('button');manage.type='button';manage.className='btn';manage.textContent='Manage puzzles';manage.disabled=!records.length;manage.onclick=()=>{renderManager();manager.showModal()};actions.append(create,upload,manage);head.append(actions);section.append(head);
-    if(!records.length){const empty=document.createElement('p');empty.className='my-puzzles-empty';empty.textContent=ready?'No puzzles yet. Create a puzzle or import JSON to get started.':'Loading your puzzles…';section.append(empty)}
-    const list=document.createElement('div');list.className='level-group-items';
-    for(const record of records){
-      const level=puzzleLevel(record.puzzle),wrap=document.createElement('article');wrap.className='my-puzzle-card';
-      const button=document.createElement('button');button.type='button';button.className='level-card';button.dataset.levelId=level.id;button.setAttribute('aria-label',`Play ${level.name}${record.completed?', completed':''}`);button.onclick=()=>play(level);
-      const art=document.createElement('span');art.className='level-preview';art.append(thumbnail(level));
-      if(record.completed){const check=document.createElement('span');check.className='completion-mark';check.textContent='✓';check.setAttribute('aria-hidden','true');check.classList.toggle('is-pending',level.id===revealLevelId);art.append(check)}
-      const caption=document.createElement('span');caption.className='level-card-caption';const details=document.createElement('span');details.className='level-details';const name=document.createElement('strong');name.textContent=level.name;details.append(name);caption.append(details);button.append(art,caption);wrap.append(button);
-      list.append(wrap);
+  function renderCollection(grid,actions,revealLevelId){
+    for(const [index,record] of records.entries()){
+      const level=puzzleLevel(record.puzzle);
+      const card=collectionCard(level,{completed:record.completed,pending:level.id===revealLevelId,number:index+1,play});
+      const art=thumbnail(level);art.classList.add('level-card__art');
+      card.querySelector('.level-card__preview').append(art);grid.append(card);
     }
-    if(records.length){const frame=document.createElement('div');frame.className='level-grid';const outline=document.createElementNS('http://www.w3.org/2000/svg','svg');outline.setAttribute('class','level-grid-outline');outline.setAttribute('aria-hidden','true');outline.setAttribute('focusable','false');frame.append(list,outline);section.append(frame);gridObserver?.observe(list)}
-    parent.append(section);
+    const heading=document.createElement('h2');heading.textContent='Make and manage puzzles';
+    const links=document.createElement('div');links.className='collection-tools';
+    const upload=document.createElement('button');upload.type='button';upload.className='action';upload.textContent='Upload a Level';upload.onclick=importFile;
+    const create=document.createElement('a');create.href=creatorUrl;create.target='_blank';create.rel='noopener';create.className='action';create.textContent='Open Level Maker';
+    create.onclick=event=>{event.preventDefault();openExternal(creatorUrl).catch(error=>notice(error.message))};
+    const manage=document.createElement('button');manage.type='button';manage.className='action';manage.textContent='Manage puzzles';manage.disabled=!records.length;
+    manage.onclick=()=>{renderManager();manager.showModal()};
+    links.append(upload,create,manage);actions.append(heading,links);
   }
   async function complete(level){if(level.temporaryPlaytest)return;try{const record=await stored('puzzles','get',level.userPuzzle.id);if(record&&record.puzzle.revision===level.userPuzzle.revision){await stored('puzzles','put',{...record,completed:true});listeners.notify();await reload()}}catch(e){notice(e.message)}}
   let pendingLink,nativeConnected=false;
@@ -87,5 +88,5 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     if(pendingLink){preview(pendingLink);pendingLink=null}
   }
   window.addEventListener('hashchange',()=>{readLink();openPending()});
-  return {render,complete,openPending,preview};
+  return {renderCollection,complete,openPending,preview,get summary(){return {ready,total:records.length,completed:records.filter(record=>record.completed).length}}};
 }
