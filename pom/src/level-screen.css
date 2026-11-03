@@ -399,6 +399,60 @@
   min-width: 0;
   overflow: hidden;
 }
+.stage.screen--level .camera-controls {
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+.stage.screen--level .camera-controls[hidden] { display: none; }
+.stage.screen--level .camera-controls.is-active { padding: 7px; border-radius: 12px; background: rgba(255,255,255,.72); }
+.stage.screen--level .camera-controls .camera-controls__toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.85);
+}
+.stage.screen--level .camera-controls__toggle[aria-pressed="true"] { background: transparent; }
+.stage.screen--level .camera-controls__toggle svg { width: 20px; height: 20px; }
+.stage.screen--level .camera-controls__close-icon,
+.stage.screen--level .camera-controls__toggle[aria-pressed="true"] .camera-controls__camera-icon { display: none; }
+.stage.screen--level .camera-controls__toggle[aria-pressed="true"] .camera-controls__close-icon { display: block; }
+.stage.screen--level .camera-controls__sliders { display: flex; align-items: center; gap: 8px; }
+.stage.screen--level .camera-controls__sliders[hidden] { display: none; }
+.stage.screen--level .camera-controls__zoom { display: flex; flex-direction: column; align-items: center; color: #222; font-size: 15px; line-height: 1; }
+.stage.screen--level .camera-controls__sliders input {
+  appearance: none;
+  -webkit-appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 24px;
+  height: 62px;
+  margin: 0;
+  background: transparent;
+  touch-action: none;
+}
+.stage.screen--level .camera-controls__sliders input::-webkit-slider-runnable-track { width: 2px; background: #111; border-radius: 2px; }
+.stage.screen--level .camera-controls__sliders input::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-left: -5px; border: 0; border-radius: 50%; background: #111; }
+.stage.screen--level .camera-controls__sliders input::-moz-range-track { width: 2px; background: #111; border-radius: 2px; }
+.stage.screen--level .camera-controls__sliders input::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #111; }
+.stage.screen--level .camera-controls__direction {
+  position: relative;
+  justify-self: end;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  touch-action: none;
+  cursor: crosshair;
+}
+.stage.screen--level .camera-controls__direction:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
+.stage.screen--level .camera-controls__globe { position: absolute; inset: 0; width: 100%; height: 100%; color: #111; stroke-width: 2; pointer-events: none; }
+.stage.screen--level .camera-controls__handle { position: absolute; left: var(--camera-x,50%); top: var(--camera-y,62.5%); width: 12px; height: 12px; border-radius: 50%; background: #111; transform: translate(-50%,-50%); pointer-events: none; }
 .stage.screen--level .dock { grid-column: 1; grid-row: 3; }
 .stage.screen--level.uses-drag-controls { grid-template-rows: auto minmax(0, 1fr); }
 .stage.screen--level .dock.is-selected-only { margin-top: 0; }

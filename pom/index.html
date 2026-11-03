@@ -53,7 +53,23 @@
       </div>
     </header>
 
-    <main class="game-board canvas-wrap" id="canvasWrap" aria-label="Game board"><div class="level-loading" id="levelLoading" hidden><p id="levelLoadingMessage" role="status" aria-live="polite">Loading puzzle…</p><button class="btn" id="retryLevelAssets" type="button" hidden>Try again</button></div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
+    <main class="game-board canvas-wrap" id="canvasWrap" aria-label="Game board"><div class="level-loading" id="levelLoading" hidden><p id="levelLoadingMessage" role="status" aria-live="polite">Loading puzzle…</p><button class="btn" id="retryLevelAssets" type="button" hidden>Try again</button></div><div class="camera-controls" id="cameraControlsPanel" role="group" aria-label="Camera controls" hidden>
+      <button class="camera-controls__toggle" id="cameraModeToggle" type="button" aria-label="Enter camera mode" aria-pressed="false" aria-controls="cameraModeSliders" title="Camera mode">
+        <svg class="camera-controls__camera-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3"/></svg>
+        <svg class="camera-controls__close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
+      </button>
+      <div class="camera-controls__sliders" id="cameraModeSliders" hidden>
+        <div class="camera-controls__direction" id="cameraDirection" role="group" tabindex="0" aria-label="Camera angle. Use arrow keys to rotate and tilt." title="Drag to rotate and tilt">
+          <svg class="camera-controls__globe" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34"/><ellipse cx="36" cy="36" rx="15" ry="34"/><path d="M2 36h68"/></svg>
+          <span class="camera-controls__handle" aria-hidden="true"></span>
+        </div>
+        <div class="camera-controls__zoom">
+          <span aria-hidden="true">+</span>
+          <input type="range" data-camera-control="zoom" aria-label="Zoom" title="Zoom" min="0" max="100" step="1" orient="vertical">
+          <span aria-hidden="true">−</span>
+        </div>
+      </div>
+    </div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
     <footer class="dock" id="pieceDock" data-active-piece="none">
       <div class="dock__tabs">
         <button class="dock__tab" type="button" disabled data-piece="left" data-state="disabled" aria-label="Left piece" aria-pressed="false">
@@ -196,6 +212,13 @@
             <p class="setting__description" id="hideHelpText-description">Hide the hint banner above the puzzle.</p>
           </div>
           <input class="switch" id="hideHelpText" type="checkbox" role="switch" aria-describedby="hideHelpText-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
+            <label class="setting__label" for="cameraControls">Camera controls</label>
+            <p class="setting__description" id="cameraControls-description">Show a camera mode with zoom and angle controls inside the puzzle.</p>
+          </div>
+          <input class="switch" id="cameraControls" type="checkbox" role="switch" aria-describedby="cameraControls-description">
         </div>
         <div class="setting setting--select">
           <div class="setting__copy">

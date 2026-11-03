@@ -18,3 +18,8 @@ test('does not restore a changed puzzle and handles corrupt storage',()=>{
  const broken=createUnfinishedPuzzles({getItem(){throw Error()},setItem(){throw Error()}});
  assert.deepEqual(broken.list(),[]);assert.equal(broken.save(a,state(1)),false);
 });
+test('hides an untouched position saved by an earlier version',()=>{
+ const saves=setup(),a=level('a');
+ saves.save(a,state(0));assert.equal(saves.get(a),null);
+ saves.save(a,{...state(0),history:[state(0)]});assert.notEqual(saves.get(a),null);
+});

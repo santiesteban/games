@@ -85,6 +85,11 @@ keepNativeInputLocal(menuScreen);
 keepNativeInputLocal(document.querySelector('.level-header'));
 keepNativeInputLocal(document.querySelector('#pieceDock'));
 const wrap = document.querySelector('#canvasWrap');
+const cameraControlsPanel=document.querySelector('#cameraControlsPanel');
+const cameraModeToggle=document.querySelector('#cameraModeToggle'),cameraModeSliders=document.querySelector('#cameraModeSliders');
+const cameraDirection=document.querySelector('#cameraDirection');
+let cameraModeActive=false,cameraModePrevious=null;
+keepNativeInputLocal(cameraControlsPanel);
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
 let visibilityStudy={target:null,lastCheck:-1,lastTime:0,lastBlocked:-1,boxes:[],board:null,key:null};
@@ -320,10 +325,10 @@ function canReach(g){return canReachPiece(movementBoard(),movementBoard().groups
 function goalNode(){const g=byCell[goalCell.y]?.[goalCell.x];return{x:goalCell.x,y:goalCell.y,z:Math.max(0,(g?.depth||0)-1)}}
 function save(){history.push({player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,won});if(history.length>80)history.shift()}
 function canSaveUnfinished(){return !isMakerPlaytest&&!cameraLab&&!interactionLab&&activeLevel.kind==='puzzle'&&!activeLevel.temporaryPlaytest}
-function saveUnfinished({keepInitial=false}={}){
+function saveUnfinished(){
   if(!canSaveUnfinished())return;
   const start=activeLevel.start,initial=groups.every((g,i)=>g.depth===(activeLevel.initialDepths?.[i]??0));
-  if(!keepInitial&&!history.length&&initial&&player.x===start.x&&player.y===(start.y??H)&&player.z===start.z){unfinished.remove(activeLevel.id);return}
+  if(!history.length&&initial&&player.x===start.x&&player.y===(start.y??H)&&player.z===start.z){unfinished.remove(activeLevel.id);return}
   unfinished.save(activeLevel,{player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,history:structuredClone(history)});
 }
 function validSavedPosition(state){
@@ -847,6 +852,10 @@ function syncPieceDock(){
 }
 function updateUI(){
   cameraLab?.setBusy(busy||won||introPlaying||levelLoading);
+  cameraControlsPanel.hidden=!controlFeatures.enabled('cameraControls')||activeLevel.kind!=='puzzle'||!!cameraLab;
+  if(cameraControlsPanel.hidden&&cameraModeActive)setCameraMode(false);
+  cameraControlsPanel.inert=busy||won||levelLoading;
+  if(viewReady)syncCameraSliders();
   wrap.classList.toggle('no-piece-selected',!selected);
   document.querySelector('#levelSettings').disabled=busy||won||introPlaying||levelLoading;
   document.querySelector('#gameActions').inert=won;
@@ -934,6 +943,7 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){if(cameraLab||interactionLab)return;unfinished.remove(activeLevel.id);if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
+  cameraModeActive=false;cameraModePrevious=null;syncCameraMode();
   levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
   pieceDragAnchor=null;activeLevel=level;if(isBackgroundStudio())backgroundStudio.setPreviewLevel(level.studioSourceId);if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
@@ -941,8 +951,8 @@ function resetLevelState(level){
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;resumeUnfinished();
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
 }
-async function playUserPuzzle(level){if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}catalogScreens?.selectForLevel(level);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);saveUnfinished({keepInitial:true})}
-async function startLevel(id){if(isMakerPlaytest)return;if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;catalogScreens?.selectForLevel(level);if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);saveUnfinished({keepInitial:true});showOpeningHelp()}
+async function playUserPuzzle(level){if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}catalogScreens?.selectForLevel(level);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
+async function startLevel(id){if(isMakerPlaytest)return;if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;catalogScreens?.selectForLevel(level);if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);showOpeningHelp()}
 document.querySelector('#openSettings').addEventListener('click',event=>{event.preventDefault();settingsReturnToLevel=false;showMenu('settings')});
 document.querySelector('#levelSettings').addEventListener('click',()=>{if(busy||won||introPlaying)return;settingsReturnToLevel=true;showMenu('settings')});
 function syncControlFeatureInputs(){
@@ -1203,6 +1213,7 @@ function applyBoardView(clamp=true){
   // Readable, projected dimensions also make responsive checks independent of device pixels.
   wrap.dataset.cameraHorizontal=String(viewSide);wrap.dataset.cameraVertical=String(viewHeightStep);wrap.dataset.cameraPitch=viewPitch.toFixed(2);wrap.dataset.squareWidth=viewUnit.toFixed(2);wrap.dataset.squareDepth=(viewUnit*Math.sin(viewPitch)).toFixed(2);wrap.dataset.view=viewUnit<=wrap.clientHeight/fitCamera(wrap.clientWidth,wrap.clientHeight)*1.001?'full':'zoomed';
   if(worldPresentation()){cameraLab?.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraMotion=cameraState.motion;wrap.dataset.cameraTruck=String(cameraState.truck);wrap.dataset.cameraFollowing=String(cameraState.followX||cameraState.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraState.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
+  syncCameraSliders();
 }
 function startBoardView(animate=true){
   if(levelLoading)return;
@@ -1242,6 +1253,77 @@ function zoomBoard(unit,x,y){
   const old=viewUnit,f=sceneFrame(wrap.clientWidth,wrap.clientHeight),min=wrap.clientHeight/f.height;viewUnit=Math.max(min,Math.min(Math.max(tappingUnit(),min),unit));
   const scale=1/old-1/viewUnit;if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale((x-wrap.clientWidth/2)*scale)).add(render3D.camera.getUp().scale((wrap.clientHeight/2-y)*scale));limitManualPan();return}viewTarget=viewTarget.add(vec3((x-wrap.clientWidth/2)*scale,(wrap.clientHeight/2-y)*scale/Math.cos(viewPitch),0));
 }
+function cameraZoomBounds(){
+  const min=wrap.clientHeight/sceneFrame(wrap.clientWidth,wrap.clientHeight).height;
+  return {min,max:Math.max(tappingUnit(),min)};
+}
+function syncCameraMode(){
+  cameraModeSliders.hidden=!cameraModeActive;
+  cameraControlsPanel.classList.toggle('is-active',cameraModeActive);
+  cameraModeToggle.setAttribute('aria-pressed',String(cameraModeActive));
+  cameraModeToggle.setAttribute('aria-label',cameraModeActive?'Exit camera mode':'Enter camera mode');
+  cameraModeToggle.title=cameraModeActive?'Exit camera mode':'Enter camera mode';
+}
+function setCameraMode(active){
+  if(active===cameraModeActive)return;
+  if(active){
+    enterPlayFromIntro();cameraModePrevious={yaw:cameraState.yaw,pitch:cameraState.pitch,unit:viewUnit,target:viewTarget.copy()};cameraModeActive=true;
+    cameraState.yaw=-12;cameraState.pitch=32;
+    viewTouched=true;clearBoardHover();syncCameraMode();applyCameraStudy({orbit:true,refit:true});
+    zoomBoard(viewUnit*1.2,wrap.clientWidth/2,wrap.clientHeight/2);applyBoardView(false);
+  }else{
+    cameraModeActive=false;
+    if(cameraModePrevious){cameraState.yaw=cameraModePrevious.yaw;cameraState.pitch=cameraModePrevious.pitch;viewUnit=cameraModePrevious.unit;viewTarget=cameraModePrevious.target}
+    cameraModePrevious=null;syncCameraMode();
+    if(gameReady&&viewReady){applyCameraStudy({orbit:true});resumeStudyFollow()}
+  }
+}
+cameraModeToggle.addEventListener('click',()=>{
+  if(gameReady&&viewReady&&!levelLoading&&!busy&&!won)setCameraMode(!cameraModeActive);
+});
+function syncCameraSliders(){
+  if(cameraControlsPanel.hidden||!viewUnit)return;
+  const {min,max}=cameraZoomBounds(),zoom=cameraControlsPanel.querySelector('[data-camera-control="zoom"]');
+  zoom.disabled=max<=min;zoom.value=max>min?String(Math.max(0,Math.min(100,Math.round(100*Math.log(viewUnit/min)/Math.log(max/min))))):'0';
+  zoom.setAttribute('aria-valuetext',`${Math.round(viewUnit/min*100)}%`);
+  const width=cameraDirection.clientWidth,height=cameraDirection.clientHeight;
+  if(width&&height){
+    let x=cameraState.yaw/40,y=(25-cameraState.pitch)/20;
+    const distance=Math.hypot(x,y);if(distance>1){x/=distance;y/=distance}
+    cameraDirection.style.setProperty('--camera-x',`${100*(6+(width-12)*(x+1)/2)/width}%`);
+    cameraDirection.style.setProperty('--camera-y',`${100*(6+(height-12)*(y+1)/2)/height}%`);
+  }
+}
+cameraControlsPanel.addEventListener('input',event=>{
+  const input=event.target;if(!input.matches('input[data-camera-control]')||!gameReady||!viewReady||levelLoading||busy||won)return;
+  enterPlayFromIntro();viewTouched=true;clearBoardHover();
+  const control=input.dataset.cameraControl,value=Number(input.value);
+  if(control==='zoom'){
+    const {min,max}=cameraZoomBounds();zoomBoard(min*(max/min)**(value/100),wrap.clientWidth/2,wrap.clientHeight/2);
+    applyBoardView();resetStudyFollow();return;
+  }
+});
+function setCameraDirection(yaw,pitch){
+  if(!cameraModeActive||!gameReady||!viewReady||levelLoading||busy||won)return;
+  cameraState.yaw=Math.max(-40,Math.min(40,yaw));cameraState.pitch=Math.max(5,Math.min(45,pitch));
+  viewTouched=true;clearBoardHover();applyCameraStudy({orbit:true});
+}
+function cameraDirectionFromPointer(event){
+  const rect=cameraDirection.getBoundingClientRect();
+  let x=2*(event.clientX-rect.left-6)/Math.max(1,rect.width-12)-1;
+  let y=2*(event.clientY-rect.top-6)/Math.max(1,rect.height-12)-1;
+  const distance=Math.hypot(x,y);if(distance>1){x/=distance;y/=distance}
+  setCameraDirection(Math.round(x*40),Math.round(25-y*20));
+}
+cameraDirection.addEventListener('pointerdown',event=>{
+  if(event.button!==0||!cameraModeActive)return;
+  event.preventDefault();cameraDirection.focus({preventScroll:true});cameraDirection.setPointerCapture(event.pointerId);cameraDirectionFromPointer(event);
+});
+cameraDirection.addEventListener('pointermove',event=>{if(cameraDirection.hasPointerCapture(event.pointerId))cameraDirectionFromPointer(event)});
+cameraDirection.addEventListener('keydown',event=>{
+  const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[event.key];
+  if(!delta)return;event.preventDefault();setCameraDirection(cameraState.yaw+delta[0],cameraState.pitch+delta[1]);
+});
 function clearBoardHover(){hovered=null;movementMarkers?.setHovered(null);if(hoverObject)hoverObject.color=new Color(1,1,1,0)}
 function boardPoint(e){const r=wrap.getBoundingClientRect();return {x:e.clientX-r.left-wrap.clientLeft,y:e.clientY-r.top-wrap.clientTop}}
 function draggableFrontPiece(e){
@@ -1359,7 +1441,7 @@ const requestGPUProjection=new URLSearchParams(location.search).get('projection'
 let projectionCamera;
 function puzzleProjectionState(){
   const camera=render3D.camera,p=camera.pos,r=camera.rotation;
-  const enabled=!cameraLab&&(!isPreviewLevel(activeLevel)||isBackgroundStudio())&&studyPerspective(),old=projectionCamera;
+  const enabled=!cameraModeActive&&!cameraLab&&(!isPreviewLevel(activeLevel)||isBackgroundStudio())&&studyPerspective(),old=projectionCamera;
   if(!old||old.enabled!==enabled||old.x!==p.x||old.y!==p.y||old.z!==p.z||old.rx!==r.x||old.ry!==r.y||old.rz!==r.z){
     projectionCamera={enabled,x:p.x,y:p.y,z:p.z,rx:r.x,ry:r.y,rz:r.z,value:puzzleProjection({enabled,eye:p,forward:camera.getForward(),up:camera.getUp()})};
   }
