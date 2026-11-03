@@ -8,7 +8,7 @@ const catalog=loadLevelCatalog(JSON.parse(fs.readFileSync(new URL('./data/levels
 test('pack totals match visible catalog levels instead of hidden pack members',()=>{
   const available=level=>level.compatibility.playable&&!level.knownIssues;
   const totals=catalog.groups.map(group=>packProgress(catalog.levels.filter(level=>level.group===group.id),new Set(),available).total);
-  assert.deepEqual(totals,[10,9,14,15,16,2]);
+  assert.deepEqual(totals,[10,9,14,15,16,9,2]);
 });
 test('visibility changes update both counts without losing hidden completions',()=>{
   const levels=[{id:'visible',kind:'puzzle'},{id:'hidden',kind:'puzzle',knownIssues:true},{id:'unsupported',kind:'puzzle',unsupported:true},{id:'studio',kind:'background-studio'}];
