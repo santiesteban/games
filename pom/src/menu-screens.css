@@ -273,6 +273,10 @@
   overflow: visible;
 }
 
+#menuScreen .menu-page .packs[hidden] { display: none; }
+
+#menuScreen .menu-page #continueSection:not([hidden]) { margin-top: 24px; }
+
 #menuScreen .menu-page .tagline {
   margin: 0;
   font-size: 18px;
@@ -347,6 +351,25 @@
   object-fit: contain;
   object-position: center;
   border-radius: 8px;
+}
+
+#menuScreen .menu-page .continue-card__art {
+  position: static;
+  display: block;
+  width: 68px;
+  height: 68px;
+  overflow: visible;
+  transform: none;
+}
+
+#menuScreen .menu-page .pack-card__copy .continue-card__pack {
+  padding: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-base);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.1;
 }
 
 #menuScreen .menu-page .pack-card__art-squares {

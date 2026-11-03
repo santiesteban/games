@@ -14,10 +14,11 @@ export function packProgress(levels,progress,isAvailable){
   return {completed:items.filter(level=>progress.has(level.id)).length,total:items.length};
 }
 
-export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzles,thumbnailLevel,open,play}) {
+export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzles,unfinished,thumbnailLevel,open,play}) {
   let collection=groups[0]?.id,ready=false;
   const packList=document.querySelector('#packList');
   const personalList=document.querySelector('#personalPackList');
+  const continueList=document.querySelector('#continueList'),continueSection=document.querySelector('#continueSection');
   const grid=document.querySelector('#collectionGrid');
   const scroller=document.querySelector('#menuScreen');
   const empty=document.querySelector('#collectionEmpty');
@@ -48,6 +49,19 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
   }
 
   function renderHome(){
+    const cards=[];
+    for(const entry of unfinished.list()){
+      const level=levels.find(item=>item.id===entry.id)??myPuzzles.levelById?.(entry.id);
+      if(!level||!unfinished.get(level))continue;
+      const item=document.querySelector('#packCardTemplate').content.firstElementChild.cloneNode(true),link=item.querySelector('a');
+      link.href=`#level=${encodeURIComponent(level.id)}`;link.setAttribute('aria-label',`Continue ${level.name}`);link.setAttribute('aria-disabled',String(!ready));
+      link.addEventListener('click',event=>{event.preventDefault();if(ready)play(level)});
+      const art=level.userPuzzle?myPuzzles.thumbnail(level):puzzleThumbnail(thumbnailLevel(level));art.classList.add('continue-card__art');art.setAttribute('aria-hidden','true');item.querySelector('.pack-card__art').replaceChildren(art);
+      item.querySelector('.pack-card__title').textContent=level.name;
+      const pack=item.querySelector('.pack-card__progress');pack.classList.add('continue-card__pack');pack.textContent=level.userPuzzle?'My Puzzles':groups.find(group=>group.id===level.group)?.name??'';
+      cards.push(item);
+    }
+    continueList.replaceChildren(...cards);continueSection.hidden=!cards.length;
     packList.replaceChildren(...groups.map((group,index)=>packCard(group.id,group.name,groupProgress(group.id),index)));
     const placeholder=document.createElement('li');
     placeholder.innerHTML=`<article class="pack-card" aria-label="Special Packs, coming soon">

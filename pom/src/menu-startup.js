@@ -3,6 +3,7 @@ import {createLevelProgress} from './level-progress.js';
 import {createLevelPreferences} from './level-preferences.js';
 import {CONTROL_FEATURES,createControlFeatures} from './control-features.js';
 import {createCatalogScreens} from './catalog-screens.js';
+import {createUnfinishedPuzzles} from './unfinished-puzzles.js';
 import {createMyPuzzles} from './my-puzzles.js';
 import {movementExamples,studioLevel} from './movement-studio.js';
 import {deploymentUrls} from '../shared/deployment.js';
@@ -15,7 +16,8 @@ export function startMenu(){
   const progress=createLevelProgress(levels.filter(level=>!isPreview(level)));
   const preferences=createLevelPreferences(), features=createControlFeatures();
   const menu=document.querySelector('#menuScreen');
-  const runtime=menuStartup={progress,preferences,features,catalog:null,puzzles:null,open:null,play:null,change:null};
+  const unfinished=createUnfinishedPuzzles();
+  const runtime=menuStartup={progress,preferences,features,unfinished,catalog:null,puzzles:null,open:null,play:null,change:null};
   function show(panel){
     document.documentElement.dataset.screen=panel==='title'?'home':panel;
     menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
@@ -53,7 +55,7 @@ export function startMenu(){
     catch(error){console.error('Unable to load game',error);document.querySelector('#levelLoadingMessage').textContent='The game could not start. Please reload and try again.'}
   };
   const puzzles=runtime.puzzles=createMyPuzzles({play:level=>runtime.play(level),onChange:()=>runtime.change(),creatorUrl:deploymentUrls().creator});
-  runtime.catalog=createCatalogScreens({levels,groups,progress,isAvailable:level=>level.compatibility.playable&&(!preferences.hideKnownIssues||!level.knownIssues),myPuzzles:puzzles,thumbnailLevel:level=>level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level,open:()=>runtime.open(),play:level=>runtime.play(level)});
+  runtime.catalog=createCatalogScreens({levels,groups,progress,unfinished,isAvailable:level=>level.compatibility.playable&&(!preferences.hideKnownIssues||!level.knownIssues),myPuzzles:puzzles,thumbnailLevel:level=>level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level,open:()=>runtime.open(),play:level=>runtime.play(level)});
   runtime.catalog.ready();puzzles.openPending();
   document.querySelector('#buildNumber').textContent=`Build ${__BUILD_INFO__.number} · ${__BUILD_INFO__.revision}${__BUILD_INFO__.development?' (development)':''}`;
   for(const [selector,panel] of [['#openSettings','settings'],['#settingsHome','title'],['#backTitle','title'],['[data-home]','title']])document.querySelector(selector).addEventListener('click',event=>{event.preventDefault();show(panel)},options);
@@ -64,7 +66,7 @@ export function startMenu(){
   document.querySelector('#clearProgress').addEventListener('click',()=>{document.querySelector('#clearProgress').hidden=true;document.querySelector('#clearProgressConfirm').hidden=false;document.querySelector('#cancelClearProgress').focus()},options);
   document.querySelector('#cancelClearProgress').addEventListener('click',()=>{document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#clearProgress').focus()},options);
   document.querySelector('#confirmClearProgress').addEventListener('click',()=>{if(!progress.clear()){document.querySelector('#progressMessage').textContent='Your browser could not clear progress. Check that site storage is allowed.';return}runtime.change();updateProgress();document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='Your progress has been cleared.'},options);
-  window.addEventListener('storage',event=>{if(event.key===progress.key||event.key===null){progress.reload();runtime.change();updateProgress()}if(event.key===preferences.key||event.key===null){preferences.reload();for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=preferences[name];runtime.change()}if(event.key===features.key||event.key===null){features.reload();syncFeatures()}},options);
+  window.addEventListener('storage',event=>{if(event.key===unfinished.key)runtime.change();if(event.key===progress.key||event.key===null){progress.reload();runtime.change();updateProgress()}if(event.key===preferences.key||event.key===null){preferences.reload();for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=preferences[name];runtime.change()}if(event.key===features.key||event.key===null){features.reload();syncFeatures()}},options);
   syncFeatures();updateProgress();
   document.querySelector('#interactionLabLink').hidden=false;
   return runtime;

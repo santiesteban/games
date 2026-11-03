@@ -11,6 +11,7 @@ import catalog from '#level-catalog';
 import {menuStartup} from './menu-startup.js';
 import { createPieceDrag, pickPieceFront, pieceInteractionAnchor } from './piece-drag.js';
 import { createLevelProgress } from './level-progress.js';
+import { createUnfinishedPuzzles } from './unfinished-puzzles.js';
 import { createLevelPreferences } from './level-preferences.js';
 import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
@@ -116,6 +117,7 @@ function cameraYaw(){return studyStraight()&&cameraState.motion!=='track'?-camer
 function cameraPitch(){return studyStraight()?cameraState.pitch*Math.PI/180:cameraPosition(viewSide,viewHeightStep).pitch}
 function isPreviewLevel(level){return ['design-playground','background-studio'].includes(level.kind)}
 const levelProgress=menuStartup?.progress??(isMakerPlaytest||cameraLab||interactionLab?{key:null,count:0,has:()=>false,reload(){},complete:()=>false,clear:()=>false}:createLevelProgress(levels.filter(level=>!isPreviewLevel(level))));
+const unfinished=menuStartup?.unfinished??createUnfinishedPuzzles();
 const levelPreferences=menuStartup?.preferences??createLevelPreferences();
 let toastTimer,helpKind=null,openingHelpShown=false,interactionHelpKey=null;
 function syncHelpVisibility(){document.querySelector('#toast').hidden=levelPreferences.hideHelpText;if(levelPreferences.hideHelpText)hideHelp()}
@@ -317,6 +319,25 @@ function reachableTop(target){if(findPath(target))return target;return standable
 function canReach(g){return canReachPiece(movementBoard(),movementBoard().groups[g?.id],player)}
 function goalNode(){const g=byCell[goalCell.y]?.[goalCell.x];return{x:goalCell.x,y:goalCell.y,z:Math.max(0,(g?.depth||0)-1)}}
 function save(){history.push({player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,won});if(history.length>80)history.shift()}
+function canSaveUnfinished(){return !isMakerPlaytest&&!cameraLab&&!interactionLab&&activeLevel.kind==='puzzle'&&!activeLevel.temporaryPlaytest}
+function saveUnfinished({keepInitial=false}={}){
+  if(!canSaveUnfinished())return;
+  const start=activeLevel.start,initial=groups.every((g,i)=>g.depth===(activeLevel.initialDepths?.[i]??0));
+  if(!keepInitial&&!history.length&&initial&&player.x===start.x&&player.y===(start.y??H)&&player.z===start.z){unfinished.remove(activeLevel.id);return}
+  unfinished.save(activeLevel,{player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,history:structuredClone(history)});
+}
+function validSavedPosition(state){
+  if(!state||!Array.isArray(state.depths)||state.depths.length!==groups.length||state.depths.some(n=>!Number.isInteger(n)||n<0||n>3))return false;
+  const p=state.player;if(!p||![p.x,p.y,p.z].every(Number.isInteger))return false;
+  return createMovementBoard(mural,state.depths).validNode(p);
+}
+function resumeUnfinished(){
+  if(!canSaveUnfinished())return;
+  const state=unfinished.get(activeLevel);if(!validSavedPosition(state))return;
+  groups.forEach((g,i)=>g.depth=state.depths[i]);player={...state.player};
+  history=Array.isArray(state.history)?state.history.slice(-80).filter(validSavedPosition).map(item=>({...item,won:false})):[];
+  selected=groups.find(g=>g.id===state.selected)??null;clearMovementRoutes();saveUnfinished();
+}
 function safeManipulation(g,next,dir){return safePieceChange(movementBoard(),movementBoard().groups[g.id],player,next,dir)}
 function canInteract(g){return g&&canReach(g)&&((g.depth<3&&safeManipulation(g,g.depth+1,1))||(g.depth>0&&safeManipulation(g,g.depth-1,-1)))}
 function autoSelectNearbyPiece(){
@@ -742,7 +763,7 @@ function pieceDragRange(g,dir){
 }
 function commitPieceDrag(dir,steps=1){
   if(!selected||busy||won||introPlaying||levelLoading||pieceDragRange(selected,dir)<steps)return;
-  hideHelp();save();resetStudyFollow();selected.depth+=dir*steps;player={...player,z:player.z+dir*steps};autoSelectNearbyPiece();animateEffort();updateUI();
+  hideHelp();save();resetStudyFollow();selected.depth+=dir*steps;player={...player,z:player.z+dir*steps};autoSelectNearbyPiece();animateEffort();saveUnfinished();updateUI();
 }
 function pieceDragState(atGrab=false,piece=selected){
   if(!controlFeatures.enabled('pieceDragArrows')||controlFeatures.enabled('stackedPieceButtons')||!gameReady||busy||won||introPlaying||levelLoading||!viewReady||document.querySelector('.stage').inert||!document.querySelector('#menuScreen').hidden||!piece||!canReach(piece))return null;
@@ -911,17 +932,17 @@ function updateProgressSettings(){
   document.querySelector('#clearProgress').disabled=levelProgress.count===0;
   if(!progressSaved)document.querySelector('#progressMessage').textContent='Your browser could not save progress. Check that site storage is allowed.';
 }
-function recordCompletedLevel(){if(cameraLab||interactionLab)return;if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
+function recordCompletedLevel(){if(cameraLab||interactionLab)return;unfinished.remove(activeLevel.id);if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
   levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
   pieceDragAnchor=null;activeLevel=level;if(isBackgroundStudio())backgroundStudio.setPreviewLevel(level.studioSourceId);if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
-  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;
+  groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;resumeUnfinished();
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
 }
-async function playUserPuzzle(level){if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}catalogScreens?.selectForLevel(level);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level)}
-async function startLevel(id){if(isMakerPlaytest)return;if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;catalogScreens?.selectForLevel(level);if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);showOpeningHelp()}
+async function playUserPuzzle(level){if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}catalogScreens?.selectForLevel(level);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);saveUnfinished({keepInitial:true})}
+async function startLevel(id){if(isMakerPlaytest)return;if(!gameReady){if(!await startGameEngine()||!document.querySelector('#menuScreen').hidden)return;}let level=levels.find(item=>item.id===id);if(!level||!level.compatibility.playable)return;catalogScreens?.selectForLevel(level);if(level.kind==='movement-studio')level=studioLevel(levels,movementExamples[0]);syncScreenAppearance('game');document.querySelector('.stage').classList.remove('is-won');document.querySelector('#menuScreen').hidden=true;document.querySelector('.stage').inert=false;resetLevelState(level);saveUnfinished({keepInitial:true});showOpeningHelp()}
 document.querySelector('#openSettings').addEventListener('click',event=>{event.preventDefault();settingsReturnToLevel=false;showMenu('settings')});
 document.querySelector('#levelSettings').addEventListener('click',()=>{if(busy||won||introPlaying)return;settingsReturnToLevel=true;showMenu('settings')});
 function syncControlFeatureInputs(){
@@ -979,7 +1000,7 @@ document.querySelector('#confirmClearProgress').addEventListener('click',()=>{
   if(!levelProgress.clear()){message.textContent='Your browser could not clear progress. Check that site storage is allowed.';return}
   progressSaved=true;renderLevelList();updateProgressSettings();document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;message.textContent='Your progress has been cleared.';document.querySelector('#settingsHome').focus();
 });
-window.addEventListener('storage',event=>{if(event.key===levelProgress.key||event.key===null){levelProgress.reload();renderLevelList();updateProgressSettings();if(levelProgress.count===0){document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false}}});
+window.addEventListener('storage',event=>{if(event.key===unfinished.key)catalogScreens?.renderHome();if(event.key===levelProgress.key||event.key===null){levelProgress.reload();renderLevelList();updateProgressSettings();if(levelProgress.count===0){document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false}}});
 document.querySelector('#backTitle').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
 document.querySelector('[data-home]').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
 document.querySelector('#exitLevel').addEventListener('click',event=>{event.preventDefault();isMakerPlaytest?returnToMaker():showMenu('levels',won?activeLevel.id:undefined)});
@@ -989,9 +1010,9 @@ const myPuzzles=menuStartup?.puzzles??(isMakerPlaytest?{renderCollection(){},com
   catch{playtestLoading.replaceChildren(document.createTextNode('This playtest could not be opened. '));const back=document.createElement('button');back.className='btn';back.textContent='Back to editor';back.onclick=returnToMaker;playtestLoading.append(back)}
 }}:createMyPuzzles({play:playUserPuzzle,onChange:()=>{if(document.querySelector('#levelsPanel').hidden===false)renderLevelList();else catalogScreens?.renderHome()},creatorUrl}));
 if(!isMakerPlaytest&&!catalogScreens)catalogScreens=createCatalogScreens({
-  levels,groups:levelGroups,progress:levelProgress,isAvailable:levelIsAvailable,myPuzzles,
+  levels,groups:levelGroups,progress:levelProgress,unfinished,isAvailable:levelIsAvailable,myPuzzles,
   thumbnailLevel:level=>level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level,
-  open:()=>showMenu('levels'),play:level=>startLevel(level.id),
+  open:()=>showMenu('levels'),play:level=>level.userPuzzle?playUserPuzzle(level):startLevel(level.id),
 });
 if(menuStartup){menuStartup.open=()=>showMenu('levels');menuStartup.play=level=>level.userPuzzle?playUserPuzzle(level):startLevel(level.id);menuStartup.change=()=>{if(!document.querySelector('#levelsPanel').hidden)renderLevelList();else catalogScreens?.renderHome()}}
 renderLevelList();
@@ -1422,7 +1443,7 @@ function moveTo(p,pressMarker=false){
     start??=now;
     // Carry elapsed time across cell boundaries instead of inserting a fresh
     // animation frame and a full stop at the beginning of every next step.
-    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape()}
+    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape();if(index<plans.length||!winningArrival)saveUnfinished()}
     if(index===plans.length){
       falling=false;setUmbrellaVisible(false);busy=false;
       if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');startCelebration()}else autoSelectNearbyPiece();updateUI();return;
@@ -1468,8 +1489,8 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
     if(x>=-1&&x<W+1&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }
 }
-function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();updateUI()}
-function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();applyBoardView();updateUI()}
+function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();saveUnfinished();updateUI()}
+function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();saveUnfinished();applyBoardView();updateUI()}
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
 const safariZoom=installSafariZoom(wrap,{
   enabled:()=>!viewportUI.pageZoomed&&!levelLoading&&!won&&viewReady&&!pieceDrag.active&&boardPointers.size<2&&document.querySelector('#menuScreen').hidden,
@@ -1526,7 +1547,7 @@ if(interactionLab){
 // A pointer gesture stops the opening camera motion even on a disabled action.
 document.querySelector('#pieceDock').addEventListener('pointerdown',()=>{if(!levelLoading&&gameReady&&viewReady)enterPlayFromIntro()},{capture:true});
 document.querySelector('#pull').onclick=()=>manipulate(1);document.querySelector('#push').onclick=()=>manipulate(-1);
-document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(history.pop())};document.querySelector('#reset').onclick=()=>{if(busy)return;hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;autoSelectNearbyPiece();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView()};
+document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(history.pop())};document.querySelector('#reset').onclick=()=>{if(busy)return;hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;if(canSaveUnfinished())unfinished.remove(activeLevel.id);autoSelectNearbyPiece();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView()};
 window.addEventListener('keydown',e=>{
   if(document.querySelector('.stage').inert||busy||won||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(['z','Z','r','R'].includes(e.key))enterPlayFromIntro();

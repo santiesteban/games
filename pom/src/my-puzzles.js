@@ -88,5 +88,5 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     if(pendingLink){preview(pendingLink);pendingLink=null}
   }
   window.addEventListener('hashchange',()=>{readLink();openPending()});
-  return {renderCollection,complete,openPending,preview,get summary(){return {ready,total:records.length,completed:records.filter(record=>record.completed).length}}};
+  return {renderCollection,complete,openPending,preview,thumbnail,levelById(id){const record=records.find(item=>`user:${item.id}`===id);return record?puzzleLevel(record.puzzle):null},get summary(){return {ready,total:records.length,completed:records.filter(record=>record.completed).length}}};
 }
