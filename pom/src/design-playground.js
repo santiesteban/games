@@ -138,7 +138,6 @@ export function createDesignPlayground(panel,onChange,onApply){
     const shadows=section(body,'Piece shadows');
     toggle(shadows,'Pieces cast shadows',values.shadows.enabled,n=>values.shadows.enabled=n,DEFAULT_DESIGN.shadows.enabled);
     range(shadows,'Shadow strength',values.shadows.strength*100,0,100,1,n=>values.shadows.strength=n/100,n=>`${n}%`,DEFAULT_DESIGN.shadows.strength*100);
-    range(shadows,'Shadow softness',values.shadows.softness,0,4,.1,n=>values.shadows.softness=n,n=>String(n),DEFAULT_DESIGN.shadows.softness);
     range(shadows,'Light direction',values.shadows.direction,-180,180,5,n=>values.shadows.direction=n,n=>`${n}°`,DEFAULT_DESIGN.shadows.direction);
     range(shadows,'Light height',values.shadows.elevation,15,85,5,n=>values.shadows.elevation=n,n=>`${n}°`,DEFAULT_DESIGN.shadows.elevation);
     const actions=document.createElement('div');actions.className='design-actions';

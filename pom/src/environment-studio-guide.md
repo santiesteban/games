@@ -4,7 +4,7 @@ Use Environment Studio to arrange scenery and compare saved environments. Undo a
 
 ## Find your controls
 
-Open or close each section independently. Saved configurations manages your alternatives. Scene & camera controls the environment, layers, floor guide and backdrop distance. Selected element contains position, size, tilt, material and support controls. Shadows controls scenery strength and ground and backdrop softness.
+Open or close each section independently. Saved configurations manages your alternatives. Scene & camera controls the environment, layers, floor guide and backdrop distance. Selected element contains position, size, tilt, material and support controls. Shadows controls scenery shadow strength.
 
 ## Arrange scenery
 
@@ -38,7 +38,7 @@ Padding and edge geometry stop at ground level independently of the painted fron
 
 Environment shadow strength controls scenery shadows independently from puzzle shadows. Zero hides projected scenery shadows; painted shading in the artwork remains visible.
 
-Ground & backdrop shadow blur softens both puzzle and scenery shadows on the ground and backdrop wall, using the same setting on both surfaces. It does not change puzzle-face shading. Scenery projects onto the ground and backdrop wall; overlapping shadows may darken. Supports do not currently add projected silhouettes.
+Scenery projects shadows onto the ground and backdrop wall; overlapping shadows may darken. Supports do not currently add projected silhouettes.
 
 ## Save and compare
 

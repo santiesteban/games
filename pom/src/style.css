@@ -216,7 +216,7 @@
 .level-group .level-details strong{display:block;font-size:14px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
 .level-group .level-badges{position:absolute;top:6px;right:8px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:calc(100% - 58px)}
 .level-group .level-status,.level-group .level-status.is-completed,.level-group .level-status.is-issues{padding:4px 7px;border:0;border-radius:999px;background:var(--paper);font-size:10px;line-height:1.3;font-weight:700;color:var(--ink);white-space:nowrap}
-.level-group .level-status.is-completed{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.completion-mark{position:absolute;z-index:1;display:grid;place-items:center;width:26px;height:26px;border:2px solid var(--ink);border-radius:8px;background:#79a66e;color:#fff;font:800 15px/1 'DM Sans',sans-serif;transform:rotate(4deg)}
+.level-group .level-status.is-completed{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.completion-mark{position:absolute;z-index:1;display:grid;place-items:center;width:26px;height:26px;border:2px solid var(--ink);border-radius:8px;background:#7fbf6f;color:#fff;font:800 15px/1 'DM Sans',sans-serif;transform:rotate(4deg)}
 .level-group .level-card.has-known-issues{opacity:1}.level-group .level-card.has-known-issues>.level-preview>.puzzle-thumbnail,.level-group .level-card.has-known-issues>.level-card-caption,.level-group .level-card.has-known-issues .card-number,.level-group .level-card.has-known-issues .level-badges{opacity:.58}
 @media(hover:hover){.level-group .level-card:hover{background:var(--level-hover);transform:none;filter:none}.level-group .level-card.has-known-issues:hover{opacity:1}}
 .level-group .level-card:active{background:var(--level-hover);transform:none;box-shadow:none}
@@ -286,7 +286,7 @@ html,body{background-color:var(--screen-top-color)}
 .no-piece-selected .block-action:disabled{opacity:.45}
 .completion-mark.is-pending{opacity:0}
 .level-card.is-just-completed .completion-mark{animation:completion-check-appear .5s .2s cubic-bezier(.2,.8,.25,1.3) both}
-@keyframes completion-check-appear{from{opacity:0;transform:rotate(4deg) scale(.4)}to{opacity:1;transform:rotate(4deg) scale(1)}}
+@keyframes completion-check-appear{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.level-card.is-just-completed .completion-mark{animation:none;opacity:1}}
 .block-action{transition:background-color .22s ease,color .22s ease,border-color .22s ease,opacity .22s ease,box-shadow .22s ease,transform .12s ease}
 @media(prefers-reduced-motion:reduce){.block-action{transition:none}}

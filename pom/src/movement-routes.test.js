@@ -84,3 +84,14 @@ test('connected steps retain speed through intermediate cells',()=>{
     }
   }
 });
+
+
+test('the right edge floor column is reachable without adding platforms outside the puzzle',()=>{
+  const level=levels.find(level=>level.legacyId===1),board=createMovementBoard(level.grid,level.initialDepths);
+  const edge={x:board.width,y:board.height,z:3};
+  assert(board.validNode(edge));
+  assert(findMovementPath(board,level.start,edge));
+  assert.deepEqual(board.nodesAt(board.width,board.height-1),[]);
+  assert.deepEqual(board.nodesAt(board.width+1,board.height),[]);
+  assert.deepEqual(board.nodesAt(-2,board.height),[]);
+});

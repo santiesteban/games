@@ -42,3 +42,13 @@ test('near-wall silhouettes remain on the receiving plane at side bearings',()=>
   }
  }
 });
+
+
+test('unblurred ground shadows survive rounding at the floor plane',()=>{
+ const sun={x:Math.sin(Math.PI/6)*Math.cos(Math.PI/4),y:Math.sin(Math.PI/4),z:Math.cos(Math.PI/6)*Math.cos(Math.PI/4)};
+ const y=0.014682747771368642,h=1.870967741935484;
+ const corners=[{x:0,y:y+h,z:3},{x:2,y:y+h,z:3},{x:2,y,z:3},{x:0,y,z:3}];
+ const shadow=projectStageShadow(corners,sun,{floor:true,origin:{x:0,y:0,z:0},normal:{x:0,y:1,z:0}},0);
+ assert.ok(shadow?.polygon.length>=3);
+ for(const p of shadow.polygon)assert(Math.abs(p.y)<1e-10);
+});

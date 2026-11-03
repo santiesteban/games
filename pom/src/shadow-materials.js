@@ -1,8 +1,11 @@
 import { Shader } from 'littlejsengine';
 
+// Radius in world units, shared by puzzle and scenery shadows.
+export const SHADOW_BLUR_RADIUS=.12;
+
 // LittleJS 1.27.2 supplies S, shadowMap, and shadowParams to 3D Shader snippets.
 // Compare each filtered sample against the receiver plane at that sample, rather
-// than comparing all nine samples with the center depth. The latter produces
+// than comparing all samples with the center depth. The latter produces
 // striped self-shadowing on sloping faces, particularly on mobile GPUs.
 const receiverShadow=`
   float surfaceShadow(){
@@ -20,13 +23,14 @@ const receiverShadow=`
     // Hardware linear filtering also compares the four surrounding texels.
     // Cover that footprint in light space so the correction stays stable at zoom.
     highp float bias=shadowParams.y/(S.w*S.w)+dot(abs(slope),texel);
-    highp float result=0.0;
-    for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y){
-      highp vec2 offset=vec2(float(x),float(y))*shadowParams.z;
+    highp float result=0.0,weight=0.0;
+    for(int i=0;i<32;i++){
+      float r=sqrt((float(i)+.5)/32.),angle=float(i)*2.39996323,w=exp(-2.*r*r);
+      highp vec2 offset=vec2(cos(angle),sin(angle))*r*shadowParams.z;
       highp float depth=q.z+dot(slope,offset)-bias;
-      result+=texture(shadowMap,vec3(q.xy+offset,depth));
+      result+=texture(shadowMap,vec3(q.xy+offset,depth))*w;weight+=w;
     }
-    return result/9.0;
+    return result/weight;
   }
 `;
 
@@ -56,31 +60,9 @@ export const solidPieceShadowShader=new Shader(`${receiverShadow}
   }
 `);
 
-// Ground and backdrop receivers share this filter; puzzle-face shading is unchanged.
-export function createGroundSurfaceShader(blur,range){
-  if(!blur)return pieceShadowShader;
-  const radius=(blur/Math.max(1,range)).toFixed(8);
-  const start=receiverShadow.indexOf('    highp float result=0.0;');
-  const filtered=receiverShadow.slice(0,start)+`
-    highp float result=0.0,weight=0.0;
-    // A dense spiral avoids the repeated square silhouettes of a sparse PCF
-    // grid when an artist chooses a broad ground blur.
-    for(int i=0;i<64;i++){
-      float r=sqrt((float(i)+.5)/64.);
-      float angle=float(i)*2.39996323;
-      highp vec2 offset=vec2(cos(angle),sin(angle))*r*max(shadowParams.z,${radius});
-      float w=exp(-2.*r*r);
-      result+=texture(shadowMap,vec3(q.xy+offset,q.z+dot(slope,offset)-bias))*w;weight+=w;
-    }
-    return result/weight;
-  }
-  `;
-  return new Shader(`${filtered}
-    void mainImage(out vec4 color,vec2 uv){
-      color=texture(iChannel0,uv);
-      color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow());
-    }
-  `);
+// Ground, backdrop, and puzzle faces use the same shadow filter.
+export function createGroundSurfaceShader(){
+  return pieceShadowShader;
 }
 
 // Scenery uses separate projected silhouettes, so its opacity does not change
@@ -99,8 +81,8 @@ export function createSceneryProjectionShader(strength,blur){
       vec2 dx=dFdx(uv)/max(length(dFdx(worldPos)),.00001)*${blur.toFixed(4)};
       vec2 dy=dFdy(uv)/max(length(dFdy(worldPos)),.00001)*${blur.toFixed(4)};
       float alpha=0.,weight=0.;
-      for(int i=0;i<64;i++){
-        float r=sqrt((float(i)+.5)/64.),angle=float(i)*2.39996323,w=exp(-2.*r*r);
+      for(int i=0;i<32;i++){
+        float r=sqrt((float(i)+.5)/32.),angle=float(i)*2.39996323,w=exp(-2.*r*r);
         alpha+=maskAlpha(uv+(dx*cos(angle)+dy*sin(angle))*r)*w;weight+=w;
       }
       color=vec4(0,0,0,alpha/weight*${strength.toFixed(4)}*sunColor.r);

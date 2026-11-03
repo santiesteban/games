@@ -51,8 +51,8 @@
   },
   "shadows": {
     "enabled": true,
-    "strength": 0.62,
-    "softness": 1.5,
+    "strength": 0.4,
+    "softness": 0,
     "direction": 30,
     "elevation": 45
   },

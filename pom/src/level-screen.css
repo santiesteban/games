@@ -294,15 +294,16 @@
 .stage.screen--level .mode__icon {
   position: absolute;
   left: 12px;
-  width: 15px;
-  height: 15px;
-  opacity: 0.72;
-  stroke-width: 1.5;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.6;
+  transform: rotate(90deg);
 }
 
 .stage.screen--level .mode__option[data-mode="pull"] .mode__icon {
   right: 12px;
   left: auto;
+  transform: rotate(-90deg);
 }
 
 .stage.screen--level .mode__option:disabled {

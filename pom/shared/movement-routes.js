@@ -14,9 +14,10 @@ export function createMovementBoard(grid,depths=[]){
   }
   const depthAt=(x,y)=>byCell[y]?.[x]?.depth??-1;
   const nodesAt=(x,y)=>{
-    if(x< -1||x>=width||y<0||y>height)return[];
-    const floor=y===height,front=floor?Math.max(0,depthAt(x,height-1)):Math.max(0,depthAt(x,y-1)),back=floor?4:depthAt(x,y);
-    if(!floor&&x<0)return[];
+    if(x< -1||x>width||y<0||y>height)return[];
+    const floor=y===height;
+    if(!floor&&(x<0||x>=width))return[];
+    const front=floor?Math.max(0,depthAt(x,height-1)):Math.max(0,depthAt(x,y-1)),back=floor?4:depthAt(x,y);
     return Array.from({length:Math.max(0,back-front)},(_,i)=>({x,y,z:front+i}));
   };
   const validNode=p=>nodesAt(p.x,p.y).some(n=>n.z===p.z);

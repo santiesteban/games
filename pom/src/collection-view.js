@@ -11,7 +11,8 @@ export function collectionCard(level, {completed=false, pending=false, number=le
   if(completed){
     const check=document.createElement('span');
     check.className=`completion-mark${pending ? ' is-pending' : ''}`;
-    check.textContent='✓';check.setAttribute('aria-hidden','true');card.append(check);
+    check.innerHTML='<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg>';
+    check.setAttribute('aria-hidden','true');card.append(check);
   }
   if(level.knownIssues){
     const status=document.createElement('span');status.className='collection-issue';

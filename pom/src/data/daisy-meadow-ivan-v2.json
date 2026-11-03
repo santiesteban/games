@@ -7,8 +7,8 @@
     "layers": "both",
     "showGuides": true,
     "backgroundDistance": 3,
-    "environmentShadowStrength": 0.45,
-    "groundShadowBlur": 0.35,
+    "environmentShadowStrength": 0.3,
+    "groundShadowBlur": 0,
     "cutoutStyle": {
       "padding": 0.01,
       "depth": 0.01,

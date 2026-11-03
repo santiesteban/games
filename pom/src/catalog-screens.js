@@ -2,9 +2,9 @@ import {collectionCard,updateGridEdges} from './collection-view.js';
 import {puzzleThumbnail} from './puzzle-thumbnail.js';
 
 const thumbnails={
-  'basic-lessons':new URL('./assets/interface/pack_01_thumb.png',import.meta.url).href,
-  'first-challenges':new URL('./assets/interface/pack_02_thumb.png',import.meta.url).href,
-  'more-challenges':new URL('./assets/interface/pack_03_thumb.png',import.meta.url).href,
+  'basic-lessons':new URL('./assets/interface/pack_01_thumb.webp',import.meta.url).href,
+  'first-challenges':new URL('./assets/interface/pack_02_thumb.webp',import.meta.url).href,
+  'more-challenges':new URL('./assets/interface/pack_03_thumb.webp',import.meta.url).href,
 };
 
 // Count the same available levels players can browse. Hidden completions stay

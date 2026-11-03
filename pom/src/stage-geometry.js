@@ -33,7 +33,10 @@ export function projectStageShadow(corners,sun,plane,blur=0){
   const clip=distance=>{
     const out=[];for(let i=0;i<polygon.length;i++){const p=polygon[i],q=polygon[(i+1)%polygon.length],dp=distance(p),dq=distance(q);if(dp>=0)out.push(p);if((dp>=0)!==(dq>=0)){const t=dp/(dp-dq),r={};for(const key of ['x','y','z','u','v','t'])r[key]=p[key]+(q[key]-p[key])*t;out.push(r)}}polygon=out;
   };
-  clip(p=>p.t);clip(p=>p.y);
+  clip(p=>p.t);
+  // Floor projections already lie on y=0; roundoff can put every vertex a
+  // fraction below zero and discard the entire shadow. Only walls need this clip.
+  if(!plane.floor)clip(p=>p.y);
   if(plane.top!==undefined)clip(p=>plane.top-p.y);
   if(plane.halfWidth!==undefined){const horizontal=p=>(p.x-plane.origin.x)*plane.normal.z-(p.z-plane.origin.z)*plane.normal.x;clip(p=>plane.halfWidth-horizontal(p));clip(p=>plane.halfWidth+horizontal(p))}
   return polygon.length>=3?{polygon,uAxis,vAxis}:null;
