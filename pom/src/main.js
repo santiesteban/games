@@ -48,6 +48,7 @@ import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from '.
 import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
+import { cameraControlCube } from './camera-control-cube.js';
 
 const buildLabel=document.querySelector('#buildNumber');
 // The initial screen is Home; only a level may claim browser input defaults.
@@ -1286,13 +1287,10 @@ function syncCameraSliders(){
   const {min,max}=cameraZoomBounds(),zoom=cameraControlsPanel.querySelector('[data-camera-control="zoom"]');
   zoom.disabled=max<=min;zoom.value=max>min?String(Math.max(0,Math.min(100,Math.round(100*Math.log(viewUnit/min)/Math.log(max/min))))):'0';
   zoom.setAttribute('aria-valuetext',`${Math.round(viewUnit/min*100)}%`);
-  const width=cameraDirection.clientWidth,height=cameraDirection.clientHeight;
-  if(width&&height){
-    let x=cameraState.yaw/40,y=(25-cameraState.pitch)/20;
-    const distance=Math.hypot(x,y);if(distance>1){x/=distance;y/=distance}
-    cameraDirection.style.setProperty('--camera-x',`${100*(6+(width-12)*(x+1)/2)/width}%`);
-    cameraDirection.style.setProperty('--camera-y',`${100*(6+(height-12)*(y+1)/2)/height}%`);
-  }
+  const cube=cameraControlCube(cameraState.yaw,cameraState.pitch);
+  for(const name of ['front','top','side','edges'])cameraDirection.querySelector(`.camera-controls__cube-${name}`).setAttribute('d',cube[name]);
+  for(const name of ['vertical','horizontal'])cameraDirection.querySelector(`.camera-controls__axis-${name}`).setAttribute('d',cube[name]);
+  for(const name of ['vertical','horizontal'])cameraDirection.querySelector(`.camera-controls__axis-${name}-face`).setAttribute('d',cube[`${name}Face`]);
 }
 cameraControlsPanel.addEventListener('input',event=>{
   const input=event.target;if(!input.matches('input[data-camera-control]')||!gameReady||!viewReady||levelLoading||busy||won)return;
@@ -1308,20 +1306,19 @@ function setCameraDirection(yaw,pitch){
   cameraState.yaw=Math.max(-40,Math.min(40,yaw));cameraState.pitch=Math.max(5,Math.min(45,pitch));
   viewTouched=true;clearBoardHover();applyCameraStudy({orbit:true});
 }
-function cameraDirectionFromPointer(event){
-  const rect=cameraDirection.getBoundingClientRect();
-  let x=2*(event.clientX-rect.left-6)/Math.max(1,rect.width-12)-1;
-  let y=2*(event.clientY-rect.top-6)/Math.max(1,rect.height-12)-1;
-  const distance=Math.hypot(x,y);if(distance>1){x/=distance;y/=distance}
-  setCameraDirection(Math.round(x*40),Math.round(25-y*20));
-}
+let cameraDirectionDrag=null;
 cameraDirection.addEventListener('pointerdown',event=>{
   if(event.button!==0||!cameraModeActive)return;
-  event.preventDefault();cameraDirection.focus({preventScroll:true});cameraDirection.setPointerCapture(event.pointerId);cameraDirectionFromPointer(event);
+  event.preventDefault();cameraDirection.focus({preventScroll:true});cameraDirection.setPointerCapture(event.pointerId);
+  cameraDirectionDrag={id:event.pointerId,x:event.clientX,y:event.clientY,yaw:cameraState.yaw,pitch:cameraState.pitch};
 });
-cameraDirection.addEventListener('pointermove',event=>{if(cameraDirection.hasPointerCapture(event.pointerId))cameraDirectionFromPointer(event)});
+cameraDirection.addEventListener('pointermove',event=>{
+  if(cameraDirectionDrag?.id!==event.pointerId)return;
+  setCameraDirection(cameraDirectionDrag.yaw+(event.clientX-cameraDirectionDrag.x)*.6,cameraDirectionDrag.pitch+(event.clientY-cameraDirectionDrag.y)*.6);
+});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])cameraDirection.addEventListener(type,event=>{if(cameraDirectionDrag?.id===event.pointerId)cameraDirectionDrag=null});
 cameraDirection.addEventListener('keydown',event=>{
-  const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[event.key];
+  const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
   if(!delta)return;event.preventDefault();setCameraDirection(cameraState.yaw+delta[0],cameraState.pitch+delta[1]);
 });
 function clearBoardHover(){hovered=null;movementMarkers?.setHovered(null);if(hoverObject)hoverObject.color=new Color(1,1,1,0)}

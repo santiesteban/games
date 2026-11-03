@@ -59,14 +59,22 @@
         <svg class="camera-controls__close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
       </button>
       <div class="camera-controls__sliders" id="cameraModeSliders" hidden>
-        <div class="camera-controls__direction" id="cameraDirection" role="group" tabindex="0" aria-label="Camera angle. Use arrow keys to rotate and tilt." title="Drag to rotate and tilt">
-          <svg class="camera-controls__globe" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34"/><ellipse cx="36" cy="36" rx="15" ry="34"/><path d="M2 36h68"/></svg>
-          <span class="camera-controls__handle" aria-hidden="true"></span>
+        <div class="camera-controls__direction" id="cameraDirection" role="group" tabindex="0" aria-label="Camera angle. Drag the cube or use arrow keys to rotate and tilt." title="Drag the cube to rotate and tilt">
+          <svg class="camera-controls__cube" viewBox="0 0 72 72" aria-hidden="true">
+            <path class="camera-controls__axis-vertical"></path>
+            <path class="camera-controls__axis-horizontal"></path>
+            <path class="camera-controls__cube-top"></path>
+            <path class="camera-controls__cube-side"></path>
+            <path class="camera-controls__cube-front"></path>
+            <path class="camera-controls__axis-vertical camera-controls__axis-vertical-face"></path>
+            <path class="camera-controls__axis-horizontal camera-controls__axis-horizontal-face"></path>
+            <path class="camera-controls__cube-edges"></path>
+          </svg>
         </div>
         <div class="camera-controls__zoom">
-          <span aria-hidden="true">+</span>
+          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5M7 10h6m-3-3v6"/></svg>
           <input type="range" data-camera-control="zoom" aria-label="Zoom" title="Zoom" min="0" max="100" step="1" orient="vertical">
-          <span aria-hidden="true">−</span>
+          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5M7 10h6"/></svg>
         </div>
       </div>
     </div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
