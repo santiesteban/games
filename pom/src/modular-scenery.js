@@ -147,9 +147,11 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
       quad([wallBacking(-w/2,h),wallBacking(w/2,h),wallBacking(w/2,0),wallBacking(-w/2,0)],backdrop.texture,[vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,1)],{receive:true}).shader=groundShader;
     }else if(state.background){
       const paintHeight=Math.max(24,height+16),paintTop=paintHeight-3,paintWidth=paintHeight*2,top=Math.max(100,height*3),bottom=-80;
-      quad([wallBacking(-span/2,top),wallBacking(span/2,top),wallBacking(span/2,bottom),wallBacking(-span/2,bottom)],a.sky.texture,[vec2(.5-span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-bottom)/paintHeight),vec2(.5-span/2/paintWidth,(paintTop-bottom)/paintHeight)],{receive:true}).shader=groundShader;
+      // Keep both painted layers behind the mounted puzzle. Recess the sky a
+      // little farther so its overlap with the hills remains depth-stable.
+      quad([wallBacking(-span/2,top,-.04),wallBacking(span/2,top,-.04),wallBacking(span/2,bottom,-.04),wallBacking(-span/2,bottom,-.04)],a.sky.texture,[vec2(.5-span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-top)/paintHeight),vec2(.5+span/2/paintWidth,(paintTop-bottom)/paintHeight),vec2(.5-span/2/paintWidth,(paintTop-bottom)/paintHeight)],{receive:true}).shader=groundShader;
       const ridgeHeight=5.5,ridgeWidth=ridgeHeight*4;
-      quad([wall(-span/2,ridgeHeight,.08),wall(span/2,ridgeHeight,.08),wall(span/2,0,.08),wall(-span/2,0,.08)],a['distant-hills'].texture,[vec2(-span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,1),vec2(-span/2/ridgeWidth,1)],{receive:true}).shader=groundShader;
+      quad([wallBacking(-span/2,ridgeHeight),wallBacking(span/2,ridgeHeight),wallBacking(span/2,0),wallBacking(-span/2,0)],a['distant-hills'].texture,[vec2(-span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,0),vec2(span/2/ridgeWidth,1),vec2(-span/2/ridgeWidth,1)],{receive:true}).shader=groundShader;
     }
     // Exact world UV scale: one repeat covers 16 x 16 puzzle cells. Horizontal
     // geometry supplies perspective; no painted foreground is stretched onto it.

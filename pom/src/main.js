@@ -146,7 +146,10 @@ let shadowFloor,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVI
 const backgroundStudio=createBackgroundStudio(document.querySelector('#backgroundPanel'),()=>{
   if(!gameReady)return;
   requestLevelEnvironment(true);syncBackground();syncDesignLighting();syncFloorGrid();
-},{onCenterPom(){studioCameraFollow=true;resumeStudyFollow()}});
+},{levels,groups:levelGroups,onCenterPom(){studioCameraFollow=true;resumeStudyFollow()},onLevelChange(id){
+  const source=id?levels.find(level=>level.id===id&&level.kind==='puzzle'&&level.compatibility.playable):levels.find(level=>level.kind==='background-studio');
+  if(source)resetLevelState(id?{...source,kind:'background-studio',studioSourceId:source.id}:source);
+}});
 function isDesignPlayground(){return activeLevel.kind==='design-playground'}
 function isBackgroundStudio(){return activeLevel.kind==='background-studio'}
 function currentBackgroundConfiguration(){
@@ -450,7 +453,7 @@ function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const 
 }
 let sceneryWallZ=null,wallJoinMesh,wallJoinKey,wallJoinStyle;
 function drawWallGroundJoin(){
-  if(sceneryWallZ===null||cameraLab||isPreviewLevel(activeLevel))return;
+  if(sceneryWallZ===null||cameraLab||(isPreviewLevel(activeLevel)&&!isBackgroundStudio()))return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=sceneryWallZ+.02;
   if(!wallJoinStyle||wallJoinStyle.width!==width||wallJoinStyle.height!==height){const style=getComputedStyle(wrap);wallJoinStyle={width,height,pixels:parseFloat(style.borderTopWidth)||2,color:style.borderTopColor}}
   const {pixels,color}=wallJoinStyle;
@@ -674,7 +677,7 @@ function syncBackground(){
     for(const object of backgroundObjects.slice(0,3)){object.mesh=undefined;object.tileInfo=undefined}
     if(gameReady)requestLevelEnvironment();
     if(activeEnvironmentTextures){
-      const reference=cameraScenery.update({state:{...cameraState,puzzleMounted:!cameraLab&&!isPreviewLevel(activeLevel),backgroundDistance:currentBackgroundConfiguration()?.backgroundDistance??cameraState.backgroundDistance,...(currentBackgroundConfiguration()?{background:currentBackgroundConfiguration().layers!=='foreground',foreground:currentBackgroundConfiguration().layers!=='background'}:{}),environmentShadowStrength:currentBackgroundConfiguration()?.environmentShadowStrength??1,groundShadowBlur:SHADOW_BLUR_RADIUS,sceneryShadows:controlFeatures.enabled('pieceShadows'),cutoutStyle:currentBackgroundConfiguration()?.cutoutStyle,sceneryLayout:currentBackgroundConfiguration()?.sceneryLayout,scenicAtmosphere:currentBackgroundConfiguration()?.scenicAtmosphere===true},environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,artworkBounds:puzzleVisualBounds(),yaw:cameraYaw(),target:cameraFocus??viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
+      const reference=cameraScenery.update({state:{...cameraState,puzzleMounted:!cameraLab&&(!isPreviewLevel(activeLevel)||isBackgroundStudio()),backgroundDistance:currentBackgroundConfiguration()?.backgroundDistance??cameraState.backgroundDistance,...(currentBackgroundConfiguration()?{background:currentBackgroundConfiguration().layers!=='foreground',foreground:currentBackgroundConfiguration().layers!=='background'}:{}),environmentShadowStrength:currentBackgroundConfiguration()?.environmentShadowStrength??1,groundShadowBlur:SHADOW_BLUR_RADIUS,sceneryShadows:controlFeatures.enabled('pieceShadows'),cutoutStyle:currentBackgroundConfiguration()?.cutoutStyle,sceneryLayout:currentBackgroundConfiguration()?.sceneryLayout,scenicAtmosphere:currentBackgroundConfiguration()?.scenicAtmosphere===true},environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,artworkBounds:puzzleVisualBounds(),yaw:cameraYaw(),target:cameraFocus??viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
       sceneryWallZ=reference.wallZ??null;
       wrap.dataset.sceneryMountOffset=String(reference.mountOffset??0);wrap.dataset.sceneryWallZ=String(reference.wallZ??'');wrap.dataset.environmentShadowStrength=String(reference.environmentShadowStrength??1);wrap.dataset.groundShadowBlur=String(reference.groundShadowBlur??0);wrap.dataset.shadowReceivers=String(reference.shadowReceivers??0);wrap.dataset.backgroundDistance=reference.distance?.toFixed(2)??'';wrap.dataset.scenerySource=reference.source??'previous-artwork';wrap.dataset.sceneryContacts=JSON.stringify(cameraScenery.contacts);
       const size=vec2(wrap.clientWidth,wrap.clientHeight),points=reference.points.map(point=>render3D.worldToScreen(point,size)),[left,center,right]=points;
@@ -912,7 +915,7 @@ function recordCompletedLevel(){if(cameraLab||interactionLab)return;if(activeLev
 function resetLevelState(level){
   levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
-  pieceDragAnchor=null;activeLevel=level;if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  pieceDragAnchor=null;activeLevel=level;if(isBackgroundStudio())backgroundStudio.setPreviewLevel(level.studioSourceId);if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
@@ -1335,7 +1338,7 @@ const requestGPUProjection=new URLSearchParams(location.search).get('projection'
 let projectionCamera;
 function puzzleProjectionState(){
   const camera=render3D.camera,p=camera.pos,r=camera.rotation;
-  const enabled=!cameraLab&&!isPreviewLevel(activeLevel)&&studyPerspective(),old=projectionCamera;
+  const enabled=!cameraLab&&(!isPreviewLevel(activeLevel)||isBackgroundStudio())&&studyPerspective(),old=projectionCamera;
   if(!old||old.enabled!==enabled||old.x!==p.x||old.y!==p.y||old.z!==p.z||old.rx!==r.x||old.ry!==r.y||old.rz!==r.z){
     projectionCamera={enabled,x:p.x,y:p.y,z:p.z,rx:r.x,ry:r.y,rz:r.z,value:puzzleProjection({enabled,eye:p,forward:camera.getForward(),up:camera.getUp()})};
   }

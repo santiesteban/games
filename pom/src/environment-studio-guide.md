@@ -1,10 +1,12 @@
 # Environment Studio guide
 
-Use Environment Studio to arrange scenery and compare saved environments. Undo and Start over sit at the top right of the game area. Changes save automatically to your current browser’s working draft.
+Use Environment Studio to arrange Daisy Meadow and compare it with Japan Spring. Controls appear only when they apply to the selected environment. Older configurations remain stored but are not shown in the Studio. Undo and Start over sit at the top right of the game area. Changes save automatically to your current browser’s working draft.
 
 ## Find your controls
 
 Open or close each section independently. Saved configurations manages your alternatives. Scene & camera controls the environment, layers, floor guide and backdrop distance. Selected element contains position, size, tilt, material and support controls. Shadows controls scenery shadow strength.
+
+Use Preview level under Scene & camera to try a playable catalog puzzle with the current scenery. Switching levels keeps your environment draft and does not record puzzle completion.
 
 ## Arrange scenery
 
@@ -54,6 +56,6 @@ Normal gameplay uses the approved Daisy Meadow scene outside Japan. Japan levels
 
 Apply to non-Japan levels saves an explicit local gameplay override. Further edits stay in Studio until you apply again. Use game defaults restores the approved gameplay scene and keeps Studio drafts and saved configurations.
 
-Reset preview resets the working preview. It does not delete your named configurations.
+Reset preview restores the approved Daisy Meadow scene in the working preview. It does not delete your named configurations.
 
 Scene images load as needed. Adding a cloud, fog bank or plant may briefly load its image the first time; subsequent placements reuse it. The published Daisy Meadow backdrop replaces the retired static background and separate sky/hill layers. Original artwork remains preserved outside the runtime build.

@@ -1,14 +1,17 @@
 import {ENVIRONMENT_REVISION,ENVIRONMENT_REVISION_KEY} from './environment-policy.js';
 import studioGuide from './environment-studio-guide.md?raw';
-import {SCENERY_ROLES,defaultSceneryLayout,normalizeSceneryLayout,cutoutMaterial} from './scenery-layout.js';
+import {SCENERY_ROLES,normalizeSceneryLayout,cutoutMaterial} from './scenery-layout.js';
 import { ENVIRONMENTS, environmentById, environmentCacheKey } from './environments.js';
+import approvedEnvironment from './data/daisy-meadow-ivan-v2.json';
 
 const DRAFT_KEY='little-ledges:v4:background-studio',APPLIED_KEY='little-ledges:v4:applied-background';
 
 const DEFAULT_CUTOUT={padding:0,paddingColor:'#fffaf0',depth:.08,depthColor:'#6e593d'};
-export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
+const STUDIO_ENVIRONMENTS=ENVIRONMENTS.filter(entry=>['daisy-meadow','japan-spring'].includes(entry.id));
+const availableInStudio=configuration=>STUDIO_ENVIRONMENTS.some(entry=>entry.id===configuration?.environment);
+export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{},levels=[],groups=[],onLevelChange=()=>{}}={}){
   const defaultOverlay=()=>({color:'#fffaf0',opacity:0});
-  const defaultPreview=()=>({environment:'highway-desert',composition:'auto',layers:'both',showGuides:true,backgroundDistance:null,environmentShadowStrength:1,groundShadowBlur:0,cutoutStyle:{...DEFAULT_CUTOUT},scenicAtmosphere:false,sceneryLayout:defaultSceneryLayout(),overlays:{background:defaultOverlay(),foreground:defaultOverlay()},anchors:{}});
+  const defaultPreview=()=>structuredClone(approvedEnvironment.configuration);
   const validAnchors=new Set(ENVIRONMENTS.flatMap(entry=>[entry.id,...Object.keys(entry.variants??{}).map(variant=>`${entry.id}:${variant}`)]));
   const numeric=(value,min,max,fallback)=>typeof value==='number'&&Number.isFinite(value)?Math.max(min,Math.min(max,value)):fallback;
   function normalize(saved){
@@ -30,7 +33,7 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
   function read(key){try{return normalize(JSON.parse(localStorage.getItem(key)||'null'))}catch{return null}}
   function save(key,value){try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}}
   let appliedRevision;try{appliedRevision=localStorage.getItem(ENVIRONMENT_REVISION_KEY)}catch{}
-  let applied=read(APPLIED_KEY),values=read(DRAFT_KEY)??structuredClone(applied??defaultPreview()),currentComposition=environmentById(values.environment);
+  let applied=read(APPLIED_KEY),draft=read(DRAFT_KEY),values=availableInStudio(draft)?draft:availableInStudio(applied)?structuredClone(applied):defaultPreview(),currentComposition=environmentById(values.environment);
   const anchorFor=(entry,configuration=values)=>configuration?.anchors?.[environmentCacheKey(entry)]??entry.groundAnchorY;
   function changed(){
     const saved=save(DRAFT_KEY,values);onChange();
@@ -58,8 +61,17 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
   guideLink.onclick=e=>{e.preventDefault();guideDialog.showModal();guideDialog.scrollTop=0;guideDialog.focus({preventScroll:true})};
   guideDialog.addEventListener('click',e=>{if(e.target===guideDialog){const r=guideDialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)guideDialog.close()}});
   function field(label,input,parent=body){const row=document.createElement('div');row.className='design-field';const text=document.createElement('label');text.htmlFor=input.id;text.textContent=label;row.append(text,input);parent.append(row);return row}
+  const levelChoice=document.createElement('select');levelChoice.id='environmentStudioLevel';levelChoice.add(new Option('Studio example',''));
+  for(const group of groups){
+    const puzzles=levels.filter(level=>level.group===group.id&&level.kind==='puzzle'&&level.compatibility.playable);
+    if(!puzzles.length)continue;
+    const options=document.createElement('optgroup');options.label=group.name;
+    for(const level of puzzles)options.append(new Option(`Level ${level.number} — ${level.name}`,level.id));
+    levelChoice.append(options);
+  }
+  const levelRow=field('Preview level',levelChoice);levelChoice.onchange=()=>onLevelChange(levelChoice.value);
   const environment=document.createElement('select');environment.id='backgroundEnvironment';
-  for(const entry of ENVIRONMENTS){const option=document.createElement('option');option.value=entry.id;option.textContent=entry.name;environment.append(option)}environment.value=values.environment;field('Environment',environment);
+  for(const entry of STUDIO_ENVIRONMENTS){const option=document.createElement('option');option.value=entry.id;option.textContent=entry.name;environment.append(option)}environment.value=values.environment;field('Environment',environment);
   const composition=document.createElement('select');composition.id='backgroundComposition';
   for(const [id,name]of [['auto','Automatic'],['portrait','Portrait'],['landscape','Landscape'],['legacy','Original panorama']]){const option=document.createElement('option');option.value=id;option.textContent=name;composition.append(option)}const compositionRow=field('Composition',composition);
   const info=document.createElement('p');info.className='design-copy';body.append(info);
@@ -144,7 +156,7 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
   const savedChoice=document.createElement('select');savedChoice.id='savedEnvironmentConfiguration';field('Saved configurations',savedChoice);
   const configName=document.createElement('input');configName.id='environmentConfigurationName';configName.type='text';configName.maxLength=80;field('Configuration name',configName);
   const libraryStatus=document.createElement('p');libraryStatus.className='design-save-status';libraryStatus.setAttribute('role','status');
-  function syncLibrary(){const previous=savedChoice.value;savedChoice.replaceChildren(new Option('Choose a configuration',''));for(const entry of library)savedChoice.add(new Option(entry.name,entry.id));savedChoice.value=library.some(e=>e.id===previous)?previous:''}
+  function syncLibrary(){const previous=savedChoice.value;savedChoice.replaceChildren(new Option('Choose a configuration',''));for(const entry of library.filter(e=>availableInStudio(e.configuration)))savedChoice.add(new Option(entry.name,entry.id));savedChoice.value=library.some(e=>e.id===previous&&availableInStudio(e.configuration))?previous:''}
   const libraryActions=document.createElement('div');libraryActions.className='design-actions';
   function libraryButton(label,fn){const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=label;button.onclick=fn;libraryActions.append(button)}
   libraryButton('Save new configuration',()=>{const name=configName.value.trim();if(!name){libraryStatus.textContent='Enter a configuration name.';return}if(library.length>=100){libraryStatus.textContent='The configuration library is full.';return}const entry={id:crypto.randomUUID(),name,configuration:structuredClone(values)};const next=[...library,entry];if(!save(libraryKey,next)){libraryStatus.textContent='Could not save on this device.';return}library=next;syncLibrary();savedChoice.value=entry.id;libraryStatus.textContent='Configuration saved on this device.'});
@@ -152,7 +164,7 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
   libraryButton('Delete configuration',()=>{const next=library.filter(e=>e.id!==savedChoice.value);if(save(libraryKey,next)){library=next;syncLibrary();libraryStatus.textContent='Saved configuration deleted. The current preview is kept.'}});
   libraryButton('Export configuration',()=>{const blob=new Blob([JSON.stringify({version:1,name:configName.value.trim()||'Environment configuration',configuration:values},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='environment-configuration.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
   const importFile=document.createElement('input');importFile.id='importEnvironmentConfiguration';importFile.type='file';importFile.accept='.json,application/json';field('Import configuration',importFile);
-  importFile.onchange=async()=>{try{const data=JSON.parse(await importFile.files[0].text()),configuration=normalize(data.configuration);if(!configuration)throw new Error();values=configuration;configName.value=String(data.name??'Imported configuration').slice(0,80);currentComposition=environmentById(values.environment);sync();changed();libraryStatus.textContent='Imported into preview. Save new configuration to keep it in the library.'}catch{libraryStatus.textContent='Could not import this configuration.'}finally{importFile.value=''}};
+  importFile.onchange=async()=>{try{const data=JSON.parse(await importFile.files[0].text()),configuration=normalize(data.configuration);if(!availableInStudio(configuration))throw new Error();values=configuration;configName.value=String(data.name??'Imported configuration').slice(0,80);currentComposition=environmentById(values.environment);sync();changed();libraryStatus.textContent='Imported into preview. Save new configuration to keep it in the library.'}catch{libraryStatus.textContent='Could not import this configuration. Choose a Daisy Meadow or Japan Spring configuration.'}finally{importFile.value=''}};
   body.append(libraryActions,libraryStatus);syncLibrary();
   const status=document.createElement('p');status.className='design-save-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');body.append(status);
   function elementGroup(title,nodes,open=false){const section=document.createElement('details');section.className='environment-element-section';section.open=open;const summary=document.createElement('summary');summary.textContent=title;section.append(summary,...nodes);editor.append(section)}
@@ -162,16 +174,16 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
   function group(title,nodes,open=false){const section=document.createElement('details');section.className='environment-section';section.open=open;const heading=document.createElement('summary');heading.textContent=title;section.append(heading,...nodes);body.append(section);return section}
   const oldChildren=[...body.children];
   const savedSection=group('Saved configurations',[savedChoice.parentElement,configName.parentElement,libraryActions,importFile.parentElement,libraryStatus],true);
-  const sceneSection=group('Scene & camera',[environment.parentElement,info,compositionRow,layers.parentElement,anchorRow,guide.parentElement,atmosphereRow,distanceRow,centerPom]);
+  const sceneSection=group('Scene & camera',[levelRow,environment.parentElement,info,compositionRow,layers.parentElement,anchorRow,guide.parentElement,atmosphereRow,distanceRow,centerPom]);
   const elementSection=group('Selected element',[editor],true);
-  group('Shadows',[strengthRow]);
-  group('Shared cutout material',[material]);
-  group('Layer appearance',overlayControls.map(c=>c.section));
+  const shadowsSection=group('Shadows',[strengthRow]);
+  const materialSection=group('Shared cutout material',[material]);
+  const appearanceSection=group('Layer appearance',overlayControls.map(c=>c.section));
   group('Apply & reset',[actions,applicationStatus]);
   body.prepend(copy,savedSection,sceneSection,elementSection);
   for(const child of oldChildren)if(child.parentElement===body&&child!==copy&&child!==status)child.remove();
   panel.append(header,body);
-  function sync(){syncElements();shadowStrength.value=values.environmentShadowStrength*100;strengthValue.value=`${Math.round(values.environmentShadowStrength*100)}%`;material.hidden=values.environment!=='daisy-meadow';for(const {key,input}of materialInputs)input.value=values.cutoutStyle[key];const entry=currentComposition;distance.value=values.backgroundDistance??'';const stageArt=values.environment==='daisy-meadow';distanceRow.hidden=!stageArt;centerPom.hidden=!stageArt;anchorRow.hidden=stageArt;for(const control of overlayControls)control.section.hidden=stageArt;info.textContent=`${entry.variant?`${entry.variant==='portrait'?'Portrait':'Landscape'} · `:''}${entry.width} × ${entry.height} · ${entry.registeredLayers?'Aligned background and foreground':'Independent sky and ground'}`;environment.value=values.environment;composition.value=values.composition;composition.querySelector('option[value=legacy]').textContent=environmentById(values.environment).fallbackName??'Original panorama';compositionRow.hidden=!environmentById(values.environment).variants;layers.value=values.layers;anchor.value=String(anchorFor(entry)*100);output.value=`${Number((anchorFor(entry)*100).toFixed(2))}%`;guide.checked=values.showGuides;atmosphere.checked=values.scenicAtmosphere;atmosphereRow.hidden=values.environment!=='daisy-meadow';for(const control of overlayControls){const overlay=values.overlays[control.id];control.color.value=overlay.color;control.opacity.value=String(Math.round(overlay.opacity*100));control.value.value=`${Math.round(overlay.opacity*100)}%`}}
+  function sync(){syncElements();shadowStrength.value=values.environmentShadowStrength*100;strengthValue.value=`${Math.round(values.environmentShadowStrength*100)}%`;material.hidden=values.environment!=='daisy-meadow';for(const {key,input}of materialInputs)input.value=values.cutoutStyle[key];const entry=currentComposition;distance.value=values.backgroundDistance??'';const stageArt=values.environment==='daisy-meadow';elementSection.hidden=!stageArt;shadowsSection.hidden=!stageArt;materialSection.hidden=!stageArt;appearanceSection.hidden=stageArt;distanceRow.hidden=!stageArt;centerPom.hidden=!stageArt;anchorRow.hidden=stageArt;for(const control of overlayControls)control.section.hidden=stageArt;info.textContent=`${entry.variant?`${entry.variant==='portrait'?'Portrait':'Landscape'} · `:''}${entry.width} × ${entry.height} · ${entry.registeredLayers?'Aligned background and foreground':'Independent sky and ground'}`;environment.value=values.environment;composition.value=values.composition;composition.querySelector('option[value=legacy]').textContent=environmentById(values.environment).fallbackName??'Original panorama';compositionRow.hidden=!environmentById(values.environment).variants;layers.value=values.layers;anchor.value=String(anchorFor(entry)*100);output.value=`${Number((anchorFor(entry)*100).toFixed(2))}%`;guide.checked=values.showGuides;atmosphere.checked=values.scenicAtmosphere;atmosphereRow.hidden=values.environment!=='daisy-meadow';for(const control of overlayControls){const overlay=values.overlays[control.id];control.color.value=overlay.color;control.opacity.value=String(Math.round(overlay.opacity*100));control.value.value=`${Math.round(overlay.opacity*100)}%`}}
   environment.onchange=()=>{values.environment=environment.value;values.composition='auto';currentComposition=environmentById(environment.value);sync();changed()};
   composition.onchange=()=>{values.composition=composition.value;sync();changed()};
   layers.onchange=()=>{values.layers=layers.value;changed()};anchor.oninput=()=>{values.anchors[environmentCacheKey(currentComposition)]=Number(anchor.value)/100;sync();changed()};guide.onchange=()=>{values.showGuides=guide.checked;changed()};
@@ -182,9 +194,9 @@ export function createBackgroundStudio(panel,onChange,{onCenterPom=()=>{}}={}){
     if(event.key!==DRAFT_KEY&&event.key!==APPLIED_KEY&&event.key!==ENVIRONMENT_REVISION_KEY&&event.key!==null)return;
     if(event.key===ENVIRONMENT_REVISION_KEY||event.key===null){try{appliedRevision=localStorage.getItem(ENVIRONMENT_REVISION_KEY)}catch{}}
     if(event.key===APPLIED_KEY||event.key===ENVIRONMENT_REVISION_KEY||event.key===null){applied=read(APPLIED_KEY);clear.hidden=!(applied&&appliedRevision===ENVIRONMENT_REVISION);applicationStatus.textContent=applied&&appliedRevision===ENVIRONMENT_REVISION?'A custom environment is applied outside Japan.':'Gameplay uses the approved environment; Japan keeps its own scenery.'}
-    if(event.key===DRAFT_KEY||event.key===null){values=read(DRAFT_KEY)??structuredClone(applied??defaultPreview());currentComposition=environmentById(values.environment);sync()}
+    if(event.key===DRAFT_KEY||event.key===null){draft=read(DRAFT_KEY);values=availableInStudio(draft)?draft:availableInStudio(applied)?structuredClone(applied):defaultPreview();currentComposition=environmentById(values.environment);sync()}
     onChange();
   });
   sync();
-  return{selectElement(id){if(!values.sceneryLayout.some(e=>e.id===id))return false;selectedElement.value=id;syncElements();elementSection.open=true;return true},moveElement(id,x,y,z){const item=values.sceneryLayout.find(e=>e.id===id);if(!item)return;item.x=Math.max(-40,Math.min(40,x));item.y=Math.max(-10,Math.min(30,y));if(Number.isFinite(z))item.z=Math.max(-20,Math.min(20,z));syncElements();changed()},get values(){return values},get appliedValues(){return applied},get appliedRevision(){return appliedRevision},anchorFor,setComposition(entry){if(environmentCacheKey(entry)!==environmentCacheKey(currentComposition)){currentComposition=entry;sync()}},setStatus(text){status.textContent=text}};
+  return{setPreviewLevel(id){levelChoice.value=id??''},selectElement(id){if(!values.sceneryLayout.some(e=>e.id===id))return false;selectedElement.value=id;syncElements();elementSection.open=true;return true},moveElement(id,x,y,z){const item=values.sceneryLayout.find(e=>e.id===id);if(!item)return;item.x=Math.max(-40,Math.min(40,x));item.y=Math.max(-10,Math.min(30,y));if(Number.isFinite(z))item.z=Math.max(-20,Math.min(20,z));syncElements();changed()},get values(){return values},get appliedValues(){return applied},get appliedRevision(){return appliedRevision},anchorFor,setComposition(entry){if(environmentCacheKey(entry)!==environmentCacheKey(currentComposition)){currentComposition=entry;sync()}},setStatus(text){status.textContent=text}};
 }
