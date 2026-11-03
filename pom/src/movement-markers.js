@@ -57,7 +57,7 @@ export function createMovementMarkers(){
     shadowShader=shader;
     for(const {object}of entries.values()){object.shader=shader;object.receiveShadow=!!shader}
   }
-  function drawOutlines(width,style){
+  function drawOutlines(width,style,project=point=>point){
     if(width<=0||style?.opacity===0)return;
     const state={shader:render3D.shader,receiveShadow:render3D.receiveShadow};
     render3D.shader=shadowShader;render3D.receiveShadow=!!shadowShader;
@@ -66,10 +66,10 @@ export function createMovementMarkers(){
       const ink=new Color(entry.color.r+(color.r-entry.color.r)*opacity,entry.color.g+(color.g-entry.color.g)*opacity,entry.color.b+(color.b-entry.color.b)*opacity),top=entry.base.y+stretchY(entry.height+.006);
       for(let i=0;i<SIDES;i++){
         const a=i*Math.PI*2/SIDES,b=(i+1)*Math.PI*2/SIDES,r=DIAMETER*.455;
-        render3D.drawLine(vec3(entry.base.x+Math.cos(a)*r,top,entry.base.z+Math.sin(a)*r),vec3(entry.base.x+Math.cos(b)*r,top,entry.base.z+Math.sin(b)*r),width,ink);
+        render3D.drawLine(project(vec3(entry.base.x+Math.cos(a)*r,top,entry.base.z+Math.sin(a)*r)),project(vec3(entry.base.x+Math.cos(b)*r,top,entry.base.z+Math.sin(b)*r)),width,ink);
       }
     }
     render3D.flush();render3D.shader=state.shader;render3D.receiveShadow=state.receiveShadow;
   }
-  return{sync,update,press,pick,setHovered,setShadowShader,drawOutlines,dispose};
+  return{sync,update,press,pick,setHovered,setShadowShader,drawOutlines,dispose,get renderObjects(){return [...objects.keys()]}};
 }

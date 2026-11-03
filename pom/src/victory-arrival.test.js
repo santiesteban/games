@@ -1,25 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { victoryLandingOffset, victoryArrival } from './victory-effects.js';
+import {victoryArrival} from './victory-effects.js';
+import {nodePose} from '../shared/movement-routes.js';
 
-test('Pom celebrates on the approach side of the centered flag',()=>{
-  assert.equal(victoryLandingOffset({x:2},{x:3},4),-.60);
-  assert.equal(victoryLandingOffset({x:1},{x:0},4),.80);
-  assert.equal(victoryLandingOffset({x:0},{x:0},4),.80);
-  assert.equal(victoryLandingOffset({x:3},{x:3},4),-.60);
-});
-test('the final hop starts continuously and settles beside the flag before landing',()=>{
-  for(const side of [-.60,.80]){
-    const start=victoryArrival(0,side);
-    assert.ok(Math.abs(start.x)<1e-12&&start.y===0);
-    const middle=victoryArrival(.45,side);
-    assert.ok(middle.y>0&&Math.abs(middle.x)<Math.abs(side));
-    const landing=victoryArrival(1,side);
-    assert.equal(landing.x,side);
-    assert.ok(Math.abs(landing.y)<1e-12);
+test('victory arrival stays over the goal support, including Peach’s single-square summit',()=>{
+  for(const goal of [{x:4,y:0,z:0},{x:0,y:3,z:2},{x:8,y:1,z:1}]){
+    const center=nodePose({height:7},goal).x;
+    for(const reduced of [false,true])for(let i=0;i<=100;i++){
+      const pose=victoryArrival(i/100,reduced);
+      assert.equal(pose.x,0);
+      assert.ok(center+pose.x-.38>=goal.x&&center+pose.x+.38<=goal.x+1);
+    }
   }
 });
-test('reduced motion removes the extra hop while retaining flag clearance',()=>{
-  assert.equal(victoryArrival(.5,.80,true).y,0);
-  assert.equal(victoryArrival(1,.80,true).x,.80);
+test('the final arrival hop starts and lands continuously at the goal center',()=>{
+  assert.deepEqual(victoryArrival(0),{x:0,y:0});
+  assert.ok(victoryArrival(.45).y>0);
+  const landing=victoryArrival(1);
+  assert.equal(landing.x,0);assert.ok(Math.abs(landing.y)<1e-12);
+});
+test('reduced motion stays centered and removes the arrival hop',()=>{
+  for(const t of [0,.25,.5,.75,1])assert.deepEqual(victoryArrival(t,true),{x:0,y:0});
 });

@@ -3896,7 +3896,7 @@
       "kind": "puzzle",
       "name": "Crab",
       "description": "Reach the flag on the Crab mural.",
-      "knownIssues": false,
+      "knownIssues": true,
       "coordinateOrigin": "top-left",
       "emptyCell": ".",
       "width": 13,
@@ -4860,7 +4860,7 @@
       "kind": "puzzle",
       "name": "Snail",
       "description": "Reach the flag on the Snail mural.",
-      "knownIssues": false,
+      "knownIssues": true,
       "coordinateOrigin": "top-left",
       "emptyCell": ".",
       "width": 11,
@@ -5020,10 +5020,15 @@
           117,
           164,
           0
+        ],
+        "I": [
+          128,
+          128,
+          128
         ]
       },
       "grid": [
-        "..AA..",
+        "..IA..",
         "..AA..",
         ".BBCC.",
         ".BCCD.",
@@ -5097,7 +5102,7 @@
       "kind": "puzzle",
       "name": "Pig",
       "description": "Reach the flag on the Pig mural.",
-      "knownIssues": false,
+      "knownIssues": true,
       "coordinateOrigin": "top-left",
       "emptyCell": ".",
       "width": 7,

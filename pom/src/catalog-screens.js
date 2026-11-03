@@ -7,6 +7,13 @@ const thumbnails={
   'more-challenges':new URL('./assets/interface/pack_03_thumb.png',import.meta.url).href,
 };
 
+// Count the same available levels players can browse. Hidden completions stay
+// saved and contribute again when their levels become visible.
+export function packProgress(levels,progress,isAvailable){
+  const items=levels.filter(level=>isAvailable(level)&&!['design-playground','background-studio'].includes(level.kind));
+  return {completed:items.filter(level=>progress.has(level.id)).length,total:items.length};
+}
+
 export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzles,thumbnailLevel,open,play}) {
   let collection=groups[0]?.id,ready=false;
   const packList=document.querySelector('#packList');
@@ -18,10 +25,8 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
   new ResizeObserver(()=>updateGridEdges(grid)).observe(grid);
 
   function groupLevels(id){return levels.filter(level=>level.group===id)}
-  // Studio tools remain accessible, but are not completion objectives.
-  function progressLevels(id){return groupLevels(id).filter(level=>!['design-playground','background-studio'].includes(level.kind))}
   function count(completed,total){return `${completed} / ${total}`}
-  function groupProgress(id){const items=progressLevels(id);return count(items.filter(level=>progress.has(level.id)).length,items.length)}
+  function groupProgress(id){const {completed,total}=packProgress(groupLevels(id),progress,isAvailable);return count(completed,total)}
 
   function packCard(id,name,progressText,index){
     const item=document.querySelector('#packCardTemplate').content.firstElementChild.cloneNode(true);

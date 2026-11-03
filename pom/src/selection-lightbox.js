@@ -41,5 +41,5 @@ export function createSelectionLightbox(){
     }
     face.color=new Color(tint.r,tint.g,tint.b,strength*(.2+.8*pulse));
   }
-  return{update,clear};
+  return{update,clear,get renderObjects(){return face?[face]:[]}};
 }

@@ -1,6 +1,6 @@
 # Little Ledges
 
-Gameplay uses a perspective camera that follows Pom, with orbit controls and landscape scenery. Piece selection defaults to an inward light-box pulse; Settings offers the classic outline and tint. Open `/?camera-lab=1` for the comparison panel. See [camera and scenery](docs/CAMERA_STUDY.md) for details.
+Gameplay uses a perspective camera that follows Pom, with orbit controls and landscape scenery. A shared render-space correction keeps puzzle faces square across zoom levels, with connected surfaces, flag and Pom following the same mapping; logical puzzle rules remain unchanged. The correction runs on the GPU with a CPU compatibility fallback (`?projection=cpu`). Piece selection defaults to an inward light-box pulse; Settings offers the classic outline and tint. Open `/?camera-lab=1` for the comparison panel. See [camera and scenery](docs/CAMERA_STUDY.md) for details.
 
 Little Ledges is a LittleJS remake of the original Little Ledges puzzle. The board, pullable block pieces, mascot, flag, and lighting are rendered with LittleJS's native 3D renderer. The interface and meadow artwork follow the original game.
 
