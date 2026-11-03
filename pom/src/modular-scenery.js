@@ -1,3 +1,4 @@
+import {mountSceneryToPuzzle} from './scenery-mount.js';
 import {createSceneryGeometryCache} from './scenery-geometry-cache.js';
 import {paddedCutout} from './cutout-padding.js';
 import {defaultSceneryLayout,cutoutMaterial} from './scenery-layout.js';
@@ -105,6 +106,8 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     return geometry;
   }
   function update({state,width,height,artworkBounds,yaw=0,target=vec3(width/2,0,1.5)}){
+    // A wall touching the puzzle must stay in its plane as the camera orbits.
+    if(state.puzzleMounted)yaw=0;
     const originX=artworkBounds?.left??0;width=artworkBounds?artworkBounds.right-artworkBounds.left:width;height=artworkBounds?.height??height;
     if(state.artworkSet!=='kit'||state.setting!=='landscape'||!hasSceneryKit(state.environment)){
       clear();return null;
@@ -117,7 +120,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     }
     onStatus(`New ${state.environment==='daisy-meadow'?'Daisy Meadow':state.environment==='meadow'?'Meadow':'Japan Spring'} image kit · grounded cardboard cutouts`);
     const pivot=state.horizonLock?{x:target.x,z:target.z}:{x:originX+width/2,z:0};
-    const next=JSON.stringify([state.environment,originX,width,height,yaw,pivot,state.backgroundDistance,state.background,state.foreground,state.props,state.scenicAtmosphere,state.sceneryLayout,state.cutoutStyle,state.environmentShadowStrength,state.groundShadowBlur,state.sceneryShadows,render3D.sunDirection,state.scenicAtmosphere?render3D.camera.getUp():null]);
+    const next=JSON.stringify([state.environment,originX,width,height,yaw,pivot,state.puzzleMounted,state.backgroundDistance,state.background,state.foreground,state.props,state.scenicAtmosphere,state.sceneryLayout,state.cutoutStyle,state.environmentShadowStrength,state.groundShadowBlur,state.sceneryShadows,render3D.sunDirection,state.scenicAtmosphere?render3D.camera.getUp():null]);
     if(next===key)return reference;
     clear();key=next;clippedCache.begin();
     const a=record.assets,cx=originX+width/2,span=Math.max(192,width*6);
@@ -196,6 +199,7 @@ export function createModularScenery({onChange=()=>{},onStatus=()=>{}}={}){
     clippedCache.end();
     bounds={left:originX-12,right:originX+width+12,back:Math.min(-12,back),front:10};
     reference={source:'modular-kit',distance:-back,theme:state.environment,environmentShadowStrength:shadowStrength,groundShadowBlur:shadowBlur,shadowReceivers:shadowPlanes.length,curved:false,points:[wall(-1,0,.08),wall(0,0,.08),wall(1,0,.08)]};
+    if(state.puzzleMounted)mountSceneryToPuzzle({objects,reference,bounds,contacts,pickRecords},wallBacking(0,0).z,CARDBOARD_THICKNESS);
     return reference;
   }
   return {async prepare(state,options){const record=loader.load(state.environment,{...options,state});await record.promise;if(record.status!=='ready')throw record.error??new Error('The scenery kit could not be loaded.')},update,clear,get bounds(){return bounds},get pickRecords(){return pickRecords},get contacts(){return contacts},get ready(){return !!reference}};

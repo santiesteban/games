@@ -447,8 +447,30 @@ function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const 
     for(let z=0;z<visualDepth(g);z++){const top=makeSurface(base,prismMesh(c.x,c.y,Math.min(1,visualDepth(g)-z),viewSide,g.color,true,z,Math.ceil(visualDepth(g)),reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top);g.lightboxSurfaces.push(top)}
   }
 }
+let sceneryWallZ=null,wallJoinMesh,wallJoinKey,wallJoinStyle;
+function drawWallGroundJoin(){
+  if(sceneryWallZ===null||cameraLab||isPreviewLevel(activeLevel))return;
+  const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=sceneryWallZ+.02;
+  if(!wallJoinStyle||wallJoinStyle.width!==width||wallJoinStyle.height!==height){const style=getComputedStyle(wrap);wallJoinStyle={width,height,pixels:parseFloat(style.borderTopWidth)||2,color:style.borderTopColor}}
+  const {pixels,color}=wallJoinStyle;
+  const key=[width,height,z,pixels,color,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  if(key!==wallJoinKey){
+    const a=render3D.worldToScreen(vec3(W/2-1,0,z),size),b=render3D.worldToScreen(vec3(W/2+1,0,z),size);
+    if(!a||!b||Math.abs(b.x-a.x)<.001)return;
+    const slope=(b.y-a.y)/(b.x-a.x),line=x=>vec2(x,a.y+(x-a.x)*slope),normal=vec2(slope,-1).normalize(pixels);
+    // Put the stroke on the wall side of the join so the ground cannot hide
+    // half of it. Screen-space construction keeps the CSS-pixel width fixed.
+    const left=line(-pixels),right=line(width+pixels),screen=[left.add(normal),right.add(normal),right,left];
+    const points=screen.map(point=>{const ray=render3D.screenToRay(point,size);return ray.getPosition((z-ray.origin.z)/ray.direction.z)});
+    if(points.some(point=>!Number.isFinite(point.x)||!Number.isFinite(point.y)))return;
+    wallJoinMesh?.dispose();wallJoinMesh=new Mesh().addQuad(...points);wallJoinMesh.doubleSided=true;wallJoinKey=key;
+  }
+  const channels=color.match(/[\d.]+/g)?.map(Number)??[17,17,17];
+  render3D.drawMesh(wallJoinMesh,buildMatrix(vec3(),vec3(),vec3(1)),undefined,new Color(channels[0]/255,channels[1]/255,channels[2]/255));
+}
 function drawMapOutlines(){
   const material={shader:render3D.shader,receiveShadow:render3D.receiveShadow,lighting:render3D.lighting,emissive:render3D.emissive};render3D.shader=undefined;render3D.receiveShadow=false;render3D.lighting=false;render3D.emissive=1;
+  drawWallGroundJoin();
   const height=wrap.clientHeight,size=vec2(wrap.clientWidth,height),stroke=2.4*viewSpan()/height,bias=render3D.camera.getForward().scale(-.026),seen=new Set,joins=new Map;
   const pointKey=p=>{const q=render3D.worldToScreen(p,size);return q?`${q.x.toFixed(1)},${q.y.toFixed(1)}`:null};
   const edge=(a,b)=>{a=puzzlePoint(a);b=puzzlePoint(b);const ka=pointKey(a),kb=pointKey(b),key=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`,aa=a.add(bias),bb=b.add(bias);if(!ka||!kb||seen.has(key))return;seen.add(key);joins.set(ka,aa);joins.set(kb,bb);render3D.drawLine(aa,bb,stroke,inkColor)};
@@ -650,8 +672,9 @@ function syncBackground(){
     for(const object of backgroundObjects.slice(0,3)){object.mesh=undefined;object.tileInfo=undefined}
     if(gameReady)requestLevelEnvironment();
     if(activeEnvironmentTextures){
-      const reference=cameraScenery.update({state:{...cameraState,backgroundDistance:currentBackgroundConfiguration()?.backgroundDistance??cameraState.backgroundDistance,...(currentBackgroundConfiguration()?{background:currentBackgroundConfiguration().layers!=='foreground',foreground:currentBackgroundConfiguration().layers!=='background'}:{}),environmentShadowStrength:currentBackgroundConfiguration()?.environmentShadowStrength??1,groundShadowBlur:currentBackgroundConfiguration()?.groundShadowBlur??0,sceneryShadows:controlFeatures.enabled('pieceShadows'),cutoutStyle:currentBackgroundConfiguration()?.cutoutStyle,sceneryLayout:currentBackgroundConfiguration()?.sceneryLayout,scenicAtmosphere:currentBackgroundConfiguration()?.scenicAtmosphere===true},environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,artworkBounds:puzzleVisualBounds(),yaw:cameraYaw(),target:cameraFocus??viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
-      wrap.dataset.environmentShadowStrength=String(reference.environmentShadowStrength??1);wrap.dataset.groundShadowBlur=String(reference.groundShadowBlur??0);wrap.dataset.shadowReceivers=String(reference.shadowReceivers??0);wrap.dataset.backgroundDistance=reference.distance?.toFixed(2)??'';wrap.dataset.scenerySource=reference.source??'previous-artwork';wrap.dataset.sceneryContacts=JSON.stringify(cameraScenery.contacts);
+      const reference=cameraScenery.update({state:{...cameraState,puzzleMounted:!cameraLab&&!isPreviewLevel(activeLevel),backgroundDistance:currentBackgroundConfiguration()?.backgroundDistance??cameraState.backgroundDistance,...(currentBackgroundConfiguration()?{background:currentBackgroundConfiguration().layers!=='foreground',foreground:currentBackgroundConfiguration().layers!=='background'}:{}),environmentShadowStrength:currentBackgroundConfiguration()?.environmentShadowStrength??1,groundShadowBlur:currentBackgroundConfiguration()?.groundShadowBlur??0,sceneryShadows:controlFeatures.enabled('pieceShadows'),cutoutStyle:currentBackgroundConfiguration()?.cutoutStyle,sceneryLayout:currentBackgroundConfiguration()?.sceneryLayout,scenicAtmosphere:currentBackgroundConfiguration()?.scenicAtmosphere===true},environment:activeEnvironment,textures:activeEnvironmentTextures,width:W,height:H,artworkBounds:puzzleVisualBounds(),yaw:cameraYaw(),target:cameraFocus??viewTarget??sceneFrame(wrap.clientWidth,wrap.clientHeight).target});
+      sceneryWallZ=reference.wallZ??null;
+      wrap.dataset.sceneryMountOffset=String(reference.mountOffset??0);wrap.dataset.sceneryWallZ=String(reference.wallZ??'');wrap.dataset.environmentShadowStrength=String(reference.environmentShadowStrength??1);wrap.dataset.groundShadowBlur=String(reference.groundShadowBlur??0);wrap.dataset.shadowReceivers=String(reference.shadowReceivers??0);wrap.dataset.backgroundDistance=reference.distance?.toFixed(2)??'';wrap.dataset.scenerySource=reference.source??'previous-artwork';wrap.dataset.sceneryContacts=JSON.stringify(cameraScenery.contacts);
       const size=vec2(wrap.clientWidth,wrap.clientHeight),points=reference.points.map(point=>render3D.worldToScreen(point,size)),[left,center,right]=points;
       const valid=points.every(point=>point&&Number.isFinite(point.x)&&Number.isFinite(point.y));
       const slope=valid?(right.y-left.y)/(right.x-left.x||1):0,y=valid?(reference.curved?center.y:center.y+slope*(size.x/2-center.x)):NaN;
@@ -995,15 +1018,29 @@ function studyFrame(width,height){
   const yaw=cameraYaw(),up=vec3(-Math.sin(yaw)*Math.sin(viewPitch),Math.cos(viewPitch),-Math.cos(yaw)*Math.sin(viewPitch));
   return{height:height/unit,target:vec3(cx,cy,cz).add(up.scale((top-bottom)/(2*unit))),minX:-halfX,maxX:halfX,minY:-halfY,maxY:halfY,top,bottom,margin};
 }
+let floorGuideMesh,floorGuideKey;
 function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
-  // Keep the transparent guide layer registered when hidden. Removing its mesh
-  // changes the engine's transparent pass and can hide the character overlay.
-  const mesh=new Mesh(),bounds=puzzleFloorBounds(mural,GRID_DEPTH),line=.018,tint=new Color(.28,.32,.25,(cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides)) ? .5 : 0);
-  const strip=(x0,z0,x1,z1)=>mesh.addQuad(worldPoint(x0,.008,z0),worldPoint(x1,.008,z0),worldPoint(x1,.008,z1),worldPoint(x0,.008,z1),tint);
-  for(let x=bounds.left;x<=bounds.right;x++)strip(x-line/2,bounds.back,x+line/2,bounds.front);
-  for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z-line/2,bounds.right,z+line/2);
+  const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
+  const visible=cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides);
+  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),visible,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
+  // Keep an empty transparent guide layer when hidden; removing its mesh can
+  // alter the engine's transparent pass and hide the character overlay.
+  const mesh=new Mesh(),tint=new Color(.28,.32,.25,visible?.5:0);
+  const strip=(x0,z0,x1,z1)=>{
+    const a=render3D.worldToScreen(worldPoint(x0,.008,z0),size),b=render3D.worldToScreen(worldPoint(x1,.008,z1),size);
+    if(!a||!b)return;
+    const delta=b.subtract(a);if(delta.length()<.001)return;
+    const normal=vec2(-delta.y,delta.x).normalize(1),screen=[a.add(normal),b.add(normal),b.subtract(normal),a.subtract(normal)];
+    const points=screen.map(point=>{const ray=render3D.screenToRay(point,size),t=(ground-ray.origin.y)/ray.direction.y;return Number.isFinite(t)&&t>0?ray.getPosition(t):null});
+    if(points.some(point=>!point))return;
+    mesh.addQuad(...points,tint);
+  };
+  for(let x=bounds.left;x<=bounds.right;x++)strip(x,bounds.back,x,bounds.front);
+  for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z,bounds.right,z);
   mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;
+  floorGuideMesh?.dispose();floorGuideMesh=mesh;floorGuideKey=key;
 }
 function sceneFrame(width,height,side=viewSide){
   if(worldPresentation())return studyFrame(width,height);

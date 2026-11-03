@@ -1,5 +1,6 @@
+import {mountSceneryToPuzzle} from './scenery-mount.js';
 import {EngineObject3D,Mesh,Color,vec2,vec3} from 'littlejsengine';
-import {cardboardMesh} from './cardboard.js';
+import {cardboardMesh,CARDBOARD_THICKNESS} from './cardboard.js';
 
 // World-anchored scenery for the camera study. Scenery never enters gameplay
 // collision or picking. The original registered images are reused unchanged.
@@ -26,6 +27,8 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     polygon(Array.from({length:20},(_,i)=>{const a=i*Math.PI/10;return vec3(x+height*.09+Math.cos(a)*height*.32,height*.79+Math.sin(a)*height*.23,z+.025)}),japan?'#f2d4d5':'#92ae87');
   }
   function update({state,environment,textures,width,height,artworkBounds,yaw=0,target=vec3(width/2,0,1.5)}){
+    // A wall touching the puzzle must stay in its plane as the camera orbits.
+    if(state.puzzleMounted)yaw=0;
     const wantsKit=usesKit(state);
     if(wantsKit){
       if(!kit){
@@ -39,7 +42,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     }
     const landscape=state.setting==='landscape',curved=!landscape&&state.backdrop==='curved',following=landscape||state.backdrop==='turning';
     const pivot=state.horizonLock?{x:target.x,z:target.z}:{x:width/2,z:0};
-    const next=JSON.stringify([state.setting,state.backdrop,state.environment,state.background,state.foreground,state.props,environment.variant,width,height,following||curved?yaw:0,following||curved?pivot:null]);
+    const next=JSON.stringify([state.setting,state.backdrop,state.environment,state.background,state.foreground,state.props,environment.variant,width,height,state.puzzleMounted,following||curved?yaw:0,following||curved?pivot:null]);
     if(next===key)return reference;key=next;for(const object of objects)object.destroy();objects=[];
     // A turning wall must clear the entire puzzle at both orbit limits; keeping
     // the old wall's shallow offset would sweep it through the puzzle.
@@ -86,6 +89,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
         }
       }
     }
+    if(state.puzzleMounted){reference.distance=-back;mountSceneryToPuzzle({objects,reference},wallPoint(0,0).z,CARDBOARD_THICKNESS)}
     return reference;
   }
   return{prepare,update,get bounds(){return kit?.bounds},get pickRecords(){return kit?.pickRecords??[]},get contacts(){return kit?.contacts??[]},destroy(){kit?.clear();for(const object of objects)object.destroy();objects=[];key=undefined}};
