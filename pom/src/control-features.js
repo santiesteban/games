@@ -2,7 +2,6 @@ import {adoptStackedInteraction,INTERACTION_REVISION} from './interaction-defaul
 import { DEFAULT_DESIGN } from './design-style.js';
 
 export const CONTROL_FEATURES=[
-  {id:'cameraControls',defaultEnabled:false,label:'Camera controls',description:'Show a camera mode with zoom and angle controls inside the puzzle.'},
   {id:'stackedPieceButtons',defaultEnabled:true,label:'Piece control dock',description:'Choose a nearby piece using tabs above Push and Pull. Turn off to use only the selected piece.'},
   {id:'pieceDragArrows',defaultEnabled:false,label:'Drag arrows on pieces',description:'Drag an arrow to slide the selected piece with your pointer. Release to snap to a legal step. Turn off to compare with the screen buttons.'},
   {id:'allPieceDragArrows',defaultEnabled:false,label:'Arrows on all movable pieces',description:'With drag arrows enabled, show centered arrows on every piece Pom can move. Turn off to show arrows only on the selected piece.'},

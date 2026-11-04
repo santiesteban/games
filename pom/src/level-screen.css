@@ -371,6 +371,23 @@
   white-space: nowrap;
 }
 .stage.screen--level .topbar__actions { flex: none; }
+.stage.screen--level .level-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 6px;
+}
+.stage.screen--level .level-header .topbar__actions {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: end;
+  align-items: center;
+  margin-left: 0;
+}
+.stage.screen--level .level-header .action { white-space: nowrap; }
+.stage.screen--level #cameraModeToggle[hidden] { display: none; }
+.stage.screen--level #cameraModeToggle[aria-pressed="false"] .camera-controls__slash { display: none; }
 .stage.screen--level #exitLevel {
   width: 28px;
   height: 28px;
@@ -409,24 +426,10 @@
   gap: 2px;
 }
 .stage.screen--level .camera-controls[hidden] { display: none; }
-.stage.screen--level .camera-controls.is-active { padding: 7px; border: var(--border); border-radius: 12px; background: rgba(255,255,255,.72); }
-.stage.screen--level .camera-controls .camera-controls__toggle {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: var(--border);
-  border-radius: var(--radius);
-  background: var(--color-paper);
-}
-.stage.screen--level .camera-controls__toggle svg { width: 18px; height: 18px; stroke-width: 2.6; }
-.stage.screen--level .camera-controls__close-icon,
-.stage.screen--level .camera-controls__toggle[aria-pressed="true"] .camera-controls__camera-icon { display: none; }
-.stage.screen--level .camera-controls__toggle[aria-pressed="true"] .camera-controls__close-icon { display: block; }
 .stage.screen--level .camera-controls__sliders { display: flex; align-items: center; gap: 8px; }
 .stage.screen--level .camera-controls__sliders[hidden] { display: none; }
 .stage.screen--level .camera-controls__zoom { display: flex; flex-direction: column; align-items: center; color: #222; font-size: 15px; line-height: 1; }
-.stage.screen--level .camera-controls__zoom .camera-controls__zoom-icon { width: 18px; height: 18px; stroke: #111; stroke-width: 2; }
+.stage.screen--level .camera-controls__zoom .camera-controls__zoom-icon { width: 20px; height: 20px; stroke: #111; stroke-width: 2; }
 .stage.screen--level .camera-controls__sliders input {
   appearance: none;
   -webkit-appearance: none;
@@ -474,6 +477,8 @@
 @media (max-width: 360px) {
   .stage.screen--level .level-header { gap: 8px; }
   .stage.screen--level .level-header .topbar__actions { gap: 4px; }
+  .stage.screen--level .level-header .action { gap: 3px; }
+  .stage.screen--level .level-header .action__label { font-size: 12px; }
 }
 
 /* The visual viewport can be narrower than the normal mobile breakpoints. */

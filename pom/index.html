@@ -44,6 +44,14 @@
           </svg>
           <span class="action__label">Clear</span>
         </button>
+        <button class="action" id="cameraModeToggle" type="button" aria-pressed="false" aria-controls="cameraModeSliders" hidden>
+          <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 8h4l2-3h4l2 3h4v11H4z" />
+            <circle cx="12" cy="13" r="3" />
+            <path class="camera-controls__slash" d="M3 3 21 21" />
+          </svg>
+          <span class="action__label">Camera</span>
+        </button>
         <button class="action" id="levelSettings" type="button" aria-label="Settings" title="Settings">
           <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v2m0 13v2m8.5-8.5h-2m-13 0h-2m14.5-6-1.5 1.5m-9 9L6 18m12 0-1.5-1.5m-9-9L6 6" />
@@ -54,10 +62,6 @@
     </header>
 
     <main class="game-board canvas-wrap" id="canvasWrap" aria-label="Game board"><div class="level-loading" id="levelLoading" hidden><p id="levelLoadingMessage" role="status" aria-live="polite">Loading puzzle…</p><button class="btn" id="retryLevelAssets" type="button" hidden>Try again</button></div><div class="camera-controls" id="cameraControlsPanel" role="group" aria-label="Camera controls" hidden>
-      <button class="camera-controls__toggle" id="cameraModeToggle" type="button" aria-label="Enter camera mode" aria-pressed="false" aria-controls="cameraModeSliders" title="Camera mode">
-        <svg class="camera-controls__camera-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3"/></svg>
-        <svg class="camera-controls__close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
-      </button>
       <div class="camera-controls__sliders" id="cameraModeSliders" hidden>
         <div class="camera-controls__direction" id="cameraDirection" role="group" tabindex="0" aria-label="Camera angle. Drag the cube or use arrow keys to rotate and tilt." title="Drag the cube to rotate and tilt">
           <svg class="camera-controls__cube" viewBox="0 0 72 72" aria-hidden="true">
@@ -72,9 +76,9 @@
           </svg>
         </div>
         <div class="camera-controls__zoom">
-          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5M7 10h6m-3-3v6"/></svg>
+          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6m-3-3v6"/></svg>
           <input type="range" data-camera-control="zoom" aria-label="Zoom" title="Zoom" min="0" max="100" step="1" orient="vertical">
-          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5M7 10h6"/></svg>
+          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6"/></svg>
         </div>
       </div>
     </div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
@@ -220,13 +224,6 @@
             <p class="setting__description" id="hideHelpText-description">Hide the hint banner above the puzzle.</p>
           </div>
           <input class="switch" id="hideHelpText" type="checkbox" role="switch" aria-describedby="hideHelpText-description">
-        </div>
-        <div class="setting">
-          <div class="setting__copy">
-            <label class="setting__label" for="cameraControls">Camera controls</label>
-            <p class="setting__description" id="cameraControls-description">Show a camera mode with zoom and angle controls inside the puzzle.</p>
-          </div>
-          <input class="switch" id="cameraControls" type="checkbox" role="switch" aria-describedby="cameraControls-description">
         </div>
         <div class="setting setting--select">
           <div class="setting__copy">

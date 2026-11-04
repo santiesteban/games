@@ -853,17 +853,20 @@ function syncPieceDock(){
 }
 function updateUI(){
   cameraLab?.setBusy(busy||won||introPlaying||levelLoading);
-  cameraControlsPanel.hidden=!controlFeatures.enabled('cameraControls')||activeLevel.kind!=='puzzle'||!!cameraLab;
-  if(cameraControlsPanel.hidden&&cameraModeActive)setCameraMode(false);
+  const cameraAvailable=activeLevel.kind==='puzzle'&&!cameraLab;
+  cameraModeToggle.hidden=!cameraAvailable;
+  cameraModeToggle.disabled=busy||won||levelLoading;
+  if(!cameraAvailable&&cameraModeActive)setCameraMode(false);
+  cameraControlsPanel.hidden=!cameraAvailable||!cameraModeActive;
   cameraControlsPanel.inert=busy||won||levelLoading;
   if(viewReady)syncCameraSliders();
   wrap.classList.toggle('no-piece-selected',!selected);
   document.querySelector('#levelSettings').disabled=busy||won||introPlaying||levelLoading;
   document.querySelector('#gameActions').inert=won;
   const title=document.querySelector('#level-title');
-  title.textContent=isBackgroundStudio()?'Environment Studio':activeLevel.userPuzzle||activeLevel.kind!=='puzzle'?activeLevel.name:`Level ${activeLevel.number}`;
+  title.textContent=isBackgroundStudio()?'Environment Studio':activeLevel.kind==='puzzle'?`“${activeLevel.name}”`:activeLevel.name;
   title.title=activeLevel.name;
-  title.setAttribute('aria-label',activeLevel.userPuzzle||activeLevel.kind!=='puzzle'?title.textContent:`Level ${activeLevel.number}: ${activeLevel.name}`);
+  title.setAttribute('aria-label',activeLevel.name);
   document.querySelector('#undo').disabled=busy||!history.length;
   document.querySelector('#reset').disabled=busy||(!history.length&&!won&&!groups.some(g=>g.depth));
   document.querySelector('#studioControls').hidden=!activeLevel.previewMove;document.querySelector('#previewClimb').disabled=busy;document.querySelector('#movementCase').disabled=busy;
@@ -1260,10 +1263,12 @@ function cameraZoomBounds(){
 }
 function syncCameraMode(){
   cameraModeSliders.hidden=!cameraModeActive;
+  cameraControlsPanel.hidden=!cameraModeActive||cameraModeToggle.hidden;
   cameraControlsPanel.classList.toggle('is-active',cameraModeActive);
   cameraModeToggle.setAttribute('aria-pressed',String(cameraModeActive));
-  cameraModeToggle.setAttribute('aria-label',cameraModeActive?'Exit camera mode':'Enter camera mode');
-  cameraModeToggle.title=cameraModeActive?'Exit camera mode':'Enter camera mode';
+  const label=cameraModeActive?'Close Camera':'Camera';
+  cameraModeToggle.querySelector('.action__label').textContent=label;
+  cameraModeToggle.title=label;
 }
 function setCameraMode(active){
   if(active===cameraModeActive)return;
