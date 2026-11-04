@@ -13,7 +13,7 @@ export const CONTROL_FEATURES=[
   {id:'pieceShadows',defaultEnabled:DEFAULT_DESIGN.shadows.enabled,label:'Cast shadows',description:'Pieces and Pom cast shadows from a light at the top right. Unshadowed colors stay unchanged.'},
   {id:'floorGrid',defaultEnabled:DEFAULT_DESIGN.floorGrid.enabled,label:'Custom floor grid',description:'Customize the existing flat floor in Design Playground: walkable fill, foreground wash, and grid-line color, opacity, and width.'},
 ];
-export const TOP_FACE_STYLES=[['checkerboard','Checkerboard'],['pull-depth','Pull-distance colors'],['walkability','Walkability grid']];
+export const TOP_FACE_STYLES=[['checkerboard','Checkerboard'],['pull-depth','Pull-distance colors'],['walkability','Walkability grid'],['diamond-shapes','Diamond shapes']];
 const STORAGE_KEY='little-ledges:v4:control-features';
 
 export function createControlFeatures({persistent=true}={}){
@@ -35,10 +35,10 @@ export function createControlFeatures({persistent=true}={}){
   try{persist()}catch{}
   return{
     key:STORAGE_KEY,
-    get topFaceStyle(){return value.walkabilityTopFaces?'walkability':value.pullDepthColors?'pull-depth':'checkerboard'},
+    get topFaceStyle(){return value.diamondTopFaces?'diamond-shapes':value.walkabilityTopFaces?'walkability':value.pullDepthColors?'pull-depth':'checkerboard'},
     setTopFaceStyle(style){
       if(!TOP_FACE_STYLES.some(([id])=>id===style))return false;
-      value={...(persistent?(read()??value):value),pullDepthColors:style==='pull-depth',walkabilityTopFaces:style==='walkability'};
+      value={...(persistent?(read()??value):value),pullDepthColors:style==='pull-depth',walkabilityTopFaces:style==='walkability',diamondTopFaces:style==='diamond-shapes'};
       try{persist();return true}catch{return false}
     },
     enabled(name){return value[name]===true},

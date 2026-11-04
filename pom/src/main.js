@@ -231,6 +231,7 @@ function movementMarkersEnabled(){return isDesignPlayground()?designPlayground.v
 function topFaceStyle(){return isDesignPlayground()?designPlayground.values.topFaces:controlFeatures.topFaceStyle}
 function depthColorsEnabled(){return topFaceStyle()==='pull-depth'}
 function walkabilityFacesEnabled(){return topFaceStyle()==='walkability'}
+function diamondShapesEnabled(){return topFaceStyle()==='diamond-shapes'}
 function reachableSurfaceKeys(){return new Set([player,...standableReachable()].filter(p=>movementBoard().validNode(p)).map(nodeKey))}
 function customFloorGridEnabled(){return isDesignPlayground()?designPlayground.values.floorGrid.enabled:controlFeatures.enabled('floorGrid')}
 let W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
@@ -245,6 +246,7 @@ function designColor(hex){return new Color(parseInt(hex.slice(1,3),16)/255,parse
 function platformTopColor(group,x,z,fraction=.5){
   if(depthColorsEnabled())return depthBandTone(depthRowColor(group.depth,z),fraction);
   if(walkabilityFacesEnabled())return topPalette[group.color];
+  if(diamondShapesEnabled())return new Color(1);
   const color=palette[group.color],shade=topFaceShade(x,z,color);
   return new Color(color.r*shade.r,color.g*shade.g,color.b*shade.b);
 }
@@ -399,10 +401,21 @@ function blockActionText(color){
   return contrast(light)>contrast(dark)?'#fffaf0':'#292537';
 }
 function makeSurface(pos,mesh,color){const o=new EngineObject3D(pos,mesh,undefined,color);o.lighting=false;o.emissive=1;o.receiveShadow=false;o.castShadow=false;return o}
-function topFaceShade(x,z,pigment){
-  if((x+z)%2!==1)return new Color(1);
+function checkerDarkShade(pigment){
   const contrast=pigment.g>pigment.r*1.15?(pigment.g>pigment.b*1.15?.69:.80):.90;
   return pigment.r>.9&&pigment.g>.75&&pigment.b<.4?new Color(1,.88,.65):new Color(contrast,contrast,contrast);
+}
+function diamondBasePigment(pigment){
+  const subtle=new Color(.94),previous=checkerDarkShade(pigment),midpoint=new Color(
+    (subtle.r+previous.r)/2,
+    (subtle.g+previous.g)/2,
+    (subtle.b+previous.b)/2,
+  );
+  return new Color(pigment.r*midpoint.r,pigment.g*midpoint.g,pigment.b*midpoint.b);
+}
+function topFaceShade(x,z,pigment){
+  if((x+z)%2!==1)return new Color(1);
+  return checkerDarkShade(pigment);
 }
 function gradientBandFace(mesh,map,bounds,color,normal,sideFace=false){
   const [u0,u1,v0,v1]=bounds,lines=currentDesign().lines;
@@ -428,6 +441,34 @@ function walkabilityFace(mesh,map,bounds,walkable){
   if(walkable){const h=width/2;for(const [a,b]of [[[u0+h,v0+h],[u1-h,v0+h]],[[u1-h,v0+h],[u1-h,v1-h]],[[u1-h,v1-h],[u0+h,v1-h]],[[u0+h,v1-h],[u0+h,v0+h]]])line(a,b)}
   else for(let t=-.8;t<1;t+=.2){const a=Math.max(0,-t)+.01,b=Math.min(1,1-t)-.01;if(b>a)line([u0+a,v0+a+t],[u0+b,v0+b+t])}
 }
+function diamondTopFace(mesh,map,bounds,pigment){
+  const [u0,u1,v0,v1]=bounds;
+  squareFace(mesh,(x,z)=>map(x,.5,z),bounds,diamondBasePigment(pigment),vec3(0,1,0));
+  for(let level=Math.floor(v0);level<Math.ceil(v1);level++){
+    const lo=Math.max(v0,level),hi=Math.min(v1,level+1),cx=(u0+u1)/2,cz=(lo+hi)/2;
+    // The motif grows with each pull row, while staying clear of the tile edge.
+    const radius=Math.min(.42,.16+level*.1,(u1-u0)*.45,(hi-lo)*.45);
+    const y=.5+.004;
+    const corners=[[cx-radius,cz],[cx,cz+radius],[cx+radius,cz],[cx,cz-radius]];
+    const edgeLength=Math.SQRT2*radius,cut=Math.min(.025,edgeLength*.12),trim=cut/edgeLength,outline=[];
+    for(let i=0;i<corners.length;i++){
+      const corner=corners[i],previous=corners[(i+corners.length-1)%corners.length],next=corners[(i+1)%corners.length];
+      const start=[corner[0]+(previous[0]-corner[0])*trim,corner[1]+(previous[1]-corner[1])*trim];
+      const end=[corner[0]+(next[0]-corner[0])*trim,corner[1]+(next[1]-corner[1])*trim];
+      for(let step=0;step<=4;step++){
+        const t=step/4,s=1-t;
+        outline.push([s*s*start[0]+2*s*t*corner[0]+t*t*end[0],s*s*start[1]+2*s*t*corner[1]+t*t*end[1]]);
+      }
+    }
+    const points=[map(cx,y,cz),...outline.map(([x,z])=>map(x,y,z))],indices=[];
+    for(let i=1;i<=outline.length;i++)indices.push(0,i,i===outline.length?1:i+1);
+    // Full palette pigment reproduces the light checkerboard tone, while the
+    // surrounding face uses the darker tone of that same piece color. Keep the
+    // vertices counter-clockwise from above so the face normal points up; the
+    // solid-piece shadow shader otherwise mistakes the motif for an underside.
+    mesh.addTriangles(points,indices,vec3(0,1,0),undefined,pigment);
+  }
+}
 function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,walkable=true){
   side=cameraSlant(side);
   const pigment=palette[color],m=new Mesh(),s=depthSkew(),lo=-.5,hi=.5,defaultFace=top?new Color(1):shaded(pigment,.72);
@@ -436,7 +477,10 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
   if(top){
     if(walkabilityFacesEnabled())walkabilityFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],walkable);
     else if(depthColorsEnabled())gradientBandFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],depthRowColor(pulledDepth,start),vec3(0,1,0));
-    else squareFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],new Color(1),vec3(0,1,0));
+    else {
+      if(diamondShapesEnabled())diamondTopFace(m,(x,y,z)=>P(x,y,z),[lo,hi,start,start+depth],pigment);
+      else squareFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],new Color(1),vec3(0,1,0));
+    }
   }
   else {
     squareFace(m,(x,y)=>P(x,y,depth),[lo,hi,lo,hi],defaultFace,vec3(0,0,1));
