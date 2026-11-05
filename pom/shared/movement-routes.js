@@ -49,6 +49,24 @@ function segmentClear(blocks,a,b){
 }
 export function movementSegmentClear(board,a,b){return segmentClear(board.blocks,a,b)}
 
+function planJump(board,from,to){
+  const dx=to.x-from.x,dz=to.z-from.z,span=Math.max(Math.abs(dx),Math.abs(dz)),drop=to.y-from.y;
+  if(span<2||span>(drop>0?3:2)||drop< -1||Math.min(Math.abs(dx),Math.abs(dz))!==0&&Math.abs(dx)!==Math.abs(dz)||drop<0&&dx!==0&&dz!==0)return null;
+  if(!board.validNode(from)||!board.validNode(to))return null;
+  for(let i=1;i<span;i++)if(board.validNode({x:from.x+dx*i/span,y:from.y,z:from.z+dz*i/span}))return null;
+  const a=nodePose(board,from),b=nodePose(board,to),edgeA={...a,x:a.x+dx/span*.2,z:a.z+dz/span*.2},edgeB={...b,x:b.x-dx/span*.2,z:b.z-dz/span*.2},points=[a];
+  // Rise early enough to clear a higher landing; descend late on long drops.
+  const top=Math.max(a.y,b.y)+.55;
+  for(let i=0;i<=32;i++){
+    const t=i/32,p=mix(edgeA,edgeB,t),rise=Math.min(1,t/.25),fall=Math.min(1,(1-t)/.25);
+    p.y=Math.min(a.y+(top-a.y)*rise,b.y+(top-b.y)*fall,top);points.push(p);
+  }
+  points.push(b);
+  if(!points.slice(1).every((p,i)=>segmentClear(board.blocks,points[i],p)))return null;
+  const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
+  return {points,lengths,length:lengths.at(-1),takeoff:lengths[1]/lengths.at(-1),landing:lengths.at(-2)/lengths.at(-1),duration:1050+span*90+Math.max(0,drop)*90,isFall:drop>1,stretch:false,isJump:true};
+}
+
 function permutations(items){return items.length?items.flatMap((v,i)=>permutations(items.filter((_,j)=>i!==j)).map(rest=>[v,...rest])):[[]]}
 function simplify(points,blocks){
   const result=[points[0]];let at=0;
@@ -97,6 +115,7 @@ function searchCorner(a,b,blocks){
 }
 
 export function planMovement(board,from,to){
+  if(!isSingleMove(from,to))return planJump(board,from,to);
   if(!isSingleMove(from,to)||!board.validNode(from)||!board.validNode(to))return null;
   const a=nodePose(board,from),b=nodePose(board,to),blocks=board.blocks.filter(block=>['x','y','z'].every(axis=>block.max[axis]>=Math.min(a[axis],b[axis])-.2&&block.min[axis]<=Math.max(a[axis],b[axis])+.2));
   let points;
@@ -135,15 +154,19 @@ export function movementProfiles(plans){
 
 export function sampleMovement(plan,time,profile={entry:0,exit:0}){
   const t=Math.max(0,Math.min(1,time)),t2=t*t,t3=t2*t;
-  const progress=(-2*t3+3*t2)+(t3-2*t2+t)*profile.entry+(t3-t2)*profile.exit,travel=progress*plan.length;
+  const progress=(-2*t3+3*t2)+(t3-2*t2+t)*profile.entry+(t3-t2)*profile.exit;
+  return sampleMovementProgress(plan,progress);
+}
+export function sampleMovementProgress(plan,progress){
+  const travel=Math.max(0,Math.min(1,progress))*plan.length;
   let i=1;while(i<plan.lengths.length-1&&plan.lengths[i]<travel)i++;
   return mix(plan.points[i-1],plan.points[i],(travel-plan.lengths[i-1])/(plan.lengths[i]-plan.lengths[i-1]||1));
 }
 
 export function movementNeighbors(board,p,getPlan=(a,b)=>planMovement(board,a,b)){
   const out=[];
-  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=board.height-p.y;dy++)for(const next of board.nodesAt(p.x+dx,p.y+dy)){
-    if(isSingleMove(p,next)&&getPlan(p,next))out.push(next);
+  for(let dx=-3;dx<=3;dx++)for(let dy=-1;dy<=board.height-p.y;dy++)for(const next of board.nodesAt(p.x+dx,p.y+dy)){
+    if(getPlan(p,next))out.push(next);
   }
   return out;
 }
@@ -159,6 +182,7 @@ export function findMovementPath(board,start,target,getPlan=(a,b)=>planMovement(
     if(current.cost!==costs.get(at))continue;
     if(at===goal){const path=[];let p=current.p;while(p){path.push(p);p=previous.get(key(p))}return path.reverse()}
     for(const next of movementNeighbors(board,current.p,getPlan)){
+      if(getPlan(current.p,next).isJump)continue;
       const k=key(next),cost=current.cost+getPlan(current.p,next).duration+Math.abs(next.y-current.p.y)*80;
       if(cost>=(costs.get(k)??Infinity))continue;
       costs.set(k,cost);previous.set(k,current.p);queue.push({p:next,cost});

@@ -45,7 +45,7 @@ import { canReachPiece, safePieceChange } from '../shared/rules.js';
 import { decodePuzzle, puzzleLevel } from '../shared/puzzle.js';
 import { deploymentUrls } from '../shared/deployment.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
-import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
+import { createMovementBoard, planMovement, sampleMovement, sampleMovementProgress, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 import { cameraControlCube } from './camera-control-cube.js';
@@ -319,11 +319,11 @@ function neighbors(p){return movementNeighbors(movementBoard(),p,routeFor)}
 function findPath(target){return findMovementPath(movementBoard(),player,target,routeFor)}
 function standableReachable(){
   const board=movementBoard(),key=`${nodeKey(player)}:${movementBoardKey}`;if(key===reachableKey)return reachableValue;
-  const q=[player],seen=new Set([nodeKey(player)]),out=[];
-  while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}
+  const q=[player],seen=new Set([nodeKey(player)]),shown=new Set(seen),out=[];
+  while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n),jump=routeFor(p,n).isJump;if(jump&&nodeKey(p)!==nodeKey(player))continue;if(!shown.has(k)){shown.add(k);out.push(n)}if(!jump&&!seen.has(k)){seen.add(k);q.push(n)}}}
   reachableKey=key;reachableValue=out.filter(p=>board.validNode(p));return reachableValue;
 }
-function reachableTop(target){if(findPath(target))return target;return standableReachable().filter(p=>Math.abs(p.x-target.x)+Math.abs(p.y-target.y)<=1).sort((a,b)=>(Math.abs(a.x-target.x)+Math.abs(a.y-target.y)+Math.abs(a.z-target.z))-(Math.abs(b.x-target.x)+Math.abs(b.y-target.y)+Math.abs(b.z-target.z)))[0]||target}
+function reachableTop(target){return target}
 function canReach(g){return canReachPiece(movementBoard(),movementBoard().groups[g?.id],player)}
 function goalNode(){const g=byCell[goalCell.y]?.[goalCell.x];return{x:goalCell.x,y:goalCell.y,z:Math.max(0,(g?.depth||0)-1)}}
 function save(){history.push({player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,won});if(history.length>80)history.shift()}
@@ -1564,20 +1564,35 @@ function moveTo(p,pressMarker=false){
   if(levelLoading||won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
   const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
   const winningArrival=!isPreviewLevel(activeLevel)&&nodeKey(path.at(-1))===nodeKey(goalNode());
-  hideHelp();save();resumeStudyFollow();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
+  hideHelp();save();resumeStudyFollow();busy=true;effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   const readyAt=performance.now()+(pressMarker?(movementMarkers?.press(p)??0):0);
   function tick(now){
     if(now<readyAt){requestAnimationFrame(tick);return}
     start??=now;
     // Carry elapsed time across cell boundaries instead of inserting a fresh
     // animation frame and a full stop at the beginning of every next step.
-    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape();if(index<plans.length||!winningArrival)saveUnfinished()}
+    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape();playerObject.scale3D=vec3(.72,.56,.018);for(const {white,black} of pomEyes){white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1)}for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}if(index<plans.length||!winningArrival)saveUnfinished()}
     if(index===plans.length){
       falling=false;setUmbrellaVisible(false);busy=false;
       if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');startCelebration()}else autoSelectNearbyPiece();updateUI();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
-    const motion={pose:plan.stretch?shapePomReach(from,to,t,profile):jumpPose(from,to,t,profile),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
+    const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;
+    const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
+    const progress=plan.isJump?(t<.14?plan.takeoff*smooth(t/.14):t<.38?plan.takeoff:t<.82?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.82)/.18)):0;
+    const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;
+    const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
+    if(plan.isJump&&!reducedSelectionMotion.matches){
+      const windup=t<.38?smooth((t-.12)/.16):Math.max(0,1-flight/.12);
+      const launch=flight>0&&flight<.22?Math.sin(Math.PI*flight/.22):0;
+      const landing=t>=.82?Math.sin(Math.PI*(t-.82)/.18):0;
+      const squash=.16*windup+.14*landing-.13*launch;
+      playerObject.scale3D=vec3(.72*(1+squash),.56*(1-squash),.018);
+      motion.pose=motion.pose.add(vec3(0,stretchY(-.2*squash),0));
+      const effort=Math.min(1,windup+Math.sin(Math.PI*flight)*.8);
+      for(const {white,black} of pomEyes){white.scale3D=vec3(.2,.26*(1-.65*effort),1);black.scale3D=vec3(.085,.13*(1-.65*effort),1)}
+      for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(t-.18-i*.08)/.55)),alpha=Math.sin(Math.PI*q)*.9;drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.2-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
+    }
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     if(winningArrival&&index===plans.length-1){const offset=victoryArrival(t,reducedSelectionMotion.matches);motion.pose=motion.pose.add(vec3(offset.x,stretchY(offset.y),0))}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
