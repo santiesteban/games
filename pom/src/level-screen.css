@@ -424,11 +424,28 @@
   display: grid;
   justify-items: end;
   gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .25s ease, visibility 0s linear .25s;
 }
 .stage.screen--level .camera-controls[hidden] { display: none; }
+.stage.screen--level .camera-controls:is(.is-active, .is-zoom-feedback, :hover, :has(:focus-visible)) {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
 .stage.screen--level .camera-controls__sliders { display: flex; align-items: center; gap: 8px; }
 .stage.screen--level .camera-controls__sliders[hidden] { display: none; }
+.stage.screen--level .camera-controls__direction[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .stage.screen--level .camera-controls { transition: none; }
+}
 .stage.screen--level .camera-controls__zoom { display: flex; flex-direction: column; align-items: center; color: #222; font-size: 15px; line-height: 1; }
+.stage.screen--level .camera-controls__zoom-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.stage.screen--level .camera-controls__zoom-button:disabled { opacity: .4; cursor: default; }
+.stage.screen--level .camera-controls__zoom-button:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 .stage.screen--level .camera-controls__zoom .camera-controls__zoom-icon { width: 20px; height: 20px; stroke: #111; stroke-width: 2; }
 .stage.screen--level .camera-controls__sliders input {
   appearance: none;

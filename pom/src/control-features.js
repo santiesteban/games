@@ -5,7 +5,7 @@ export const CONTROL_FEATURES=[
   {id:'stackedPieceButtons',defaultEnabled:true,label:'Piece control dock',description:'Choose a nearby piece using tabs above Push and Pull. Turn off to use only the selected piece.'},
   {id:'pieceDragArrows',defaultEnabled:false,label:'Drag arrows on pieces',description:'Drag an arrow to slide the selected piece with your pointer. Release to snap to a legal step. Turn off to compare with the screen buttons.'},
   {id:'allPieceDragArrows',defaultEnabled:false,label:'Arrows on all movable pieces',description:'With drag arrows enabled, show centered arrows on every piece Pom can move. Turn off to show arrows only on the selected piece.'},
-  {id:'selectionLightbox',defaultEnabled:true,label:'Pulsing piece highlight',description:'Use an inward light-box pulse. Turn off for the classic outline and tint.'},
+  {id:'selectionLightbox',defaultEnabled:true,label:'Pulsing piece highlight',description:'Pulse the selected piece color. Turn off for the classic outline and tint.'},
   {id:'movementStuds',defaultEnabled:DEFAULT_DESIGN.studs.enabled,label:'Reachable platform studs',description:'Show small raised bumps on platforms Pom can reach. Tap a bump to press it down and move there.'},
   {id:'autoSelectPieces',defaultEnabled:true,label:'Automatically select nearby pieces',description:'After Pom moves, select a piece he can push or pull: behind him first, then right, then left.'},
   {id:'pullDepthColors',defaultEnabled:false,label:'Color top faces by pull distance',description:'Green at the front, yellow on the second row, and red on the third, with gentle gradients and subtle square grid lines on the tops and sides.'},

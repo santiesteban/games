@@ -3,7 +3,7 @@ import {gameplayEnvironmentConfiguration} from './environment-policy.js';
 import {limitStagePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
-  timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
+  timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Light3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
   Color, render3D, glContext, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
   setInputPreventDefault, inputClear,
 } from 'littlejsengine';
@@ -26,7 +26,6 @@ import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { createCameraLab } from './camera-lab.js';
-import { createSelectionLightbox } from './selection-lightbox.js';
 import { puzzleBackgroundDistance, puzzleArtworkWidth } from './scenery-distance.js';
 import { selectionColor } from './selection-color.js';
 import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
@@ -37,7 +36,7 @@ import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, e
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
 import { createVictoryEffects, victoryArrival } from './victory-effects.js';
-import { pieceShadowShader, solidPieceShadowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
+import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
 import {createPieceDock,pieceDockState} from './piece-dock.js';
@@ -89,7 +88,7 @@ const wrap = document.querySelector('#canvasWrap');
 const cameraControlsPanel=document.querySelector('#cameraControlsPanel');
 const cameraModeToggle=document.querySelector('#cameraModeToggle'),cameraModeSliders=document.querySelector('#cameraModeSliders');
 const cameraDirection=document.querySelector('#cameraDirection');
-let cameraModeActive=false,cameraModePrevious=null;
+let cameraModeActive=false,cameraModePrevious=null,zoomFeedbackTimer;
 keepNativeInputLocal(cameraControlsPanel);
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
@@ -150,7 +149,7 @@ const designPlayground=createDesignPlayground(document.querySelector('#designPan
 });
 let studioCameraFollow=false;
 let environmentLoadPromise=Promise.resolve(false);
-let shadowFloor,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
+let shadowFloor,pomLight,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
 const backgroundStudio=createBackgroundStudio(document.querySelector('#backgroundPanel'),()=>{
   if(!gameReady)return;
   requestLevelEnvironment(true);syncBackground();syncDesignLighting();syncFloorGrid();
@@ -710,7 +709,7 @@ function syncDesignLighting(){
   // Its projection therefore cannot paint the sky, even after panning or zooming.
   shadowFloor.scale3D=vec3((visual.right-visual.left+8)/2,1,4);shadowFloor.pos3D=worldPoint((visual.left+visual.right)/2,-.008,4.025);
 }
-let pulsePiece=null,pulseStart=0,selectionLightbox;
+let pulsePiece=null,pulseStart=0;
 function lightboxEnabled(){return worldPresentation()&&(cameraLab?cameraState.selectionEffect==='lightbox':controlFeatures.enabled('selectionLightbox'))}
 const reducedSelectionMotion=matchMedia('(prefers-reduced-motion:reduce)');
 function selectionPhase(now=performance.now()){
@@ -721,24 +720,15 @@ function selectedSurfaceColor(g,now=performance.now()){
   const color=palette[g.color];if(g!==selected||won)return color;
   const phase=selectionPhase(now);
   if(lightboxEnabled()){
-    const shifted=selectionColor(color,phase,cameraState.lightboxStrength);
+    const shifted=selectionColor(color,phase,Math.min(1,cameraState.lightboxStrength*1.25));
     return new Color(shifted.r,shifted.g,shifted.b);
   }
   return tinted(color,reducedSelectionMotion.matches?.12:.26*phase);
 }
 function updateSelectionLightbox(){
-  if(!selectionLightbox)return;
-  const group=lightboxEnabled()&&!won&&!introPlaying&&document.querySelector('#menuScreen').hidden?selected:null;
-  const pulse=selectionPhase(),strength=cameraState.lightboxStrength;
-  if(group){
-    for(const object of group.objects){object.emissive=1+strength*(.01+.03*pulse);object.shader=undefined}
-    // The luminous front is the selection cue. Keep its top/side materials
-    // steady. No local light sources or outside glow are created.
-    const shadows=controlFeatures.enabled('pieceShadows');
-    for(const object of group.lightboxSurfaces??[]){object.emissive=1;object.shader=shadows?solidPieceShadowShader:undefined}
-  }
-  selectionLightbox.update({group:pieceDragPreview&&group?{...group,depth:visualDepth(group)}:group,width:W,height:H,worldPoint,tint:group?selectedSurfaceColor(group):new Color(1),pulse,strength,glow:cameraState.lightboxGlow});
-  wrap.dataset.selectionGlow='inside';wrap.dataset.selectionSpill='false';wrap.dataset.selectionEffect=lightboxEnabled()?'lightbox':'original';wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
+  const pulse=selectionPhase();
+  for(const g of groups)for(const object of g.objects)object.shader=render3D.shadows?(g===selected&&!won&&lightboxEnabled()?highlightedPieceShadowShader:solidPieceShadowShader):undefined;
+  wrap.dataset.selectionGlow='none';wrap.dataset.selectionSpill='false';wrap.dataset.selectionEffect=lightboxEnabled()?'lightbox':'original';wrap.dataset.selectionLightActive='false';wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
 }
 function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,visualDepth(g)),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting();updateSelectionLightbox()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
@@ -901,7 +891,7 @@ function updateUI(){
   cameraModeToggle.hidden=!cameraAvailable;
   cameraModeToggle.disabled=busy||won||levelLoading;
   if(!cameraAvailable&&cameraModeActive)setCameraMode(false);
-  cameraControlsPanel.hidden=!cameraAvailable||!cameraModeActive;
+  cameraControlsPanel.hidden=!cameraAvailable;
   cameraControlsPanel.inert=busy||won||levelLoading;
   if(viewReady)syncCameraSliders();
   wrap.classList.toggle('no-piece-selected',!selected);
@@ -1235,8 +1225,8 @@ function updateStudyVisibility(){
 }
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
 const tappingUnit=()=>32/Math.max(.18,Math.sin(viewPitch));
-function stopIntro(){introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
-function finishIntro(){if(!cameraLab&&worldPresentation())resetStudyFollow({paused:false});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
+function stopIntro(){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
+function finishIntro(){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();if(!cameraLab&&worldPresentation())resetStudyFollow({paused:false});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
 function enterPlayFromIntro(){
   if(!introPlaying)return;
   stopIntro();viewTouched=true;keepInterruptedView=true;finishIntro();
@@ -1280,7 +1270,7 @@ function startBoardView(animate=true){
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
   if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
   autoSelectNearbyPiece();introPlaying=true;document.querySelector('.stage').classList.add('is-introducing');wrap.dataset.introPhase='overview';updateUI();
-  let start,lastFrame;
+  let start,lastFrame,introZoomShown=false;
   introTick=now=>{
     if(token!==introFrame||celebration)return;
     // The engine may do several simulation ticks before one render. Move the
@@ -1289,6 +1279,7 @@ function startBoardView(animate=true){
     const pose=sampleCameraIntro(now-start,fitUnit,endUnit);
     wrap.dataset.introPhase=pose.phase;
     if(pose.phase!=='overview'){
+      if(needsZoom&&!introZoomShown&&!cameraModeToggle.hidden){introZoomShown=true;showZoomFeedback(true)}
       viewUnit=pose.unit;viewTarget=from.lerp(target,pose.pan);applyBoardView(false);
     }
     if(pose.done)finishIntro();
@@ -1299,6 +1290,7 @@ function limitManualPan(){const p=limitStagePan(viewTarget,render3D.camera.getRi
 function panBoard(dx,dy){if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale(-dx/viewUnit)).add(render3D.camera.getUp().scale(dy/viewUnit));limitManualPan();return}viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
 function zoomBoard(unit,x,y){
   const old=viewUnit,f=sceneFrame(wrap.clientWidth,wrap.clientHeight),min=wrap.clientHeight/f.height;viewUnit=Math.max(min,Math.min(Math.max(tappingUnit(),min),unit));
+  if(!cameraModeActive&&gameReady&&viewReady&&!cameraModeToggle.hidden&&Math.abs(viewUnit-old)>.0001)showZoomFeedback();
   const scale=1/old-1/viewUnit;if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale((x-wrap.clientWidth/2)*scale)).add(render3D.camera.getUp().scale((wrap.clientHeight/2-y)*scale));limitManualPan();return}viewTarget=viewTarget.add(vec3((x-wrap.clientWidth/2)*scale,(wrap.clientHeight/2-y)*scale/Math.cos(viewPitch),0));
 }
 function cameraZoomBounds(){
@@ -1306,13 +1298,21 @@ function cameraZoomBounds(){
   return {min,max:Math.max(tappingUnit(),min)};
 }
 function syncCameraMode(){
-  cameraModeSliders.hidden=!cameraModeActive;
-  cameraControlsPanel.hidden=!cameraModeActive||cameraModeToggle.hidden;
+  cameraModeSliders.hidden=false;
+  cameraControlsPanel.hidden=cameraModeToggle.hidden;
   cameraControlsPanel.classList.toggle('is-active',cameraModeActive);
+  cameraDirection.hidden=!cameraModeActive;
+  clearTimeout(zoomFeedbackTimer);cameraControlsPanel.classList.remove('is-zoom-feedback');
   cameraModeToggle.setAttribute('aria-pressed',String(cameraModeActive));
   const label=cameraModeActive?'Close Camera':'Camera';
   cameraModeToggle.querySelector('.action__label').textContent=label;
   cameraModeToggle.title=label;
+}
+function showZoomFeedback(hold=false){
+  cameraControlsPanel.hidden=false;cameraModeSliders.hidden=false;cameraDirection.hidden=true;
+  cameraControlsPanel.classList.add('is-zoom-feedback');
+  clearTimeout(zoomFeedbackTimer);
+  if(!hold)zoomFeedbackTimer=setTimeout(()=>cameraControlsPanel.classList.remove('is-zoom-feedback'),1800);
 }
 function setCameraMode(active){
   if(active===cameraModeActive)return;
@@ -1336,6 +1336,8 @@ function syncCameraSliders(){
   const {min,max}=cameraZoomBounds(),zoom=cameraControlsPanel.querySelector('[data-camera-control="zoom"]');
   zoom.disabled=max<=min;zoom.value=max>min?String(Math.max(0,Math.min(100,Math.round(100*Math.log(viewUnit/min)/Math.log(max/min))))):'0';
   zoom.setAttribute('aria-valuetext',`${Math.round(viewUnit/min*100)}%`);
+  cameraControlsPanel.querySelector('[data-zoom-step="1"]').disabled=viewUnit>=max-.0001;
+  cameraControlsPanel.querySelector('[data-zoom-step="-1"]').disabled=viewUnit<=min+.0001;
   const cube=cameraControlCube(cameraState.yaw,cameraState.pitch);
   for(const name of ['front','top','side','edges'])cameraDirection.querySelector(`.camera-controls__cube-${name}`).setAttribute('d',cube[name]);
   for(const name of ['vertical','horizontal'])cameraDirection.querySelector(`.camera-controls__axis-${name}`).setAttribute('d',cube[name]);
@@ -1349,6 +1351,14 @@ cameraControlsPanel.addEventListener('input',event=>{
     const {min,max}=cameraZoomBounds();zoomBoard(min*(max/min)**(value/100),wrap.clientWidth/2,wrap.clientHeight/2);
     applyBoardView();resetStudyFollow();return;
   }
+});
+cameraControlsPanel.addEventListener('click',event=>{
+  const button=event.target.closest('[data-zoom-step]');
+  if(!button||button.disabled||!gameReady||!viewReady||levelLoading||busy||won)return;
+  enterPlayFromIntro();viewTouched=true;clearBoardHover();
+  const {min,max}=cameraZoomBounds(),factor=(max/min)**.1;
+  zoomBoard(viewUnit*(button.dataset.zoomStep==='1'?factor:1/factor),wrap.clientWidth/2,wrap.clientHeight/2);
+  applyBoardView();resetStudyFollow();
 });
 function setCameraDirection(yaw,pitch){
   if(!cameraModeActive||!gameReady||!viewReady||levelLoading||busy||won)return;
@@ -1503,7 +1513,7 @@ function syncPuzzleProjection(){
   if(gpu)puzzleMeshes.clear();else puzzleMeshes.begin(projection);
   const apply=object=>gpu?puzzleGPU.apply(object):puzzleMeshes.apply(object);
   for(const g of groups)for(const object of g.objects)apply(object);
-  for(const object of [...extrusionObjects,...extrusionOutlines,...(selectionLightbox?.renderObjects??[]),...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
+  for(const object of [...extrusionObjects,...extrusionOutlines,...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
   for(const object of [...pomParts,umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix())}
   if(!gpu)puzzleMeshes.end();
 }
@@ -1515,7 +1525,6 @@ function gameInit(){
   setCanvasClearColor(new Color(1,250/255,240/255));
   setDebugWatermark(false);puzzleGPU=createPuzzleGPUProjection({gl:glContext,cloneMesh:cloneProjectionMesh});new Render3DPlugin();puzzleGPU.attach(render3D);
   movementMarkers=createMovementMarkers();
-  selectionLightbox=createSelectionLightbox();
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);
   baseCameraHeight=fitCamera(bounds.width,bounds.height);render3D.camera.orthographic=baseCameraHeight;positionCameraForView(viewSide);
@@ -1532,6 +1541,7 @@ function gameInit(){
   hoverObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));hoverObject.transparent=true;hoverObject.render3D=()=>{};
   studioTargetObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));studioTargetObject.transparent=true;studioTargetObject.render3D=()=>{};
   playerObject=new EngineObject3D(vec3(.5,.2,.14),pomBlob,undefined,inkColor);playerObject.scale3D=vec3(.72,.56,.018);playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.lighting=false;playerObject.softShadow=0;pomParts=[playerObject];
+  pomLight=new Light3D(vec3(),2,new Color(1,.88,.68),1);pomLight.glow=.45;
   pomBody=new EngineObject3D(vec3(0,0,1),pomBlob,undefined,new Color(.97,.22,.16));pomBody.scale3D=vec3(.88,.88,1);pomBody.lighting=false;playerObject.addChild(pomBody);pomParts.push(pomBody);
   for(const x of [-.17,.17]){const white=new EngineObject3D(vec3(x,.19,2),pomEye,undefined,new Color(1,.95,.83)),black=new EngineObject3D(vec3(x,.19,2.2),pomEye,undefined,new Color(.12,.1,.09));white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1);white.lighting=false;black.lighting=false;playerObject.addChild(white);playerObject.addChild(black);pomEyes.push({white,black});pomParts.push(white,black)}
   const sweatContour=[...quadraticSegment([0,.6],[-.65,-.05],[-.35,-.3],10),...quadraticSegment([-.35,-.3],[0,-.7],[.35,-.3],10).slice(1),...quadraticSegment([.35,-.3],[.65,-.05],[0,.6],10).slice(1)],sweatMesh=makeFanMesh(sweatContour);
@@ -1553,7 +1563,7 @@ function gameInit(){
 }
 function gameUpdate(){
   introTick?.(timeReal*1000);
-  syncCellGeometry();syncPomMatrix();updateStudyFollow();updateStudyVisibility();
+  syncCellGeometry();syncPomMatrix();if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updateStudyFollow();updateStudyVisibility();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;

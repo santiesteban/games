@@ -76,9 +76,9 @@
           </svg>
         </div>
         <div class="camera-controls__zoom">
-          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6m-3-3v6"/></svg>
+          <button type="button" class="camera-controls__zoom-button" data-zoom-step="1" aria-label="Zoom in" title="Zoom in"><svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6m-3-3v6"/></svg></button>
           <input type="range" data-camera-control="zoom" aria-label="Zoom" title="Zoom" min="0" max="100" step="1" orient="vertical">
-          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6"/></svg>
+          <button type="button" class="camera-controls__zoom-button" data-zoom-step="-1" aria-label="Zoom out" title="Zoom out"><svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6"/></svg></button>
         </div>
       </div>
     </div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
@@ -228,7 +228,7 @@
         <div class="setting setting--select">
           <div class="setting__copy">
             <label class="setting__label" for="pieceHighlight">Piece highlight</label>
-            <p class="setting__description" id="pieceHighlight-description">Choose a pulsing inner light or the classic outline and tint.</p>
+            <p class="setting__description" id="pieceHighlight-description">Choose a pulsing color or the classic outline and tint.</p>
           </div>
           <select id="pieceHighlight" aria-describedby="pieceHighlight-description">
             <option value="lightbox">Pulsing light box</option>

@@ -39,8 +39,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
       <fieldset><legend>Selected piece</legend>
       <label>Highlight style<select data-selection-effect aria-label="Highlight style"><option value="lightbox">Pulsing light box</option><option value="original">Original outline & tint</option></select></label>
       <label>Light box strength <output data-lightbox-strength-output>65%</output><input data-lightbox-strength aria-label="Light box strength" type="range" min="0" max="100" step="5" value="65"></label>
-      <label class="camera-lab-check"><input type="checkbox" data-lightbox-glow checked> Inner glow</label>
-      <p class="camera-lab-copy">A balanced color pulse and inward glow stay inside the selected front face, including white and black pieces. Tops, sides, nearby blocks and ground keep their normal shading. Reduced motion uses a steady light.</p></fieldset>
+      <p class="camera-lab-copy">A color pulse marks the selected front face, including white and black pieces. Shadows remain visible. Reduced motion uses a steady color.</p></fieldset>
       <fieldset><legend>Scenery</legend><div class="camera-lab-presets"><button type="button" data-setting="stage">Wall & ground set</button><button type="button" data-setting="landscape">Landscape</button></div>
       <label data-backdrop-field>Set backdrop<select data-backdrop aria-label="Set backdrop"><option value="fixed">Fixed wall</option><option value="turning" selected>Wall turns with the view</option><option value="curved">Curved wall</option></select></label>
       <label class="camera-lab-check"><input type="checkbox" data-horizonLock checked> Hold horizon height during orbit</label>
@@ -81,7 +80,7 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
     panel.querySelector('[data-camera-note]').textContent=original?'Original sheared geometry and camera angles.':state.pitch===0?'Front inspection view. Raise the downward angle to play.':perspective?'Perspective camera. Field of view changes keep the target at a comparable size. Pan to inspect; a movement tap resumes smooth centered follow. Center on Pom recenters immediately; scenery stays in the world.':'Straight blocks with a rotated orthographic camera.';
     panel.querySelector('[data-selection-effect]').value=state.selectionEffect;
     panel.querySelector('[data-lightbox-strength]').value=state.lightboxStrength*100;panel.querySelector('[data-lightbox-strength-output]').value=`${Math.round(state.lightboxStrength*100)}%`;
-    for(const id of ['strength','glow'])panel.querySelector(`[data-lightbox-${id}]`).disabled=state.selectionEffect!=='lightbox';
+    panel.querySelector('[data-lightbox-strength]').disabled=state.selectionEffect!=='lightbox';
     panel.querySelector('[data-auto-tilt]').checked=state.autoTilt;panel.querySelector('[data-auto-tilt]').disabled=original;
     panel.querySelector('[data-artwork-set]').value=state.artworkSet;
     panel.querySelector('[data-background-auto]').checked=state.backgroundDistanceAuto;
@@ -122,7 +121,6 @@ export function createCameraLab({levels,environments,onChange,onLevel}){
   panel.querySelector('[data-auto-tilt]').onchange=event=>{state.autoTilt=event.target.checked;change({visibilityOnly:true})};
   panel.querySelector('[data-selection-effect]').onchange=event=>{state.selectionEffect=event.target.value;change({selectionOnly:true})};
   panel.querySelector('[data-lightbox-strength]').oninput=event=>{state.lightboxStrength=Number(event.target.value)/100;change({selectionOnly:true})};
-  panel.querySelector('[data-lightbox-glow]').onchange=event=>{state.lightboxGlow=event.target.checked;change({selectionOnly:true})};
   panel.querySelector('[data-fit]').onclick=()=>onChange({refit:true});refresh();
   return{state,panel,setArtworkStatus(message){const status=panel.querySelector('[data-kit-status]');if(status.textContent!==message)status.textContent=message},reportTilt(degrees){panel.querySelector('[data-auto-tilt-note]').textContent=state.projection==='oblique'?'Original camera: automatic tilt unavailable.':state.pitch<5?'Front artwork: automatic tilt paused.':`Current downward angle: ${degrees.toFixed(1)}° · base ${state.pitch}°`},orbitBy(delta){orbitTo(state.motion==='track'?state.truck-delta:state.yaw+delta)},setLevel(id){levelSelect.value=id;if(state.backgroundDistanceAuto)state.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(levels.find(level=>level.id===id)??{width:4,grid:[]}));refresh()},measure({percent,tilt,curved,unit,cameraHeight}){
     if(!Number.isFinite(percent)){panel.querySelector('[data-horizon-measure]').textContent='Backdrop join is outside the view.';guide.hidden=true;return}

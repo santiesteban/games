@@ -8,6 +8,15 @@ export const SHADOW_BLUR_RADIUS=.12;
 // than comparing all samples with the center depth. The latter produces
 // striped self-shadowing on sloping faces, particularly on mobile GPUs.
 const receiverShadow=`
+  float pomLight(){
+    float glow=0.0;
+    for(int i=0;i<lightCount;i++){
+      if(lights[i].w<=0.0)continue;
+      float falloff=max(0.0,1.0-distance(worldPos,lights[i].xyz)/lights[i].w);
+      glow=max(glow,falloff*falloff*lightColors[i].a);
+    }
+    return clamp(glow,0.0,0.8);
+  }
   float surfaceShadow(){
     highp vec3 q=S.xyz/max(S.w,0.000001)*0.5+0.5;
     highp vec3 dx=dFdx(q),dy=dFdy(q);
@@ -38,13 +47,13 @@ const receiverShadow=`
 export const pieceShadowShader=new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
-    color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow());
+    color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow())*(1.0-pomLight());
   }
 `);
 
 export const groundShadowShader=new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
-    color=vec4(0.0,0.0,0.0,sunColor.r*(1.0-surfaceShadow()));
+    color=vec4(0.0,0.0,0.0,sunColor.r*(1.0-surfaceShadow())*(1.0-pomLight()));
   }
 `);
 
@@ -52,13 +61,15 @@ export const groundShadowShader=new Shader(`${receiverShadow}
 // the sun. Enforce that geometric fact before sampling the biased shadow map;
 // otherwise its filtering leaks a bright rim at convex checkerboard corners.
 // Keep this on solid puzzle faces, not painted character/flag billboards.
-export const solidPieceShadowShader=new Shader(`${receiverShadow}
+const solidPieceShadow=(strength)=>new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
     float visible=dot(normalize(worldNormal),sunDirection)>0.0001?surfaceShadow():0.0;
-    color.rgb*=1.0-sunColor.r*(1.0-visible);
+    color.rgb*=1.0-${strength}*sunColor.r*(1.0-visible)*(1.0-pomLight());
   }
 `);
+export const solidPieceShadowShader=solidPieceShadow('1.0');
+export const highlightedPieceShadowShader=solidPieceShadow('0.5');
 
 // Ground, backdrop, and puzzle faces use the same shadow filter.
 export function createGroundSurfaceShader(){
