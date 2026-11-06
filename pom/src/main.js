@@ -1016,6 +1016,7 @@ for(const feature of CONTROL_FEATURES){
   if(!toggle)continue;
   toggle.addEventListener('change',()=>{
     const saved=controlFeatures.set(feature.id,toggle.checked);
+    if(feature.id==='movementArrow'&&!toggle.checked)clearRoutePreview();
     if(toggle.checked&&['stackedPieceButtons','pieceDragArrows'].includes(feature.id)){
       for(const id of ['stackedPieceButtons','pieceDragArrows'])if(id!==feature.id)controlFeatures.set(id,false);
     }
@@ -1397,6 +1398,130 @@ function draggableFrontPiece(e){
   return hit;
 }
 let sceneryGesture=null;
+let routePreview=null,routePreviewTimer;
+let routeCanvas,routeContext,routeMask,routeMaskContext;
+function routeDrawingContext(){
+  if(!routeCanvas){
+    routeCanvas=document.createElement('canvas');routeCanvas.setAttribute('aria-hidden','true');
+    Object.assign(routeCanvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',zIndex:'2',pointerEvents:'none'});
+    wrap.append(routeCanvas);routeContext=routeCanvas.getContext('2d');routeMask=document.createElement('canvas');routeMaskContext=routeMask.getContext('2d');
+  }
+  return routeContext;
+}
+function clearRoutePreview(){
+  clearTimeout(routePreviewTimer);routePreview=null;
+  if(routeCanvas&&routeContext)routeContext.clearRect(0,0,routeCanvas.width,routeCanvas.height);
+}
+function drawRoutePreview(){
+  if(!routePreview)return;
+  if(!controlFeatures.enabled('movementArrow')){clearRoutePreview();return}
+  const arrowHeadLength=7;
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),points=[],camera=render3D.camera,right=camera.getRight();
+  const canvas=routeCanvas?routeContext:routeDrawingContext(),ratio=window.devicePixelRatio||1,width=Math.round(size.x*ratio),height=Math.round(size.y*ratio);
+  if(routeCanvas.width!==width||routeCanvas.height!==height){routeCanvas.width=width;routeCanvas.height=height;routeMask.width=width;routeMask.height=height;routePreview.geometryKey=''}
+  const geometryKey=[size.x,size.y,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic,viewUnit,yStretch].join(':');
+  if(routePreview.geometryKey===geometryKey&&!routePreview.fadeAt)return;
+  routePreview.geometryKey=geometryKey;
+  canvas.setTransform(ratio,0,0,ratio,0,0);canvas.clearRect(0,0,size.x,size.y);
+  const drawing=routeMaskContext,alpha=.8*(routePreview.fadeAt?Math.max(0,1-(performance.now()-routePreview.fadeAt)/350):1);
+  drawing.setTransform(ratio,0,0,ratio,0,0);drawing.clearRect(0,0,size.x,size.y);
+  const screen=p=>render3D.worldToScreen(p,size);
+  const pixelScale=p=>{
+    const a=screen(p),b=screen(p.add(right.scale(.1)));
+    return a&&b?.x!==undefined ? .1/Math.max(.001,Math.hypot(b.x-a.x,b.y-a.y)) : 0;
+  };
+  // Place the overlay just above the surface Pom walks on, rather than at his
+  // raised movement anchor.
+  function routePoint(p){
+    const center=puzzlePoint(worldPoint(p.x,p.y,p.z));
+    const base=screen(center),raised=screen(puzzlePoint(worldPoint(p.x,p.y+1,p.z)));
+    const lift=base&&raised?2/Math.max(.001,Math.hypot(raised.x-base.x,raised.y-base.y)):pixelScale(center)*2;
+    return puzzlePoint(worldPoint(p.x,p.y-.22+unStretchY(lift),p.z));
+  }
+  const visiblePlans=routePreview.plans;
+  for(const plan of visiblePlans)for(const p of plan.points){
+    const point=routePoint(p);
+    if(!points.length||point.subtract(points.at(-1)).length()>.001)points.push(point);
+  }
+  let centers=[];
+  if(points.length<2){
+    if(routePreview.plans.length!==1)return;
+    const plan=routePreview.plans[0],tip=screen(routePoint(plan.points.at(-1))),before=screen(routePoint(plan.points[Math.max(0,plan.points.length-2)]));
+    if(!tip||!before)return;
+    const dx=tip.x-before.x,dy=tip.y-before.y,length=Math.hypot(dx,dy)||1,tail=arrowHeadLength+2;centers=[{x:tip.x-dx/length*tail,y:tip.y-dy/length*tail},tip];
+  }else{
+    const separated=[points[0]];
+    for(let i=1;i<points.length-1;i++){
+      const a=points[i-1],b=points[i];
+      let end=i;
+      while(end+1<points.length-1&&Math.abs(points[end+1].y-b.y)<=.03&&points[end+1].subtract(b).length()<.24)end++;
+      const c=points[end+1],from=screen(a),turn=screen(b),to=screen(c);
+      if(a.y>b.y+.03&&c.y>points[end].y+.03&&from&&turn&&to){
+        const ax=from.x-turn.x,ay=from.y-turn.y,bx=to.x-turn.x,by=to.y-turn.y;
+        const al=Math.hypot(ax,ay),bl=Math.hypot(bx,by);
+        if(al>1&&bl>1&&(ax*bx+ay*by)/(al*bl)>.85){
+          // Give overlapping descent and ascent their own sides of the turn.
+          const offset=right.scale(Math.min(.16,pixelScale(b)*7));
+          const direction=from.x>to.x?-1:1;
+          separated.push(b.subtract(offset.scale(direction)),...points.slice(i,end+1),points[end].add(offset.scale(direction)));
+          i=end;
+          continue;
+        }
+      }
+      separated.push(b);
+    }
+    separated.push(points.at(-1));
+    centers=separated.map(point=>screen(point)).filter(Boolean);
+    for(let i=centers.length-1;i>0;i--)if(Math.hypot(centers[i].x-centers[i-1].x,centers[i].y-centers[i-1].y)<.1)centers.splice(i,1);
+  }
+  if(centers.length<2)return;
+  const tip=centers.at(-1);let previous=centers.length-2;
+  while(previous>0&&Math.hypot(tip.x-centers[previous].x,tip.y-centers[previous].y)<2)previous--;
+  const before=centers[previous],dx=tip.x-before.x,dy=tip.y-before.y,len=Math.hypot(dx,dy)||1;
+  const head=[{x:tip.x-dx/len*7+dy/len*4.5,y:tip.y-dy/len*7-dx/len*4.5},tip,{x:tip.x-dx/len*7-dy/len*4.5,y:tip.y-dy/len*7+dx/len*4.5}];
+  function bodyPath(){
+    drawing.beginPath();drawing.moveTo(centers[0].x,centers[0].y);
+    for(let i=1;i<centers.length-1;i++){
+      const a=centers[i-1],b=centers[i],c=centers[i+1],ax=a.x-b.x,ay=a.y-b.y,bx=c.x-b.x,by=c.y-b.y,al=Math.hypot(ax,ay),bl=Math.hypot(bx,by);
+      if(al<.1||bl<.1)continue;
+      const radius=Math.min(14,al/2,bl/2);
+      drawing.lineTo(b.x+ax/al*radius,b.y+ay/al*radius);
+      drawing.quadraticCurveTo(b.x,b.y,b.x+bx/bl*radius,b.y+by/bl*radius);
+    }
+    drawing.lineTo(centers.at(-1).x,centers.at(-1).y);
+  }
+  const headPath=()=>{drawing.beginPath();drawing.moveTo(head[0].x,head[0].y);drawing.lineTo(head[1].x,head[1].y);drawing.lineTo(head[2].x,head[2].y)};
+  drawing.save();drawing.lineCap='round';drawing.lineJoin='round';drawing.strokeStyle='#ffd23f';drawing.lineWidth=8;
+  bodyPath();drawing.stroke();headPath();drawing.stroke();drawing.restore();
+  canvas.globalAlpha=alpha;canvas.drawImage(routeMask,0,0,width,height,0,0,size.x,size.y);canvas.globalAlpha=1;
+  const pomMesh=playerObject?.mesh,meshPoints=pomMesh?.points;
+  if(meshPoints?.length>2){
+    const matrix=playerObject.getMatrix(),gpuProjection=puzzleGPU?.active;
+    const contour=(pomReaching?meshPoints:meshPoints.slice(1)).map(point=>{
+      const world=matrix.transformPoint(point);
+      return screen(gpuProjection?puzzlePoint(world):world);
+    }).filter(Boolean);
+    if(contour.length>2){
+      canvas.save();canvas.globalCompositeOperation='destination-out';canvas.beginPath();canvas.moveTo(contour[0].x,contour[0].y);
+      for(const point of contour.slice(1))canvas.lineTo(point.x,point.y);
+      canvas.closePath();canvas.fill();canvas.lineWidth=1;canvas.lineJoin='round';canvas.stroke();canvas.restore();
+    }
+  }
+}
+function previewRoute(e){
+  clearRoutePreview();if(!controlFeatures.enabled('movementArrow')||busy||won||levelLoading)return;
+  const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
+  const stud=pickMovementMarker(ray);let target=stud??standableAt(ray);
+  if(!target){
+    const hits=puzzleRaycast(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines]);
+    if(hits.some(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o)))return;
+    const floor=pointOnFloor(ray);
+    if(floor){target=standableReachable().filter(p=>p.y===H).sort((a,b)=>{const pa=worldPosition(a),pb=worldPosition(b);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(target){const p=worldPosition(target);if(Math.hypot(p.x-floor.x,p.z-floor.z)>=1.15)target=null}}
+  }
+  if(!target)return;
+  const path=findPath(target);if(!path||path.length<2)return;
+  routePreview={pointer:e.pointerId,target,path,plans:path.slice(1).map((to,i)=>routeFor(path[i],to)),board:movementBoard(),start:nodeKey(player),stud:!!stud};drawRoutePreview();
+}
 function sceneryRay(e){const p=boardPoint(e);return render3D.screenToRay(vec2(p.x,p.y),vec2(wrap.clientWidth,wrap.clientHeight))}
 function boardDown(e){
   if(pieceDrag.active)return;
@@ -1411,7 +1536,7 @@ function boardDown(e){
   const piece=viewportUI.pageZoomed?null:draggableFrontPiece(e);
   if(piece){selected=piece.piece;pieceDragAnchor=piece;updateUI();if(pieceDrag.beginFace(e))return}
   const p=boardPoint(e);boardPointers.set(e.pointerId,p);if(!viewportUI.pageZoomed)wrap.setPointerCapture(e.pointerId);
-  if(boardPointers.size===1)boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};else{boardGesture.multi=true;clearBoardHover()}
+  if(boardPointers.size===1){boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};previewRoute(e)}else{boardGesture.multi=true;clearRoutePreview();clearBoardHover()}
 }
 function boardMove(e){
   if(viewportUI.pageZoomed){
@@ -1420,7 +1545,7 @@ function boardMove(e){
     if(sceneryGesture?.pointer===e.pointerId||pieceDrag.active){boardUp(e,true);return}
     if(boardPointers.has(e.pointerId)){
       const p=boardPoint(e);boardPointers.set(e.pointerId,p);
-      if(boardGesture){boardGesture.moved||=Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6;boardGesture.multi||=boardPointers.size>1}
+      if(boardGesture){boardGesture.moved||=Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6;boardGesture.multi||=boardPointers.size>1;if(boardGesture.moved||boardGesture.multi)clearRoutePreview()}
     }
     return;
   }
@@ -1433,11 +1558,11 @@ function boardMove(e){
   if(!boardPointers.has(e.pointerId)){if(e.pointerType!=='touch')updateHover(e);return}
   const before=[...boardPointers.values()],old=boardPointers.get(e.pointerId),p=boardPoint(e);boardPointers.set(e.pointerId,p);
   if(boardPointers.size>=2){
-    boardGesture.multi=true;boardGesture.moved=true;const after=[...boardPointers.values()],a=before[0],b=before[1],c=after[0],d=after[1],oldDistance=Math.hypot(a.x-b.x,a.y-b.y),distance=Math.hypot(c.x-d.x,c.y-d.y),cx=(c.x+d.x)/2,cy=(c.y+d.y)/2;
+    boardGesture.multi=true;boardGesture.moved=true;clearRoutePreview();const after=[...boardPointers.values()],a=before[0],b=before[1],c=after[0],d=after[1],oldDistance=Math.hypot(a.x-b.x,a.y-b.y),distance=Math.hypot(c.x-d.x,c.y-d.y),cx=(c.x+d.x)/2,cy=(c.y+d.y)/2;
     panBoard(cx-(a.x+b.x)/2,cy-(a.y+b.y)/2);if(oldDistance>1)zoomBoard(viewUnit*distance/oldDistance,cx,cy);
   }else{
     if(Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6)boardGesture.moved=true;
-    if(!boardGesture.moved)return;panBoard(p.x-old.x,p.y-old.y);
+    if(!boardGesture.moved)return;clearRoutePreview();panBoard(p.x-old.x,p.y-old.y);
   }
   viewTouched=true;clearBoardHover();applyBoardView();resetStudyFollow();e.preventDefault();
 }
@@ -1448,7 +1573,10 @@ function boardUp(e,cancel=false){
   const tap=!cancel&&boardPointers.size===0&&boardGesture&&!boardGesture.moved&&!boardGesture.multi;
   if(wrap.hasPointerCapture(e.pointerId))wrap.releasePointerCapture(e.pointerId);
   if(boardPointers.size===0)boardGesture=null;
-  if(tap){viewTouched=true;clickBoard(e)}
+  const preview=routePreview;
+  if(tap&&preview&&preview.pointer===e.pointerId&&preview.board===movementBoard()&&preview.start===nodeKey(player)){
+    viewTouched=true;moveTo(preview.target,preview.stud,preview);preview.fadeAt=performance.now();routePreviewTimer=setTimeout(clearRoutePreview,350);
+  }else{clearRoutePreview();if(tap&&!preview){viewTouched=true;clickBoard(e)}}
 }
 function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function syncVictoryShowcase(now,sequence){
@@ -1569,10 +1697,14 @@ function gameUpdate(){
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;
   updateSelectionLightbox();
   syncPuzzleProjection();
+  if(routePreview){
+    if(routePreview.fadeAt)drawRoutePreview();
+    else if(routePreview.board!==movementBoard()||routePreview.start!==nodeKey(player))clearRoutePreview();else drawRoutePreview();
+  }
 }
-function moveTo(p,pressMarker=false){
-  if(levelLoading||won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
-  const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
+function moveTo(p,pressMarker=false,preview=null){
+  if(levelLoading||won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=preview?.path??findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
+  const plans=preview?.plans??path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
   const winningArrival=!isPreviewLevel(activeLevel)&&nodeKey(path.at(-1))===nodeKey(goalNode());
   hideHelp();save();resumeStudyFollow();busy=true;effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   const readyAt=performance.now()+(pressMarker?(movementMarkers?.press(p)??0):0);
