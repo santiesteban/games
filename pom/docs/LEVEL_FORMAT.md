@@ -43,13 +43,13 @@ positions, and engine compatibility. A valid document is not proof of solvabilit
 
 Group order controls gallery and next-level order. Within a group, levels sort
 by `number`. Empty groups are not rendered. The built-in catalog reserves
-`murals` immediately after `more-challenges`, followed by `japan-challenges`, `candidate-challenges`, and `others`.
+`murals` immediately after `more-challenges`, followed by `japan-challenges`, `candidate-challenges`, `food-for-thought`, and `others`.
 `rangeLabel` optionally replaces the automatically generated number range.
 
 The 18 reconstructed Murals occupy display numbers 55–72. Japan Challenges follows
 with 16 QR conversions (73–88), using Japan Spring scenery. Others follows
 with Movement Studio (89), Pull out a path (90), Design Playground (91), and Background Studio (92). The first two retain the original
-`builtin-055` and `builtin-056` values. Candidate Challenges has ten entries numbered 93–102; see [Candidate Challenges](CANDIDATE_CHALLENGES.md) for provenance and solver limits. See [Murals provenance](MURALS.md) and [Japan Challenges](JAPAN_CHALLENGES.md).
+`builtin-055` and `builtin-056` values. Food for Thought begins with Hot Dog with Everything (103). Candidate Challenges has ten entries numbered 93–102; see [Candidate Challenges](CANDIDATE_CHALLENGES.md) for provenance and solver limits. See [Murals provenance](MURALS.md) and [Japan Challenges](JAPAN_CHALLENGES.md).
 
 ## Identity and metadata
 
