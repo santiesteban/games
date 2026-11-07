@@ -28,7 +28,7 @@ try{
   const preview=import.meta.env.DEV&&new URLSearchParams(location.search).has('preview');
   let entries;
   if(preview){entries=(await import('./gallery-preview.js')).previewPuzzles()}
-  else{const response=await fetch(new URL('community-gallery.json',location.href));if(!response.ok)throw new Error('Gallery unavailable.');entries=await response.json()}
+  else{const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_API||new URL('community-gallery.json',location.href);const response=await fetch(galleryUrl);if(!response.ok)throw new Error('Gallery unavailable.');entries=await response.json()}
   if(!Array.isArray(entries))throw new Error('Gallery data is invalid.');
   for(const entry of entries)list.append(puzzleCard(entry));
   count.hidden=false;count.textContent=`${entries.length} ${entries.length===1?'puzzle':'puzzles'}`;

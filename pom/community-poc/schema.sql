@@ -8,7 +8,8 @@ CREATE TABLE submissions (
   puzzle_json TEXT NOT NULL,
   content_hash TEXT NOT NULL,
   reviewed_at TEXT,
-  reviewer TEXT
+  reviewer TEXT,
+  published INTEGER NOT NULL DEFAULT 0 CHECK (published IN (0,1))
 );
 CREATE INDEX submissions_review_queue ON submissions(status, created_at, id);
 CREATE INDEX submissions_hash ON submissions(content_hash);
