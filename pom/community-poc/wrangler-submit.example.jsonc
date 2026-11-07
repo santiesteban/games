@@ -1,0 +1,10 @@
+{
+  "name": "little-ledges-poc-submit",
+  "main": "submission-worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {"CREATOR_ORIGIN": "https://santiesteban.github.io"},
+  "d1_databases": [{"binding": "DB", "database_name": "little-ledges-submissions-poc", "database_id": "4e515f08-ced5-4a7e-a8ea-050dc9440726"}],
+  "ratelimits": [{"name": "SUBMISSION_LIMITER", "namespace_id": "10701", "simple": {"limit": 5, "period": 60}}]
+}
