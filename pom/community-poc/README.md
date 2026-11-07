@@ -1,6 +1,6 @@
 # Community submissions proof of concept
 
-This is a **deployed proof of concept** at https://santiesteban.github.io/little-ledges-community-poc/. It uses a separate `little-ledges-submissions-poc` D1 database, submission and review Workers, a Turnstile widget, and GitHub OAuth. No Cloudflare Access policy is used. The live creator and player do not use this code. The test gallery contains a disposable example puzzle.
+This is a **deployed proof of concept** at https://santiesteban.github.io/little-ledges-community-poc/. It uses a separate `little-ledges-submissions-poc` D1 database, submission and review Workers, a Turnstile widget, and GitHub OAuth. No Cloudflare Access policy is used. The regular creator also submits to this test review queue. The test gallery contains a disposable example puzzle.
 
 ## Flow
 

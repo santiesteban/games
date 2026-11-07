@@ -84,6 +84,9 @@ jobs:
       - name: Build Puzzle Maker
         env:
           VITE_PUBLIC_SITE_URL: ${{ steps.pages.outputs.base_url }}
+          VITE_COMMUNITY_SUBMIT_URL: https://little-ledges-poc-submit.community-poc.workers.dev/submit
+          VITE_COMMUNITY_TURNSTILE_SITE_KEY: 0x4AAAAAAF3rjK_M284MF2oF
+          VITE_COMMUNITY_GALLERY_URL: https://santiesteban.github.io/little-ledges-community-poc/community-gallery.html
         run: npm run build
         working-directory: pom/creator
 
