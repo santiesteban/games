@@ -180,10 +180,12 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)saveNow()})
 async function init(){$('.studio').inert=true;$('#draftsButton').disabled=$('#newButton').disabled=true;$('#saveStatus').textContent='Opening draft…';state=blank();render();fit();let id;try{id=localStorage.getItem(lastDraftStorageKey);const draft=id&&await stored('drafts','get',id);if(draft)await openState(draft.state,draft.referenceData)}catch{notice('Local drafts could not be restored. Export JSON to keep your work.')}hydrating=false;$('.studio').inert=false;$('#draftsButton').disabled=$('#newButton').disabled=false;setTool('pencil');render();scheduleSave()}
 init();
 
-// The proof of concept is invisible unless its public endpoint and site key are configured at build time.
+// Submission is available only when its public endpoint and site key are configured at build time.
 const communityUrl=import.meta.env.VITE_COMMUNITY_SUBMIT_URL,communitySiteKey=import.meta.env.VITE_COMMUNITY_TURNSTILE_SITE_KEY;
 if(communityUrl&&communitySiteKey){
   const url=new URL(communityUrl);if(url.protocol==='https:'||['localhost','127.0.0.1'].includes(url.hostname)){
+    const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_URL;
+    if(galleryUrl){const gallery=new URL(galleryUrl);if(gallery.protocol==='https:')$('#communityGalleryLink').href=gallery.href}
     $('#communityPanel').hidden=false;let widget,token='';
     const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.defer=true;
     script.onload=()=>{widget=window.turnstile.render('#communityChallenge',{sitekey:communitySiteKey,action:'puzzle_submit',callback:t=>{token=t},'expired-callback':()=>{token=''}})};
