@@ -67,9 +67,12 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     const upload=document.createElement('button');upload.type='button';upload.className='action';upload.textContent='Upload a Level';upload.onclick=importFile;
     const create=document.createElement('a');create.href=creatorUrl;create.target='_blank';create.rel='noopener';create.className='action';create.textContent='Open Level Maker';
     create.onclick=event=>{event.preventDefault();openExternal(creatorUrl).catch(error=>notice(error.message))};
+    const galleryUrl='https://santiesteban.github.io/little-ledges-community-poc/community-gallery.html';
+    const gallery=document.createElement('a');gallery.href=galleryUrl;gallery.target='_blank';gallery.rel='noopener';gallery.className='action';gallery.textContent='Community Gallery';
+    gallery.onclick=event=>{event.preventDefault();openExternal(galleryUrl).catch(error=>notice(error.message))};
     const manage=document.createElement('button');manage.type='button';manage.className='action';manage.textContent='Manage puzzles';manage.disabled=!records.length;
     manage.onclick=()=>{renderManager();manager.showModal()};
-    links.append(upload,create,manage);actions.append(heading,links);
+    links.append(upload,create,gallery,manage);actions.append(heading,links);
   }
   async function complete(level){if(level.temporaryPlaytest)return;try{const record=await stored('puzzles','get',level.userPuzzle.id);if(record&&record.puzzle.revision===level.userPuzzle.revision){await stored('puzzles','put',{...record,completed:true});listeners.notify();await reload()}}catch(e){notice(e.message)}}
   let pendingLink,nativeConnected=false;
