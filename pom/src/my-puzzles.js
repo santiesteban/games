@@ -3,7 +3,8 @@ import { stored, storageChannel } from '../shared/storage.js';
 import {deploymentUrls} from '../shared/deployment.js';
 import {openExternal,canPickPuzzleFile,pickPuzzleFile,subscribePuzzleImports} from '../shared/platform.js';
 import {puzzleFromTransfer,puzzleFromLink} from '../shared/puzzle-transfer.js';
-import { puzzleThumbnail } from './puzzle-thumbnail.js';
+import {galleryImportUrl} from '../shared/gallery-message.js';
+import { userPuzzleThumbnail } from './puzzle-thumbnail.js';
 import { collectionCard } from './collection-view.js';
 import './my-puzzles.css';
 
@@ -14,13 +15,24 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     grid.forEach((row,y)=>[...row].forEach((slot,x)=>{if(slot!=='.'){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}));
     return{left,top,width:right-left+1,height:bottom-top+1};
   }
-  function thumbnail(level){const svg=puzzleThumbnail(level),bounds=paintedBounds(level.grid);if(bounds.width>0)svg.setAttribute('viewBox',`${bounds.left-.5} ${bounds.top-.5} ${bounds.width+1} ${bounds.height+1}`);return svg}
+  function thumbnail(level){return userPuzzleThumbnail(level)}
 
   const listeners=storageChannel(()=>reload());
   const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;document.body.append(input);
-  const dialog=document.createElement('dialog');dialog.className='puzzle-import';dialog.setAttribute('aria-labelledby','userPuzzleImportTitle');dialog.setAttribute('aria-describedby','userPuzzleImportDetails');
-  dialog.innerHTML='<header class="import-header"><h2 id="userPuzzleImportTitle" tabindex="-1">Import user created puzzle</h2><form method="dialog"><button class="btn import-close" aria-label="Close puzzle import">✕</button></form></header><h3 class="import-puzzle-name"></h3><div class="import-art"></div><p class="import-details" id="userPuzzleImportDetails"></p><p class="import-copy"></p><p class="import-existing" hidden></p><p class="import-error" role="status"></p><div class="import-actions"><button class="btn" data-action="copy">Save as a copy</button><button class="btn menu-primary" data-action="add">Add to My Puzzles</button></div>';
+  const dialog=document.createElement('dialog');dialog.className='puzzle-import user-puzzle-dialog';dialog.setAttribute('aria-labelledby','userPuzzleImportTitle');dialog.setAttribute('aria-describedby','userPuzzleImportDetails');
+  dialog.innerHTML='<header class="import-header"><h2 id="userPuzzleImportTitle" tabindex="-1">Add user-created puzzle</h2><form method="dialog"><button class="btn import-close" aria-label="Close puzzle import">✕</button></form></header><h3 class="import-puzzle-name"></h3><div class="import-art"></div><p class="import-details" id="userPuzzleImportDetails"></p><p class="import-copy"></p><p class="import-existing" hidden></p><p class="import-error" role="status"></p><div class="import-actions"><button class="btn" data-action="copy">Save as a copy</button><button class="btn menu-primary" data-action="add">Add to My Puzzles</button></div>';
   document.body.append(dialog);
+  const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_URL||'https://santiesteban.github.io/little-ledges-community-poc/community-gallery.html';
+  const galleryOrigin=new URL(galleryUrl).origin;
+  const gallerySheet=document.createElement('dialog');gallerySheet.className='community-sheet';gallerySheet.setAttribute('aria-labelledby','communitySheetTitle');
+  gallerySheet.innerHTML='<header class="community-sheet-header"><h2 id="communitySheetTitle">Community Gallery</h2><form method="dialog"><button class="community-sheet-close" aria-label="Close community gallery">✕</button></form></header><p class="community-sheet-note" role="status" hidden>The gallery requires an internet connection.</p><iframe title="Community Gallery" class="community-sheet-frame"></iframe>';
+  const galleryFrame=gallerySheet.querySelector('iframe'),galleryNote=gallerySheet.querySelector('.community-sheet-note');let galleryTimer;document.body.append(gallerySheet);
+  galleryFrame.addEventListener('load',()=>{if(gallerySheet.open)galleryFrame.contentWindow?.postMessage({type:'little-ledges:gallery-handshake'},galleryOrigin)});
+  gallerySheet.addEventListener('close',()=>{clearTimeout(galleryTimer);galleryFrame.src='about:blank'});
+  window.addEventListener('message',async event=>{
+    if(gallerySheet.open&&event.source===galleryFrame.contentWindow&&event.origin===galleryOrigin&&event.data?.type==='little-ledges:gallery-status'&&['ready','error'].includes(event.data.status)){clearTimeout(galleryTimer);galleryNote.hidden=event.data.status==='ready';return}
+    const url=galleryImportUrl(event,gallerySheet.open?galleryFrame.contentWindow:null,galleryOrigin);if(!url)return;try{const puzzle=puzzleFromLink(url,allowedGameUrls);await loaded;gallerySheet.close();preview(puzzle)}catch(error){notice(error.message)}
+  });
   const manager=document.createElement('dialog');manager.className='puzzle-import puzzle-manager';manager.setAttribute('aria-labelledby','puzzleManagerTitle');
   manager.innerHTML='<header class="import-header"><h2 id="puzzleManagerTitle">Manage my puzzles</h2><form method="dialog"><button class="btn import-close" aria-label="Close puzzle manager">✕</button></form></header><div class="puzzle-manager-list"></div>';
   document.body.append(manager);
@@ -31,7 +43,7 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     previewPuzzle=validatePuzzle(puzzle);const existing=records.find(r=>r.id===puzzle.id),same=existing?.puzzle.revision===previewPuzzle.revision;
     const bounds=paintedBounds(previewPuzzle.grid);dialog.querySelector('.import-details').textContent=`${bounds.width} × ${bounds.height} cells`;
     dialog.querySelector('.import-puzzle-name').textContent=previewPuzzle.name;dialog.querySelector('.import-art').replaceChildren(thumbnail(puzzleLevel(previewPuzzle)));
-    dialog.querySelector('.import-copy').textContent="This puzzle is user-created and we haven't verified if it's solvable. The puzzle will be stored on this device only.";
+    dialog.querySelector('.import-copy').textContent="This puzzle will be saved on this device. Its solvability hasn't been verified.";
     const duplicate=dialog.querySelector('.import-existing');duplicate.hidden=!existing;duplicate.textContent=existing?(same?'This puzzle is already in your library. You can open it or save a separate copy.':'A different version is in your library. Replacing its layout clears completion. You can also save a separate copy.'):'';
     dialog.querySelector('.import-error').textContent='';dialog.querySelector('[data-action="add"]').textContent=existing?(same?'Open saved puzzle':'Replace saved version'):'Add to My Puzzles';dialog.querySelector('[data-action="copy"]').hidden=!existing;
     if(!dialog.open){dialog.showModal();dialog.querySelector('#userPuzzleImportTitle').focus({preventScroll:true})}
@@ -67,9 +79,8 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     const upload=document.createElement('button');upload.type='button';upload.className='action';upload.textContent='Upload a Level';upload.onclick=importFile;
     const create=document.createElement('a');create.href=creatorUrl;create.target='_blank';create.rel='noopener';create.className='action';create.textContent='Open Level Maker';
     create.onclick=event=>{event.preventDefault();openExternal(creatorUrl).catch(error=>notice(error.message))};
-    const galleryUrl='https://santiesteban.github.io/little-ledges-community-poc/community-gallery.html';
-    const gallery=document.createElement('a');gallery.href=galleryUrl;gallery.target='_blank';gallery.rel='noopener';gallery.className='action';gallery.textContent='Community Gallery';
-    gallery.onclick=event=>{event.preventDefault();openExternal(galleryUrl).catch(error=>notice(error.message))};
+    const gallery=document.createElement('button');gallery.type='button';gallery.className='action';gallery.textContent='Community Gallery';
+    gallery.onclick=()=>{galleryNote.hidden=true;galleryFrame.src=galleryUrl;gallerySheet.showModal();clearTimeout(galleryTimer);galleryTimer=setTimeout(()=>{if(gallerySheet.open)galleryNote.hidden=false},12000)};
     const manage=document.createElement('button');manage.type='button';manage.className='action';manage.textContent='Manage puzzles';manage.disabled=!records.length;
     manage.onclick=()=>{renderManager();manager.showModal()};
     links.append(upload,create,gallery,manage);actions.append(heading,links);
