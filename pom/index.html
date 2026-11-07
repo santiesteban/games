@@ -271,10 +271,21 @@
         </div>
         <div class="setting">
           <div class="setting__copy">
-            <label class="setting__label" for="movementStuds">Reachable platform studs</label>
-            <p class="setting__description" id="movementStuds-description">Show small raised bumps on platforms Pom can reach. Tap a bump to press it down and move there.</p>
+            <label class="setting__label" for="movementStuds">Reachable platform markers</label>
+            <p class="setting__description" id="movementStuds-description">Show small markers on platforms Pom can reach. Tap a marker to move there.</p>
           </div>
           <input class="switch" id="movementStuds" type="checkbox" role="switch" aria-describedby="movementStuds-description">
+        </div>
+        <div class="setting setting--select">
+          <div class="setting__copy">
+            <label class="setting__label" for="movementMarkerShape">Platform marker shape</label>
+            <p class="setting__description" id="movementMarkerShape-description">Choose the shape of reachable platform markers.</p>
+          </div>
+          <select id="movementMarkerShape" aria-describedby="movementMarkerShape-description">
+            <option value="diamond">Diamond</option>
+            <option value="square">Square</option>
+            <option value="circle">Circle</option>
+          </select>
         </div>
         <div class="setting">
           <div class="setting__copy">
@@ -286,9 +297,10 @@
         <div class="setting setting--select">
           <div class="setting__copy">
             <label class="setting__label" for="topFaceAppearance">Top-face appearance</label>
-            <p class="setting__description" id="topFaceAppearance-description">Choose checkerboard, pull-distance colors, a walkability grid, or diamond shapes that grow with each pull.</p>
+            <p class="setting__description" id="topFaceAppearance-description">Choose flat color, checkerboard, pull-distance colors, a walkability grid, or diamond shapes that grow with each pull.</p>
           </div>
           <select id="topFaceAppearance" aria-describedby="topFaceAppearance-description">
+            <option value="flat">Flat</option>
             <option value="pull-depth">Pull-distance colors</option>
             <option value="checkerboard">Checkerboard</option>
             <option value="walkability">Grid with diagonal lines</option>

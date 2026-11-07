@@ -17,6 +17,7 @@ const receiverShadow=`
     }
     return clamp(glow,0.0,0.8);
   }
+  vec3 pomIllumination(){return vec3(1.0,0.82,0.58)*pomLight();}
   float surfaceShadow(){
     highp vec3 q=S.xyz/max(S.w,0.000001)*0.5+0.5;
     highp vec3 dx=dFdx(q),dy=dFdy(q);
@@ -47,13 +48,16 @@ const receiverShadow=`
 export const pieceShadowShader=new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
-    color.rgb*=1.0-sunColor.r*(1.0-surfaceShadow())*(1.0-pomLight());
+    float visibility=surfaceShadow();
+    color.rgb*=1.0-sunColor.r*(1.0-visibility);
+    color.rgb+=pomIllumination()*0.85;
   }
 `);
 
 export const groundShadowShader=new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
-    color=vec4(0.0,0.0,0.0,sunColor.r*(1.0-surfaceShadow())*(1.0-pomLight()));
+    float visibility=surfaceShadow();
+    color=vec4(0.0,0.0,0.0,sunColor.r*(1.0-visibility)*(1.0-pomLight()));
   }
 `);
 
@@ -61,11 +65,20 @@ export const groundShadowShader=new Shader(`${receiverShadow}
 // the sun. Enforce that geometric fact before sampling the biased shadow map;
 // otherwise its filtering leaks a bright rim at convex checkerboard corners.
 // Keep this on solid puzzle faces, not painted character/flag billboards.
+export const solidPieceGlowShader=new Shader(`${receiverShadow}
+  void mainImage(out vec4 color,vec2 uv){
+    color=texture(iChannel0,uv);
+    color.rgb+=pomIllumination()*0.85;
+  }
+`);
+
 const solidPieceShadow=(strength)=>new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
-    float visible=dot(normalize(worldNormal),sunDirection)>0.0001?surfaceShadow():0.0;
-    color.rgb*=1.0-${strength}*sunColor.r*(1.0-visible)*(1.0-pomLight());
+    float shadowVisibility=surfaceShadow();
+    float visible=dot(normalize(worldNormal),sunDirection)>0.0001?shadowVisibility:0.0;
+    color.rgb*=1.0-${strength}*sunColor.r*(1.0-visible);
+    color.rgb+=pomIllumination()*0.85;
   }
 `);
 export const solidPieceShadowShader=solidPieceShadow('1.0');
