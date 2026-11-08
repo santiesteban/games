@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {ENVIRONMENT_REVISION,gameplayEnvironmentConfiguration} from './environment-policy.js';
+import {ENVIRONMENT_REVISION,USER_PUZZLE_ENVIRONMENT,gameplayEnvironmentConfiguration} from './environment-policy.js';
 import {adoptStackedInteraction,INTERACTION_REVISION} from './interaction-defaults.js';
 const catalog=JSON.parse(fs.readFileSync(new URL('./data/levels.json',import.meta.url))),exported=JSON.parse(fs.readFileSync(new URL('./data/daisy-meadow-ivan-v2.json',import.meta.url))),approved=exported.configuration;
 test('approved scene covers the catalog except every Japan level',()=>{
@@ -16,6 +16,13 @@ test('legacy applied scene is preserved but cannot mask shipped adoption; explic
  assert.equal(gameplayEnvironmentConfiguration(level,catalog.groups,approved,old,ENVIRONMENT_REVISION),old);
  assert.equal(gameplayEnvironmentConfiguration({environment:'japan-spring'},[],approved,old,ENVIRONMENT_REVISION),null);
  assert.equal(gameplayEnvironmentConfiguration(level,catalog.groups,approved,null,ENVIRONMENT_REVISION),approved);
+});
+test('user puzzles and creator playtests use the spare dreamscape',()=>{
+ const applied={environment:'highway-desert'};
+ for(const level of [{userPuzzle:{id:'example'}},{temporaryPlaytest:true}]){
+   const result=gameplayEnvironmentConfiguration(level,catalog.groups,approved,applied,ENVIRONMENT_REVISION);
+   assert.equal(result,USER_PUZZLE_ENVIRONMENT);assert.equal(result.environment,'dreamscape');assert.deepEqual(result.sceneryLayout,[]);assert.equal(result.scenicAtmosphere,false);
+ }
 });
 test('stacked controls adopt once and preserve subsequent user choices and unrelated flags',()=>{
  const flags={stackedPieceButtons:false,pieceDragArrows:true,pieceShadows:false,floorGrid:true};
