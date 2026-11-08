@@ -42,7 +42,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     }
     const landscape=state.setting==='landscape',curved=!landscape&&state.backdrop==='curved',following=landscape||state.backdrop==='turning';
     const pivot=state.horizonLock?{x:target.x,z:target.z}:{x:width/2,z:0};
-    const next=JSON.stringify([state.setting,state.backdrop,state.environment,state.background,state.foreground,state.props,environment.variant,width,height,state.puzzleMounted,following||curved?yaw:0,following||curved?pivot:null]);
+    const next=JSON.stringify([state.setting,state.backdrop,state.environment,state.background,state.foreground,state.props,environment.variant,environment.fullTextures,environment.spare,width,height,state.puzzleMounted,following||curved?yaw:0,following||curved?pivot:null]);
     if(next===key)return reference;key=next;for(const object of objects)object.destroy();objects=[];
     // A turning wall must clear the entire puzzle at both orbit limits; keeping
     // the old wall's shallow offset would sweep it through the puzzle.
@@ -60,23 +60,24 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       const point=(angle,y)=>vec3(pivot.x+radius*Math.sin(angle),y,pivot.z-radius*Math.cos(angle));
       for(let i=0;i<segments;i++){
         const a=-arc+2*arc*i/segments,b=-arc+2*arc*(i+1)/segments;
-        mesh.addQuad(point(a,wallHeight),point(b,wallHeight),point(b,0),point(a,0),state.background?new Color(1):color('#eee9df'),[vec2(i/segments,0),vec2((i+1)/segments,0),vec2((i+1)/segments,anchor),vec2(i/segments,anchor)]);
+        const end=environment.fullTextures?1:anchor;
+        mesh.addQuad(point(a,wallHeight),point(b,wallHeight),point(b,0),point(a,0),state.background?new Color(1):color('#eee9df'),[vec2(i/segments,0),vec2((i+1)/segments,0),vec2((i+1)/segments,end),vec2(i/segments,end)]);
       }
       add(mesh,state.background?textures[0]:undefined);
       reference={curved:true,points:[point(-yaw-.4,0),point(-yaw,0),point(-yaw+.4,0)]};
     }else{
       const wall=[wallPoint(-span/2,wallHeight),wallPoint(span/2,wallHeight),wallPoint(span/2,0),wallPoint(-span/2,0)];
-      patch(wall,state.background?textures[0]:undefined,uv(0,anchor),state.background?new Color(1):color('#eee9df'));
+      patch(wall,state.background?textures[0]:undefined,uv(0,environment.fullTextures?1:anchor),state.background?new Color(1):color('#eee9df'));
       reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
     }
     const groundBack=landscape||following||curved?-40:back;
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];
     patch(ground,undefined,undefined,color(landscape?'#a9b58a':'#c9c9a9'));
-    if(state.foreground)patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],uv(Math.min(.99,anchor+.025),1),new Color(1));
+    if(state.foreground)patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],uv(environment.fullTextures?0:Math.min(.99,anchor+.025),1),new Color(1));
     if(!landscape&&!curved){
       // A fine join makes the set's right-angle construction easy to inspect.
       patch([wallPoint(-span/2,0),wallPoint(span/2,0),wallPoint(span/2,.025),wallPoint(-span/2,.025)].map(p=>p.add(vec3(Math.sin(yaw)*.003,0,.003))),undefined,undefined,color('#6f7765'));
-    }else if(landscape&&state.props){
+    }else if(landscape&&state.props&&!environment.spare){
       const japan=environment.id==='japan-spring';
       // Distant mounds and side trees leave the entire playable floor clear.
       for(const side of [-1,1]){
