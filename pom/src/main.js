@@ -36,6 +36,7 @@ import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, e
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
 import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryFrameUnit } from './victory-effects.js';
+import {setLoadingPalette} from './loading-palette.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
@@ -334,12 +335,11 @@ function updatePomGlow(now){
   const covered=pomShadowCoverage()>=1;
   if(covered&&!pomGlowCovered)pomGlowStart=now;
   pomGlowCovered=covered;
-  // The geometry estimate controls the bulb's startup flicker and Pom's
-  // cast shadow; the active light then follows its normal distance falloff.
-  const elapsed=now-pomGlowStart;
-  const level=covered?(elapsed<415?(elapsed<70?1:elapsed<135?0:elapsed<215?.45:elapsed<270?0:elapsed<355?.82:elapsed<415?0:1):1):0;
+  // Fade the light in smoothly when Pom enters shadow.
+  const t=Math.max(0,Math.min(1,(now-pomGlowStart)/415));
+  const level=covered?t*t*(3-2*t):0;
   const glowWasOn=pomGlowOn;
-  pomGlowOn=covered&&level>0;
+  pomGlowOn=covered;
   pomLight.intensity=level;
   if(playerObject){
     playerObject.castShadow=render3D.shadows&&!pomGlowOn;
@@ -1052,6 +1052,7 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){if(cameraLab||interactionLab)return;unfinished.remove(activeLevel.id);if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
+  setLoadingPalette(levelLoadingPanel,level);
   movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
   pomGlowCovered=false;pomGlowOn=false;pomGlowStart=0;if(pomLight){pomLight.intensity=1;pomLight.glow=0}
   cameraModeActive=false;cameraModePrevious=null;syncCameraMode();
@@ -1686,7 +1687,9 @@ function boardUp(e,cancel=false){
 }
 function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function expandVictoryBoard(rect,progress){
-  wrap.style.clipPath=progress>=1?'':victoryBoardClip(wrap.getBoundingClientRect(),rect,progress);
+  const expanded=wrap.getBoundingClientRect();
+  wrap.style.clipPath=progress>=1?'':victoryBoardClip(expanded,rect,progress);
+  victoryEffects.setExpansionOutline(rect,expanded,progress);
 }
 function keepVictoryPomVisible(width,height,yaw,pitch){
   const size=vec2(width,height),pom=playerObject.pos3D,point=render3D.worldToScreen(pom,size);

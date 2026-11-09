@@ -7,6 +7,7 @@ import {createUnfinishedPuzzles} from './unfinished-puzzles.js';
 import {createMyPuzzles} from './my-puzzles.js';
 import {movementExamples,studioLevel} from './movement-studio.js';
 import {deploymentUrls} from '../shared/deployment.js';
+import {setLoadingPalette} from './loading-palette.js';
 
 // The menu keeps its state when the game module is loaded for the first level.
 export let menuStartup;
@@ -50,6 +51,7 @@ export function startMenu(){
   runtime.play=async level=>{
     abort.abort();
     menu.hidden=true;document.querySelector('.stage').inert=false;
+    setLoadingPalette(document.querySelector('#levelLoading'),level);
     document.querySelector('#levelLoading').hidden=false;
     document.querySelector('#levelLoadingMessage').textContent='Loading puzzle…';
     void import('./loading-star.js').then(({initLoadingStar})=>initLoadingStar()).catch(()=>{});

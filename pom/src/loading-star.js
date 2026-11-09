@@ -31,7 +31,7 @@ export function initLoadingStar(){
   if(!panel||!svg||!path||!message)return;
   initialized=true;
   const motion=matchMedia('(prefers-reduced-motion: reduce)');
-  let frame=0,shapes,start,lastIndex=-1;
+  let frame=0,shapes,start,lastIndex=-1,colors=[[255,152,42]];
   function sampleShapes(){
     const measure=document.createElementNS(SVG_NS,'path');svg.append(measure);
     try{
@@ -51,19 +51,23 @@ export function initLoadingStar(){
     if(t>0||index!==lastIndex){
       const from=shapes[index],to=shapes[(index+1)%shapes.length];
       path.setAttribute('d',from.map((point,i)=>`${i?'L':'M'}${(point.x+(to[i].x-point.x)*eased).toFixed(2)} ${(point.y+(to[i].y-point.y)*eased).toFixed(2)}`).join('')+'Z');
+      const color=colors[index%colors.length],next=colors[(index+1)%colors.length];
+      path.setAttribute('fill',`rgb(${color.map((value,i)=>Math.round(value+(next[i]-value)*eased)).join(' ')})`);
       lastIndex=index;
     }
     path.setAttribute('transform',`rotate(${elapsed*360/TURN_MS%360} 100 100)`);
     frame=requestAnimationFrame(tick);
   }
   function sync(){
+    try{const palette=JSON.parse(panel.dataset.loadingColors);if(Array.isArray(palette)&&palette.length)colors=palette}catch{}
+    lastIndex=-1;
     const loading=!panel.hidden&&message.textContent.trim()==='Loading puzzle…';
     svg.style.visibility=loading?'':'hidden';
-    if(!loading||motion.matches){cancelAnimationFrame(frame);frame=0;start=undefined;lastIndex=-1;return}
+    if(!loading||motion.matches){cancelAnimationFrame(frame);frame=0;start=undefined;lastIndex=-1;path.setAttribute('fill',`rgb(${colors[0].join(' ')})`);return}
     if(frame)return;
     try{shapes??=sampleShapes();frame=requestAnimationFrame(tick)}catch{svg.style.visibility=''}
   }
-  new MutationObserver(sync).observe(panel,{attributes:true,attributeFilter:['hidden'],childList:true,subtree:true,characterData:true});
+  new MutationObserver(sync).observe(panel,{attributes:true,attributeFilter:['hidden','data-loading-colors'],childList:true,subtree:true,characterData:true});
   motion.addEventListener?.('change',sync);
   sync();
 }
