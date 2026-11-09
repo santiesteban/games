@@ -35,7 +35,7 @@ import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
-import { createVictoryEffects, victoryArrival } from './victory-effects.js';
+import { createVictoryEffects, victoryArrival, victoryCenter } from './victory-effects.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
@@ -1691,21 +1691,29 @@ function syncVictoryShowcase(now,sequence){
   const turn=sequence.reducedMotion?1:ease(elapsed/1200);
   // Looking along the extrusion shear makes the complete mural read as a flat image.
   const yaw=sequence.yaw*(1-turn)+Math.atan(depthSkew())*turn,pitch=sequence.pitch*(1-turn);
-  const top=Math.min(victoryEffects.messageHeight+32,height*.42),bottom=24;
+  const top=24,bottom=24;
   const visual=puzzleVisualBounds(),unit=Math.max(1,Math.min((width-32)/(visual.right-visual.left+.8),(height-top-bottom)/(visual.height+1.15)));
   // This is the camera endpoint at zero pitch, where yStretch is exactly 1.
   const finalHeight=height/unit,target=vec3((visual.left+visual.right)/2+extrusion(1.5).x,(visual.height+.85)/2+(top-bottom)/(2*unit),1.5);
   configureStudyCamera(sequence.baseHeight+(finalHeight-sequence.baseHeight)*turn,sequence.baseTarget.lerp(target,turn),yaw,pitch);
-  // Four hops, then settle on the goal square before the circle closes.
+  // Four hops, then settle on the goal square before the star closes.
   sequence.jump=!sequence.reducedMotion&&elapsed<2320?.32*Math.sin(Math.PI*(elapsed%580)/580):0;
   render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
-  victoryEffects.update(elapsed,wrap.getBoundingClientRect().top+16);
   const fade=ease((elapsed-250)/2000),strength=currentDesign().shadows.strength*(1-fade);
   render3D.sunColor=new Color(strength,strength,strength);
   wrap.dataset.view='completed';wrap.dataset.cameraPitch=pitch.toFixed(2);
   if(elapsed>=3200){
     if(isMakerPlaytest){showPlaytestResult();return}
-    victoryEffects.transitionTo(pomScreenPoint(),()=>showMenu('levels',sequence.levelId,{preserveVictoryTransition:true,deferCheck:true})).then(card=>{
+    const rect=wrap.getBoundingClientRect(),size=vec2(width,height),center=victoryCenter(rect,window.innerWidth,window.innerHeight),screen=vec2(center.x,center.y);
+    const ray=render3D.screenToRay(screen,size),forward=render3D.camera.getForward(),denominator=ray.direction.dot(forward);
+    const distance=denominator?playerObject.pos3D.subtract(ray.origin).dot(forward)/denominator:0;
+    const offset=playerObject.pos3D.subtract(ray.getPosition(distance)),baseTarget=cameraFocus.copy(),span=viewSpan();
+    const recenter=progress=>{
+      if(celebration!==sequence)return;
+      configureStudyCamera(span,baseTarget.add(offset.scale(progress)),yaw,pitch);
+      render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
+    };
+    victoryEffects.transitionTo(recenter,()=>showMenu('levels',sequence.levelId,{preserveVictoryTransition:true,deferCheck:true})).then(card=>{
       if(card?.isConnected){card.classList.add('is-just-completed');card.focus({preventScroll:true})}
     });
     return;
@@ -1715,13 +1723,8 @@ function syncVictoryShowcase(now,sequence){
 function startCelebration(){
   hideHelp();stopIntro();selected=null;clearBoardHover();
   const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,yaw:cameraYaw(),baseHeight:viewSpan(),baseTarget:(cameraFocus??viewTarget).copy(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches};
-  setUmbrellaVisible(false);victoryEffects.start(activeLevel.name,pomScreenPoint(),wrap.getBoundingClientRect().top+16);requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
+  setUmbrellaVisible(false);victoryEffects.start(activeLevel.name);requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
-function pomScreenPoint(){
-  const rect=wrap.getBoundingClientRect(),point=render3D.worldToScreen(playerObject.pos3D,vec2(rect.width,rect.height));
-  return{x:rect.left+point.x,y:rect.top+point.y};
-}
-
 function cloneProjectionMesh(source){
   const mesh=new Mesh().combine(source);mesh.doubleSided=source.doubleSided;mesh.dynamicDraw=true;return mesh;
 }

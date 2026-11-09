@@ -1,6 +1,15 @@
+import { VICTORY_STARS } from './victory-stars.js';
+
 const SVG_NS='http://www.w3.org/2000/svg';
-const COLORS=['#ff7138','#f2a05a','#79a66e','#55a9ae','#ffdf3f','#c9e9d5'];
 const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t)};
+
+// Keep the star and the camera aimed at the center of the artwork area.
+export function victoryCenter(rect,viewportWidth,viewportHeight){
+  return {
+    x:Math.max(0,Math.min(rect.width,viewportWidth/2-rect.left)),
+    y:Math.max(rect.height*.2,Math.min(rect.height*.8,viewportHeight*.29-rect.top)),
+  };
+}
 
 // Celebrate over the goal's supporting square. The collected flag is hidden
 // on completion, so no sideways displacement is needed to make room for it.
@@ -10,89 +19,80 @@ export function victoryArrival(t,reducedMotion=false){
 }
 
 export function createVictoryEffects(app){
+  const board=app.querySelector('#canvasWrap'),stage=board.closest('.stage');
   const message=document.createElement('div');message.className='victory-message';message.hidden=true;message.setAttribute('role','status');message.setAttribute('aria-live','polite');
   const title=document.createElement('strong'),caption=document.createElement('span');title.textContent='Congratulations!';message.append(title,caption);
-  const confetti=document.createElement('canvas');confetti.className='victory-confetti';confetti.hidden=true;confetti.setAttribute('aria-hidden','true');
-  const context=confetti.getContext('2d');
+  const description=document.createElement('p');description.className='victory-description';message.append(description);
+  const continueButton=document.createElement('button');continueButton.type='button';continueButton.className='victory-continue';continueButton.textContent='Continue';continueButton.hidden=true;message.append(continueButton);
   const iris=document.createElementNS(SVG_NS,'svg');iris.classList.add('victory-transition');iris.setAttribute('hidden','');iris.setAttribute('aria-hidden','true');
-  const shade=document.createElementNS(SVG_NS,'path'),rim=document.createElementNS(SVG_NS,'circle');
-  shade.setAttribute('fill','#292537');shade.setAttribute('fill-rule','evenodd');rim.setAttribute('fill','none');rim.setAttribute('stroke','#fffaf0');rim.setAttribute('stroke-width','2');iris.append(shade,rim);
-  document.body.append(confetti,message,iris);
-  let particles=[],generation=0,frame=0,finishAnimation,width=0,height=0,pixelRatio=1,reducedMotion=false;
-
-  function resize(){
-    const w=window.innerWidth,h=window.innerHeight,ratio=Math.min(devicePixelRatio||1,2);
-    if(w===width&&h===height&&ratio===pixelRatio)return;
-    width=w;height=h;pixelRatio=ratio;confetti.width=Math.round(w*ratio);confetti.height=Math.round(h*ratio);
-  }
+  const frameOutline=document.createElement('div');frameOutline.className='victory-board-outline';frameOutline.hidden=true;frameOutline.setAttribute('aria-hidden','true');
+  const defs=document.createElementNS(SVG_NS,'defs'),clip=document.createElementNS(SVG_NS,'clipPath'),clipShape=document.createElementNS(SVG_NS,'path'),rim=document.createElementNS(SVG_NS,'path');
+  clip.id='victory-star-clip';clip.setAttribute('clipPathUnits','userSpaceOnUse');clip.append(clipShape);defs.append(clip);
+  rim.setAttribute('fill','none');rim.setAttribute('stroke','#111');rim.setAttribute('stroke-width','2');rim.setAttribute('vector-effect','non-scaling-stroke');iris.append(defs,rim);
+  stage.append(message);document.body.append(frameOutline,iris);
+  let generation=0,frame=0,finishAnimation,reducedMotion=false;
   function reset(){
     generation++;cancelAnimationFrame(frame);finishAnimation?.(false);finishAnimation=undefined;
-    message.hidden=true;confetti.hidden=true;iris.setAttribute('hidden','');iris.style.opacity='';particles=[];app.inert=false;
-    context?.clearRect(0,0,confetti.width,confetti.height);
+    message.hidden=true;continueButton.hidden=true;continueButton.disabled=false;continueButton.onclick=null;iris.setAttribute('hidden','');frameOutline.hidden=true;board.style.clipPath='';board.style.opacity='';app.inert=false;
   }
-  function start(name,origin,top){
-    reset();resize();reducedMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
-    caption.textContent=`${name} complete!`;message.style.top=`${top}px`;message.hidden=false;
-    if(reducedMotion||!context)return;
-    confetti.hidden=false;
-    const scale=Math.min(1,Math.max(.6,width/700));
-    particles=Array.from({length:width<600?65:100},(_,i)=>({
-      x:(origin.x+(Math.random()-.5)*50)/width,y:origin.y/height,
-      vx:(Math.random()-.5)*650*scale,vy:-(190+Math.random()*380)*scale,
-      spin:(Math.random()-.5)*12,angle:Math.random()*Math.PI,
-      size:5+Math.random()*5,color:COLORS[i%COLORS.length],delay:Math.random()*.15,
-    }));
+  function start(name){
+    reset();reducedMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    caption.textContent=`${name} complete!`;
+    description.textContent="Keep going—there's more to discover.";
   }
-  function update(elapsed,top){
-    if(message.hidden)return;resize();message.style.top=`${top}px`;
-    if(!context||confetti.hidden)return;
-    context.setTransform(pixelRatio,0,0,pixelRatio,0,0);context.clearRect(0,0,width,height);
-    for(const particle of particles){
-      const t=elapsed/1000-particle.delay;if(t<0)continue;
-      const x=particle.x*width+particle.vx*t,y=particle.y*height+particle.vy*t+180*t*t;
-      if(y>height+30)continue;
-      context.save();context.translate(x,y);context.rotate(particle.angle+particle.spin*t);
-      context.globalAlpha=Math.min(1,Math.max(0,(3.2-t)/.5));context.fillStyle=particle.color;
-      context.fillRect(-particle.size/2,-particle.size/4,particle.size,particle.size*.5);context.restore();
-    }
-  }
-  function drawIris(center,amount){
-    resize();
-    const radius=Math.hypot(width,height)*amount,x=center.x,y=center.y;
-    iris.setAttribute('viewBox',`0 0 ${width} ${height}`);
-    shade.setAttribute('d',`M0 0H${width}V${height}H0Z M${x-radius} ${y}a${radius} ${radius} 0 1 0 ${2*radius} 0a${radius} ${radius} 0 1 0 ${-2*radius} 0Z`);
-    rim.setAttribute('cx',x);rim.setAttribute('cy',y);rim.setAttribute('r',radius);rim.style.display=radius>0?'':'none';
+  function drawIris(amount,angle=(1-amount)*90){
+    const rect=board.getBoundingClientRect();
+    const {x,y}=victoryCenter(rect,window.innerWidth,window.innerHeight);
+    const finalSize=Math.max(1,Math.min(rect.width*.56,window.innerHeight*.29,1.4*x,1.4*(rect.width-x),1.4*y,1.4*(rect.height-y)));
+    const initialSize=Math.max(rect.width,rect.height)*16;
+    const size=finalSize*Math.pow(initialSize/finalSize,amount),scale=size/200;
+    Object.assign(iris.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
+    Object.assign(frameOutline.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
+    iris.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
+    const transform=`translate(${x} ${y}) rotate(${angle}) scale(${scale}) translate(-100 -100)`;
+    clipShape.setAttribute('transform',transform);rim.setAttribute('transform',transform);
+    board.style.clipPath='url(#victory-star-clip)';
   }
   function animate(duration,draw,token){
     return new Promise(resolve=>{
       let start;finishAnimation=resolve;
       function tick(now){
         if(token!==generation){resolve(false);return}
-        start??=now;const progress=Math.min(1,(now-start)/duration);draw(ease(progress));
+        start??=now;const progress=Math.min(1,(now-start)/duration);draw(ease(progress),progress);
         if(progress<1)frame=requestAnimationFrame(tick);
         else{finishAnimation=undefined;resolve(true)}
       }
       frame=requestAnimationFrame(tick);
     });
   }
-  async function transitionTo(origin,reveal){
-    const token=generation;app.inert=true;message.hidden=true;confetti.hidden=true;iris.removeAttribute('hidden');
-    iris.style.opacity=reducedMotion?'0':'';
-    drawIris(origin,reducedMotion?0:1);
-    const closed=await animate(reducedMotion?140:850,t=>{
-      if(reducedMotion)iris.style.opacity=String(t);else drawIris(origin,1-t);
+  async function transitionTo(recenter,reveal){
+    const token=generation;
+    const stars=Object.values(VICTORY_STARS),shape=stars[Math.floor(Math.random()*stars.length)];
+    clipShape.setAttribute('d',shape);rim.setAttribute('d',shape);
+    frameOutline.style.borderRadius=getComputedStyle(board).borderRadius;frameOutline.hidden=false;iris.removeAttribute('hidden');drawIris(reducedMotion?0:1);recenter(reducedMotion?1:0);
+    const closed=await animate(reducedMotion?1:1050,(t,progress)=>{
+      if(!reducedMotion){drawIris(1-t,progress*45*1.05);recenter(t)}
     },token);
     if(!closed||token!==generation)return null;
-    try{
-      const card=await reveal();
-      if(token!==generation)return null;
-      const preview=card?.querySelector('.puzzle-thumbnail')??card,rect=preview?.getBoundingClientRect();
-      const center=rect?{x:rect.left+rect.width/2,y:rect.top+rect.height/2}:{x:width/2,y:height/2};
-      const opened=await animate(reducedMotion?140:750,t=>{
-        if(reducedMotion)iris.style.opacity=String(1-t);else drawIris(center,t);
-      },token);
-      return opened&&token===generation?card:null;
-    }finally{if(token===generation){iris.setAttribute('hidden','');iris.style.opacity='';app.inert=false}}
+    if(!reducedMotion){
+      let started;
+      const spin=now=>{
+        if(token!==generation)return;
+        started??=now;drawIris(0,45*1.05+(now-started)*.03);
+        frame=requestAnimationFrame(spin);
+      };
+      frame=requestAnimationFrame(spin);
+    }
+    message.hidden=false;continueButton.hidden=false;
+    continueButton.focus({preventScroll:true});
+    return new Promise(resolve=>{
+      finishAnimation=()=>resolve(null);
+      continueButton.onclick=async()=>{
+        continueButton.disabled=true;message.hidden=true;cancelAnimationFrame(frame);finishAnimation=undefined;
+        try{const card=await reveal();resolve(token===generation?card:null)}
+        finally{if(token===generation){iris.setAttribute('hidden','');frameOutline.hidden=true;board.style.clipPath='';board.style.opacity='';continueButton.disabled=false}}
+      };
+    });
   }
-  return{start,update,reset,transitionTo,get messageHeight(){return message.getBoundingClientRect().height}};
+  return{start,reset,transitionTo};
 }

@@ -490,6 +490,10 @@
 .stage.screen--level .dock__tab .piece-pull-count { fill: var(--piece-label-color, #111); }
 .stage.screen--level .dock[data-active-piece="none"] .mode__option:disabled { opacity: 1; }
 .stage.screen--level.is-won .dock { visibility: hidden; }
+.stage.screen--level.is-won { background: #fff; }
+.stage.screen--level.is-won .level-header { visibility: hidden; }
+.stage.screen--level.is-won .camera-controls { visibility: hidden; }
+.stage.screen--level.is-won .game-board { pointer-events: none; }
 
 @media (max-width: 360px) {
   .stage.screen--level .level-header { gap: 8px; }
