@@ -11,6 +11,12 @@ export function victoryCenter(rect,viewportWidth,viewportHeight){
   };
 }
 
+// Limit Pom's apparent size in the final star while still fitting large puzzles.
+export function victoryFrameUnit(width,height,visualWidth,visualHeight){
+  const starSize=Math.min(width*.56,height*.29);
+  return Math.max(1,Math.min((width-32)/(visualWidth+.8),(height-48)/(visualHeight+1.15),starSize*.32/.72));
+}
+
 // Celebrate over the goal's supporting square. The collected flag is hidden
 // on completion, so no sideways displacement is needed to make room for it.
 export function victoryArrival(t,reducedMotion=false){
@@ -24,16 +30,17 @@ export function createVictoryEffects(app){
   const title=document.createElement('strong'),caption=document.createElement('span');title.textContent='Congratulations!';message.append(title,caption);
   const description=document.createElement('p');description.className='victory-description';message.append(description);
   const continueButton=document.createElement('button');continueButton.type='button';continueButton.className='victory-continue';continueButton.textContent='Continue';continueButton.hidden=true;message.append(continueButton);
+  const arrow=document.createElementNS(SVG_NS,'svg'),arrowPath=document.createElementNS(SVG_NS,'path');
+  arrow.classList.add('victory-continue__arrow');arrow.setAttribute('viewBox','0 0 24 24');arrow.setAttribute('aria-hidden','true');arrowPath.setAttribute('d','M19 12H5M11 6l-6 6 6 6');arrow.append(arrowPath);continueButton.append(arrow);
   const iris=document.createElementNS(SVG_NS,'svg');iris.classList.add('victory-transition');iris.setAttribute('hidden','');iris.setAttribute('aria-hidden','true');
-  const frameOutline=document.createElement('div');frameOutline.className='victory-board-outline';frameOutline.hidden=true;frameOutline.setAttribute('aria-hidden','true');
   const defs=document.createElementNS(SVG_NS,'defs'),clip=document.createElementNS(SVG_NS,'clipPath'),clipShape=document.createElementNS(SVG_NS,'path'),rim=document.createElementNS(SVG_NS,'path');
   clip.id='victory-star-clip';clip.setAttribute('clipPathUnits','userSpaceOnUse');clip.append(clipShape);defs.append(clip);
   rim.setAttribute('fill','none');rim.setAttribute('stroke','#111');rim.setAttribute('stroke-width','2');rim.setAttribute('vector-effect','non-scaling-stroke');iris.append(defs,rim);
-  stage.append(message);document.body.append(frameOutline,iris);
+  stage.append(message);document.body.append(iris);
   let generation=0,frame=0,finishAnimation,reducedMotion=false;
   function reset(){
     generation++;cancelAnimationFrame(frame);finishAnimation?.(false);finishAnimation=undefined;
-    message.hidden=true;continueButton.hidden=true;continueButton.disabled=false;continueButton.onclick=null;iris.setAttribute('hidden','');frameOutline.hidden=true;board.style.clipPath='';board.style.opacity='';app.inert=false;
+    message.hidden=true;continueButton.hidden=true;continueButton.disabled=false;continueButton.onclick=null;iris.setAttribute('hidden','');board.style.clipPath='';board.style.opacity='';app.inert=false;
   }
   function start(name){
     reset();reducedMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -47,7 +54,6 @@ export function createVictoryEffects(app){
     const initialSize=Math.max(rect.width,rect.height)*16;
     const size=finalSize*Math.pow(initialSize/finalSize,amount),scale=size/200;
     Object.assign(iris.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
-    Object.assign(frameOutline.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
     iris.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
     const transform=`translate(${x} ${y}) rotate(${angle}) scale(${scale}) translate(-100 -100)`;
     clipShape.setAttribute('transform',transform);rim.setAttribute('transform',transform);
@@ -69,7 +75,7 @@ export function createVictoryEffects(app){
     const token=generation;
     const stars=Object.values(VICTORY_STARS),shape=stars[Math.floor(Math.random()*stars.length)];
     clipShape.setAttribute('d',shape);rim.setAttribute('d',shape);
-    frameOutline.style.borderRadius=getComputedStyle(board).borderRadius;frameOutline.hidden=false;iris.removeAttribute('hidden');drawIris(reducedMotion?0:1);recenter(reducedMotion?1:0);
+    iris.removeAttribute('hidden');drawIris(reducedMotion?0:1);recenter(reducedMotion?1:0);
     const closed=await animate(reducedMotion?1:1050,(t,progress)=>{
       if(!reducedMotion){drawIris(1-t,progress*45*1.05);recenter(t)}
     },token);
@@ -90,7 +96,7 @@ export function createVictoryEffects(app){
       continueButton.onclick=async()=>{
         continueButton.disabled=true;message.hidden=true;cancelAnimationFrame(frame);finishAnimation=undefined;
         try{const card=await reveal();resolve(token===generation?card:null)}
-        finally{if(token===generation){iris.setAttribute('hidden','');frameOutline.hidden=true;board.style.clipPath='';board.style.opacity='';continueButton.disabled=false}}
+        finally{if(token===generation){iris.setAttribute('hidden','');board.style.clipPath='';board.style.opacity='';continueButton.disabled=false}}
       };
     });
   }

@@ -293,19 +293,18 @@ html,body{background-color:var(--screen-top-color)}
 
 .victory-message[hidden],.victory-confetti[hidden],.victory-transition[hidden]{display:none!important}
 button:focus,button:focus-visible{outline:none!important}
-.victory-message{position:fixed;z-index:21;left:50%;top:50%;transform:translateX(-50%);box-sizing:border-box;width:min(100%,340px);padding:0 18px 30px;text-align:center;color:#1c0808;animation:victory-message-appear .3s ease-out both}
-.victory-message strong{display:block;font-size:29px;line-height:.99;font-weight:900;letter-spacing:-.055em}
-.victory-message span{display:block;margin-top:14px;font-size:17px;line-height:1.15;font-weight:700;letter-spacing:-.035em;color:#000}
-.victory-description{max-width:216px;margin:14px auto 0;font-size:11px;line-height:1.25;font-weight:500;letter-spacing:-.015em;color:#332525}
-.stage.screen--level .victory-continue{min-width:96px;height:35px;margin-top:20px;padding:0 18px;border:2px solid #210504;border-radius:14px;background:#fd982a;box-shadow:3px 3px 0 #210504;color:#000;font-size:11px;font-weight:700}
-.stage.screen--level .victory-continue[hidden]{display:inline-block;visibility:hidden}
+.victory-message{position:fixed;z-index:21;left:50%;top:50%;transform:translateX(-50%);box-sizing:border-box;width:min(100%,400px);padding:0 18px 30px;text-align:center;color:#1c0808;animation:victory-message-appear .3s ease-out both}
+.victory-message strong{display:block;font-size:clamp(30px,8vw,36px);line-height:1;font-weight:900;letter-spacing:-.055em}
+.victory-message span{display:block;margin-top:14px;font-size:21px;line-height:1.15;font-weight:700;letter-spacing:-.035em;color:#000}
+.victory-description{max-width:300px;margin:14px auto 0;font-size:16px;line-height:1.3;font-weight:500;letter-spacing:-.015em;color:#332525}
+.stage.screen--level .victory-continue{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:124px;height:44px;margin-top:20px;padding:0 18px;border:2px solid #210504;border-radius:14px;background:#fd982a;box-shadow:3px 3px 0 #210504;color:#000;font-size:16px;font-weight:700}
+.stage.screen--level .victory-continue__arrow{width:18px;height:18px;stroke-width:2.6;transform:rotate(180deg)}
+.stage.screen--level .victory-continue[hidden]{display:inline-flex;visibility:hidden}
 .victory-confetti{position:fixed;inset:0;z-index:20;width:100%;height:100%;pointer-events:none}
 .victory-transition{position:fixed;z-index:120;pointer-events:none;overflow:hidden}
-.victory-board-outline{position:fixed;z-index:19;box-sizing:border-box;border:2px solid #111;pointer-events:none}
-.victory-board-outline[hidden]{display:none}
 @keyframes victory-message-appear{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 @media(prefers-reduced-motion:reduce){.victory-message{animation:none}}
-@media(max-height:500px){.victory-message{padding:0 12px 8px}.victory-message strong{font-size:22px}.victory-message span{margin-top:6px;font-size:14px}.victory-description{margin-top:6px}.stage.screen--level .victory-continue{margin-top:8px}}
+@media(max-height:500px){.victory-message{padding:0 12px 8px}.victory-message strong{font-size:26px}.victory-message span{margin-top:6px;font-size:18px}.victory-description{margin-top:6px}.stage.screen--level .victory-continue{margin-top:8px}}
 
 /* Loaded scenery is drawn by the engine; hide the original CSS fallback layers. */
 .canvas-wrap[data-environment]{background:#eee8fa}

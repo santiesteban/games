@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {victoryArrival} from './victory-effects.js';
+import {victoryArrival,victoryFrameUnit} from './victory-effects.js';
 import {nodePose} from '../shared/movement-routes.js';
 
 test('victory arrival stays over the goal support, including Peach’s single-square summit',()=>{
@@ -21,4 +21,14 @@ test('the final arrival hop starts and lands continuously at the goal center',()
 });
 test('reduced motion stays centered and removes the arrival hop',()=>{
   for(const t of [0,.25,.5,.75,1])assert.deepEqual(victoryArrival(t,true),{x:0,y:0});
+});
+test('celebration framing keeps Pom small on short levels and fits large puzzles',()=>{
+  for(const [width,height] of [[390,844],[844,390]]){
+    const starWidth=Math.min(width*.56,height*.29);
+    const small=victoryFrameUnit(width,height,2,2);
+    assert.ok(.72*small<=starWidth*.32+1e-9);
+    const large=victoryFrameUnit(width,height,15,12);
+    assert.ok(large*(15+.8)<=width-32+1e-9);
+    assert.ok(large*(12+1.15)<=height-48+1e-9);
+  }
 });

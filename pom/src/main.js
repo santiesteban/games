@@ -35,7 +35,7 @@ import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
-import { createVictoryEffects, victoryArrival, victoryCenter } from './victory-effects.js';
+import { createVictoryEffects, victoryArrival, victoryCenter, victoryFrameUnit } from './victory-effects.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
@@ -1685,20 +1685,44 @@ function boardUp(e,cancel=false){
   }else{clearRoutePreview();if(tap&&!preview){viewTouched=true;clickBoard(e)}}
 }
 function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
+function expandVictoryBoard(rect,progress){
+  const mix=(start,end)=>`${start+(end-start)*progress}px`;
+  wrap.style.setProperty('--victory-board-left',mix(rect.left,-2));
+  wrap.style.setProperty('--victory-board-top',mix(rect.top,-2));
+  wrap.style.setProperty('--victory-board-width',mix(rect.width,window.innerWidth+4));
+  wrap.style.setProperty('--victory-board-height',mix(rect.height,window.innerHeight+4));
+  wrap.style.setProperty('--victory-board-radius',mix(rect.radius,0));
+}
+function keepVictoryPomVisible(width,height,yaw,pitch){
+  const size=vec2(width,height),pom=playerObject.pos3D,point=render3D.worldToScreen(pom,size);
+  if(!point)return;
+  const edge=render3D.worldToScreen(pom.add(render3D.camera.getRight().scale(.5)),size);
+  const margin=Math.min(width*.45,height*.45,Math.max(16,edge?Math.abs(edge.x-point.x)+8:16));
+  const x=Math.max(margin,Math.min(width-margin,point.x)),y=Math.max(margin,Math.min(height-margin,point.y));
+  if(Math.abs(x-point.x)<.1&&Math.abs(y-point.y)<.1)return;
+  const ray=render3D.screenToRay(vec2(x,y),size),forward=render3D.camera.getForward(),denominator=ray.direction.dot(forward);
+  if(Math.abs(denominator)<1e-6)return;
+  const distance=pom.subtract(ray.origin).dot(forward)/denominator;
+  configureStudyCamera(viewSpan(),cameraFocus.add(pom.subtract(ray.getPosition(distance))),yaw,pitch);
+  render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
+}
 function syncVictoryShowcase(now,sequence){
   if(celebration!==sequence)return;
-  const elapsed=now-sequence.start,width=wrap.clientWidth,height=wrap.clientHeight;
+  const elapsed=now-sequence.start;
+  expandVictoryBoard(sequence.boardRect,sequence.reducedMotion?1:ease(elapsed/700));
+  const width=wrap.clientWidth,height=wrap.clientHeight;
   const turn=sequence.reducedMotion?1:ease(elapsed/1200);
   // Looking along the extrusion shear makes the complete mural read as a flat image.
   const yaw=sequence.yaw*(1-turn)+Math.atan(depthSkew())*turn,pitch=sequence.pitch*(1-turn);
   const top=24,bottom=24;
-  const visual=puzzleVisualBounds(),unit=Math.max(1,Math.min((width-32)/(visual.right-visual.left+.8),(height-top-bottom)/(visual.height+1.15)));
+  const visual=puzzleVisualBounds(),unit=victoryFrameUnit(width,height,visual.right-visual.left,visual.height);
   // This is the camera endpoint at zero pitch, where yStretch is exactly 1.
   const finalHeight=height/unit,target=vec3((visual.left+visual.right)/2+extrusion(1.5).x,(visual.height+.85)/2+(top-bottom)/(2*unit),1.5);
   configureStudyCamera(sequence.baseHeight+(finalHeight-sequence.baseHeight)*turn,sequence.baseTarget.lerp(target,turn),yaw,pitch);
   // Four hops, then settle on the goal square before the star closes.
   sequence.jump=!sequence.reducedMotion&&elapsed<2320?.32*Math.sin(Math.PI*(elapsed%580)/580):0;
   render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
+  keepVictoryPomVisible(width,height,yaw,pitch);
   const fade=ease((elapsed-250)/2000),strength=currentDesign().shadows.strength*(1-fade);
   render3D.sunColor=new Color(strength,strength,strength);
   wrap.dataset.view='completed';wrap.dataset.cameraPitch=pitch.toFixed(2);
@@ -1722,8 +1746,9 @@ function syncVictoryShowcase(now,sequence){
 }
 function startCelebration(){
   hideHelp();stopIntro();selected=null;clearBoardHover();
-  const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,yaw:cameraYaw(),baseHeight:viewSpan(),baseTarget:(cameraFocus??viewTarget).copy(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches};
-  setUmbrellaVisible(false);victoryEffects.start(activeLevel.name);requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
+  const rect=wrap.getBoundingClientRect(),boardRect={left:rect.left,top:rect.top,width:rect.width,height:rect.height,radius:parseFloat(getComputedStyle(wrap).borderTopLeftRadius)||0};
+  const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,yaw:cameraYaw(),baseHeight:viewSpan(),baseTarget:(cameraFocus??viewTarget).copy(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches,boardRect};
+  setUmbrellaVisible(false);victoryEffects.start(activeLevel.name);expandVictoryBoard(boardRect,0);document.querySelector('.stage').classList.add('is-won');requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
 function cloneProjectionMesh(source){
   const mesh=new Mesh().combine(source);mesh.doubleSided=source.doubleSided;mesh.dynamicDraw=true;return mesh;
@@ -1829,7 +1854,7 @@ function moveTo(p,pressMarker=false,preview=null){
     if(index!==previousIndex&&movementMarkerRoute)syncMovementMarkers();
     if(index===plans.length){
       falling=false;setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
-      if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');startCelebration()}else autoSelectNearbyPiece();updateUI();return;
+      if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();startCelebration()}else autoSelectNearbyPiece();updateUI();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;

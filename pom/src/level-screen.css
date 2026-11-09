@@ -493,7 +493,16 @@
 .stage.screen--level.is-won { background: #fff; }
 .stage.screen--level.is-won .level-header { visibility: hidden; }
 .stage.screen--level.is-won .camera-controls { visibility: hidden; }
-.stage.screen--level.is-won .game-board { pointer-events: none; }
+.stage.screen--level.is-won .game-board {
+  position: fixed;
+  inset: auto;
+  left: var(--victory-board-left, -2px);
+  top: var(--victory-board-top, -2px);
+  width: var(--victory-board-width, calc(100% + 4px));
+  height: var(--victory-board-height, calc(100dvh + 4px));
+  border-radius: var(--victory-board-radius, 0px);
+  pointer-events: none;
+}
 
 @media (max-width: 360px) {
   .stage.screen--level .level-header { gap: 8px; }
