@@ -13,10 +13,13 @@ function database(name='little-ledges-puzzles',stores=['puzzles','drafts']){
 }
 function transact(db,store,method,value){return new Promise((resolve,reject)=>{const tx=db.transaction(store,method==='get'||method==='getAll'?'readonly':'readwrite'),req=tx.objectStore(store)[method](value);let result;req.onsuccess=()=>result=req.result;tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error??new Error('Could not save on this device.'))})}
 export async function stored(store,method,value){if(store!=='puzzles')throw new Error('The game can only access its puzzle library.');return transact(await database(),store,method,value)}
+const creatorNamespace=import.meta.env?.VITE_CREATOR_STORAGE_NAMESPACE;
+if(creatorNamespace&&!/^[a-z0-9-]{1,32}$/.test(creatorNamespace))throw new Error('Invalid creator storage namespace.');
 let creatorReady;
 async function creatorDatabase(){
   if(!creatorReady)creatorReady=(async()=>{
-    const db=await database('little-ledges-creator',['drafts','metadata']);
+    const db=await database(creatorNamespace?`little-ledges-creator-${creatorNamespace}`:'little-ledges-creator',['drafts','metadata']);
+    if(creatorNamespace)return db;
     if(!await transact(db,'metadata','get','legacy-drafts-copied')){
       const legacy=await transact(await database(),'drafts','getAll');
       // Copy once, atomically. Original drafts remain untouched for rollback.

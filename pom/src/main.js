@@ -3,7 +3,7 @@ import {gameplayEnvironmentConfiguration} from './environment-policy.js';
 import {limitStagePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
-  timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
+  timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Light3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
   Color, render3D, glContext, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
   setInputPreventDefault, inputClear,
 } from 'littlejsengine';
@@ -26,18 +26,17 @@ import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.
 import { createDesignPlayground } from './design-playground.js';
 import { createBackgroundStudio } from './background-studio.js';
 import { createCameraLab } from './camera-lab.js';
-import { createSelectionLightbox } from './selection-lightbox.js';
 import { puzzleBackgroundDistance, puzzleArtworkWidth } from './scenery-distance.js';
 import { selectionColor } from './selection-color.js';
 import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
-import { chooseVisibilityPitch, visibilityCameraPose } from './camera-visibility.js';
+import { chooseVisibilityPitch, visibilityCameraPose, visibilityAtPitch } from './camera-visibility.js';
 import { createGoalBadge } from './goal-badge.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
 import { createVictoryEffects, victoryArrival } from './victory-effects.js';
-import { pieceShadowShader, solidPieceShadowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
+import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
 import {createPieceDock,pieceDockState} from './piece-dock.js';
@@ -45,7 +44,7 @@ import { canReachPiece, safePieceChange } from '../shared/rules.js';
 import { decodePuzzle, puzzleLevel } from '../shared/puzzle.js';
 import { deploymentUrls } from '../shared/deployment.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
-import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
+import { createMovementBoard, planMovement, sampleMovement, sampleMovementProgress, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 import { cameraControlCube } from './camera-control-cube.js';
@@ -90,7 +89,7 @@ const wrap = document.querySelector('#canvasWrap');
 const cameraControlsPanel=document.querySelector('#cameraControlsPanel');
 const cameraModeToggle=document.querySelector('#cameraModeToggle'),cameraModeSliders=document.querySelector('#cameraModeSliders');
 const cameraDirection=document.querySelector('#cameraDirection');
-let cameraModeActive=false,cameraModePrevious=null;
+let cameraModeActive=false,cameraModePrevious=null,zoomFeedbackTimer;
 keepNativeInputLocal(cameraControlsPanel);
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
@@ -151,7 +150,8 @@ const designPlayground=createDesignPlayground(document.querySelector('#designPan
 });
 let studioCameraFollow=false;
 let environmentLoadPromise=Promise.resolve(false);
-let shadowFloor,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
+let shadowFloor,pomLight,pomGlowCovered=false,pomGlowOn=false,pomGlowStart=0,environmentLoader,activeEnvironment=environmentById(DEFAULT_ENVIRONMENT),activeEnvironmentTextures,environmentRequest=0,environmentRequestKey,failedEnvironmentKey,environmentSelection;
+let pomShadowProbeKey='',pomShadowProbeValue=0;
 const backgroundStudio=createBackgroundStudio(document.querySelector('#backgroundPanel'),()=>{
   if(!gameReady)return;
   requestLevelEnvironment(true);syncBackground();syncDesignLighting();syncFloorGrid();
@@ -232,6 +232,7 @@ function movementMarkersEnabled(){return isDesignPlayground()?designPlayground.v
 function topFaceStyle(){return isDesignPlayground()?designPlayground.values.topFaces:controlFeatures.topFaceStyle}
 function depthColorsEnabled(){return topFaceStyle()==='pull-depth'}
 function walkabilityFacesEnabled(){return topFaceStyle()==='walkability'}
+function diamondShapesEnabled(){return topFaceStyle()==='diamond-shapes'}
 function reachableSurfaceKeys(){return new Set([player,...standableReachable()].filter(p=>movementBoard().validNode(p)).map(nodeKey))}
 function customFloorGridEnabled(){return isDesignPlayground()?designPlayground.values.floorGrid.enabled:controlFeatures.enabled('floorGrid')}
 let W=activeLevel.width,H=activeLevel.height,mural=activeLevel.grid.map(row=>[...row]),goalCell={...activeLevel.goal};
@@ -246,8 +247,17 @@ function designColor(hex){return new Color(parseInt(hex.slice(1,3),16)/255,parse
 function platformTopColor(group,x,z,fraction=.5){
   if(depthColorsEnabled())return depthBandTone(depthRowColor(group.depth,z),fraction);
   if(walkabilityFacesEnabled())return topPalette[group.color];
+  if(diamondShapesEnabled())return new Color(1);
+  if(topFaceStyle()==='flat')return palette[group.color];
   const color=palette[group.color],shade=topFaceShade(x,z,color);
   return new Color(color.r*shade.r,color.g*shade.g,color.b*shade.b);
+}
+function reachableMarkerColor(group,contrast=.10){
+  const face=palette[group.color];
+  const luminance=.2126*face.r+.7152*face.g+.0722*face.b;
+  if(luminance>=.5){const darken=.10+contrast*.2;return new Color(face.r*(1-darken),face.g*(1-darken),face.b*(1-darken))}
+  const lighten=contrast;
+  return new Color(face.r+(1-face.r)*lighten,face.g+(1-face.g)*lighten,face.b+(1-face.b)*lighten);
 }
 function useLevelPalette(level){
   palette=Object.fromEntries(Object.entries(level.palette).map(([slot,[r,g,b]])=>[slot,new Color(r/255,g/255,b/255)]));
@@ -255,7 +265,7 @@ function useLevelPalette(level){
   sidePalette=Object.fromEntries(Object.entries(palette).map(([slot,color])=>[slot,shaded(color,.96)]));
 }
 useLevelPalette(activeLevel);
-let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
+let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topPickObjects=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const inkColor=new Color(.157,.145,.122);
 function squareFace(m,map,bounds,color,normal){const [u0,u1,v0,v1]=bounds,pts=[[u0,v0],[u1,v0],[u1,v1],[u0,v1]],center=map((u0+u1)/2,(v0+v1)/2),vertices=[center,...pts.map(([u,v])=>map(u,v))],indices=[];for(let i=1;i<=4;i++)indices.push(0,i,i===4?1:i+1);m.addTriangles(vertices,indices,normal,undefined,color);return m}
@@ -288,6 +298,54 @@ const pomBlob=makeFanMesh(pomContour),pomEye=makeFanMesh(Array.from({length:20},
 function makeGroups(){const board=createMovementBoard(mural,activeLevel.initialDepths);groups=board.groups;byCell=board.byCell;for(const g of groups)g.objects=[]}
 function clearMovementRoutes(){movementRouteCache.clear();movementBoardCache=null;movementBoardKey=null;reachableKey=null;reachableValue=null}
 function movementBoard(){const key=groups.map(g=>g.depth).join(',');if(!movementBoardCache||key!==movementBoardKey){movementBoardKey=key;movementBoardCache=createMovementBoard(mural,groups.map(g=>g.depth))}return movementBoardCache}
+function rayHitsTriangle(origin,direction,a,b,c){
+  const e1=b.subtract(a),e2=c.subtract(a),h=direction.cross(e2),det=e1.dot(h);
+  if(Math.abs(det)<1e-8)return false;
+  const inv=1/det,s=origin.subtract(a),u=inv*s.dot(h);
+  if(u<0||u>1)return false;
+  const q=s.cross(e1),v=inv*direction.dot(q);
+  if(v<0||u+v>1)return false;
+  return inv*e2.dot(q)>.025;
+}
+function pomShadowCoverage(){
+  if(!render3D.shadows||!playerObject)return 0;
+  const sun=render3D.sunDirection.copy().normalize(),projection=puzzleProjectionState(),right=render3D.camera.getRight(),up=render3D.camera.getUp(),pose=playerObject.pos3D,key=[activeLevel.id,player.x,player.y,player.z,pose.x,pose.y,pose.z,pieceDragPreview?.offset??0,groups.map(g=>g.depth).join(','),depthSkew(),yStretch,JSON.stringify(viewSide),sun.x,sun.y,sun.z,right.x,right.y,right.z,up.x,up.y,up.z,...Object.values(projection)].join(':');
+  if(key===pomShadowProbeKey)return pomShadowProbeValue;
+  pomShadowProbeKey=key;
+  const triangles=[],gpuProjected=!!puzzleGPU?.active;
+  for(const object of [...extrusionObjects,...extrusionOutlines])if(object.castShadow&&object.mesh){
+    const matrix=object.getMatrix(),source=object.mesh,points=source.points.map(point=>{const p=matrix.transformPoint(point);if(!gpuProjected)return p;const projected=projectPuzzlePoint(projection,p);return vec3(projected.x,projected.y,projected.z)});
+    if(source.indices){for(let i=0;i<source.indices.length;i+=3)triangles.push([points[source.indices[i]],points[source.indices[i+1]],points[source.indices[i+2]]])}
+    else for(let i=2;i<points.length;i++)triangles.push([points[i-2],points[i-1],points[i]]);
+  }
+  const center=puzzlePoint(playerObject.pos3D);
+  const samples=[];
+  for(const [x,y]of [[-.36,.04],[.36,.04]]){
+    const p=center.add(right.scale(x)).add(up.scale(y));
+    samples.push(triangles.some(([a,b,c])=>rayHitsTriangle(p,sun,a,b,c)));
+  }
+  pomShadowProbeValue=samples.filter(Boolean).length/samples.length;
+  return pomShadowProbeValue;
+}
+function updatePomGlow(now){
+  if(!pomLight)return;
+  // Require both side samples to hit actual casting geometry so a shadow on
+  // only one side of Pom cannot activate the light.
+  const covered=pomShadowCoverage()>=1;
+  if(covered&&!pomGlowCovered)pomGlowStart=now;
+  pomGlowCovered=covered;
+  // The geometry estimate controls the bulb's startup flicker and Pom's
+  // cast shadow; the active light then follows its normal distance falloff.
+  const elapsed=now-pomGlowStart;
+  const level=covered?(elapsed<415?(elapsed<70?1:elapsed<135?0:elapsed<215?.45:elapsed<270?0:elapsed<355?.82:elapsed<415?0:1):1):0;
+  const glowWasOn=pomGlowOn;
+  pomGlowOn=covered&&level>0;
+  pomLight.intensity=level;
+  if(playerObject){
+    playerObject.castShadow=render3D.shadows&&!pomGlowOn;
+    if(glowWasOn!==pomGlowOn)for(const part of pomParts){part.shader=render3D.shadows&&!pomGlowOn?pieceShadowShader:undefined;part.receiveShadow=render3D.shadows&&!pomGlowOn}
+  }
+}
 function routeFor(from,to){const board=movementBoard(),key=`${nodeKey(from)}>${nodeKey(to)}:${movementBoardKey}`;if(!movementRouteCache.has(key))movementRouteCache.set(key,planMovement(board,from,to));return movementRouteCache.get(key)}
 function cellDepth(x,y){return y===H?0:(byCell[y]?.[x]?.depth??-1)}
 function nodesAt(x,y){if(x< -1||x>=W||y<0||y>H)return[];if(y===H){const front=Math.max(0,cellDepth(x,H-1));return Array.from({length:Math.max(0,FLOOR_DEPTH-front)},(_,i)=>({x,y,z:front+i}))}if(x<0)return[];const d=cellDepth(x,y),above=cellDepth(x,y-1);if(d<=0)return[];return Array.from({length:Math.max(0,d-Math.max(0,above))},(_,i)=>({x,y,z:Math.max(0,above)+i}))}
@@ -318,11 +376,11 @@ function neighbors(p){return movementNeighbors(movementBoard(),p,routeFor)}
 function findPath(target){return findMovementPath(movementBoard(),player,target,routeFor)}
 function standableReachable(){
   const board=movementBoard(),key=`${nodeKey(player)}:${movementBoardKey}`;if(key===reachableKey)return reachableValue;
-  const q=[player],seen=new Set([nodeKey(player)]),out=[];
-  while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n);if(!seen.has(k)){seen.add(k);out.push(n);q.push(n)}}}
+  const q=[player],seen=new Set([nodeKey(player)]),shown=new Set(seen),out=[];
+  while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n),jump=routeFor(p,n).isJump;if(jump&&nodeKey(p)!==nodeKey(player))continue;if(!shown.has(k)){shown.add(k);out.push(n)}if(!jump&&!seen.has(k)){seen.add(k);q.push(n)}}}
   reachableKey=key;reachableValue=out.filter(p=>board.validNode(p));return reachableValue;
 }
-function reachableTop(target){if(findPath(target))return target;return standableReachable().filter(p=>Math.abs(p.x-target.x)+Math.abs(p.y-target.y)<=1).sort((a,b)=>(Math.abs(a.x-target.x)+Math.abs(a.y-target.y)+Math.abs(a.z-target.z))-(Math.abs(b.x-target.x)+Math.abs(b.y-target.y)+Math.abs(b.z-target.z)))[0]||target}
+function reachableTop(target){return target}
 function canReach(g){return canReachPiece(movementBoard(),movementBoard().groups[g?.id],player)}
 function goalNode(){const g=byCell[goalCell.y]?.[goalCell.x];return{x:goalCell.x,y:goalCell.y,z:Math.max(0,(g?.depth||0)-1)}}
 function save(){history.push({player:{...player},depths:groups.map(g=>g.depth),selected:selected?.id??null,won});if(history.length>80)history.shift()}
@@ -400,10 +458,21 @@ function blockActionText(color){
   return contrast(light)>contrast(dark)?'#fffaf0':'#292537';
 }
 function makeSurface(pos,mesh,color){const o=new EngineObject3D(pos,mesh,undefined,color);o.lighting=false;o.emissive=1;o.receiveShadow=false;o.castShadow=false;return o}
-function topFaceShade(x,z,pigment){
-  if((x+z)%2!==1)return new Color(1);
+function checkerDarkShade(pigment){
   const contrast=pigment.g>pigment.r*1.15?(pigment.g>pigment.b*1.15?.69:.80):.90;
   return pigment.r>.9&&pigment.g>.75&&pigment.b<.4?new Color(1,.88,.65):new Color(contrast,contrast,contrast);
+}
+function diamondBasePigment(pigment){
+  const subtle=new Color(.94),previous=checkerDarkShade(pigment),midpoint=new Color(
+    (subtle.r+previous.r)/2,
+    (subtle.g+previous.g)/2,
+    (subtle.b+previous.b)/2,
+  );
+  return new Color(pigment.r*midpoint.r,pigment.g*midpoint.g,pigment.b*midpoint.b);
+}
+function topFaceShade(x,z,pigment){
+  if((x+z)%2!==1)return new Color(1);
+  return checkerDarkShade(pigment);
 }
 function gradientBandFace(mesh,map,bounds,color,normal,sideFace=false){
   const [u0,u1,v0,v1]=bounds,lines=currentDesign().lines;
@@ -429,7 +498,35 @@ function walkabilityFace(mesh,map,bounds,walkable){
   if(walkable){const h=width/2;for(const [a,b]of [[[u0+h,v0+h],[u1-h,v0+h]],[[u1-h,v0+h],[u1-h,v1-h]],[[u1-h,v1-h],[u0+h,v1-h]],[[u0+h,v1-h],[u0+h,v0+h]]])line(a,b)}
   else for(let t=-.8;t<1;t+=.2){const a=Math.max(0,-t)+.01,b=Math.min(1,1-t)-.01;if(b>a)line([u0+a,v0+a+t],[u0+b,v0+b+t])}
 }
-function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,walkable=true){
+function diamondTopFace(mesh,map,bounds,pigment){
+  const [u0,u1,v0,v1]=bounds;
+  squareFace(mesh,(x,z)=>map(x,.5,z),bounds,diamondBasePigment(pigment),vec3(0,1,0));
+  for(let level=Math.floor(v0);level<Math.ceil(v1);level++){
+    const lo=Math.max(v0,level),hi=Math.min(v1,level+1),cx=(u0+u1)/2,cz=(lo+hi)/2;
+    // The motif grows with each pull row, while staying clear of the tile edge.
+    const radius=Math.min(.42,.16+level*.1,(u1-u0)*.45,(hi-lo)*.45);
+    const y=.5+.004;
+    const corners=[[cx-radius,cz],[cx,cz+radius],[cx+radius,cz],[cx,cz-radius]];
+    const edgeLength=Math.SQRT2*radius,cut=Math.min(.025,edgeLength*.12),trim=cut/edgeLength,outline=[];
+    for(let i=0;i<corners.length;i++){
+      const corner=corners[i],previous=corners[(i+corners.length-1)%corners.length],next=corners[(i+1)%corners.length];
+      const start=[corner[0]+(previous[0]-corner[0])*trim,corner[1]+(previous[1]-corner[1])*trim];
+      const end=[corner[0]+(next[0]-corner[0])*trim,corner[1]+(next[1]-corner[1])*trim];
+      for(let step=0;step<=4;step++){
+        const t=step/4,s=1-t;
+        outline.push([s*s*start[0]+2*s*t*corner[0]+t*t*end[0],s*s*start[1]+2*s*t*corner[1]+t*t*end[1]]);
+      }
+    }
+    const points=[map(cx,y,cz),...outline.map(([x,z])=>map(x,y,z))],indices=[];
+    for(let i=1;i<=outline.length;i++)indices.push(0,i,i===outline.length?1:i+1);
+    // Full palette pigment reproduces the light checkerboard tone, while the
+    // surrounding face uses the darker tone of that same piece color. Keep the
+    // vertices counter-clockwise from above so the face normal points up; the
+    // solid-piece shadow shader otherwise mistakes the motif for an underside.
+    mesh.addTriangles(points,indices,vec3(0,1,0),undefined,pigment);
+  }
+}
+function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,walkable=true,exposed={left:true,right:true,bottom:true}){
   side=cameraSlant(side);
   const pigment=palette[color],m=new Mesh(),s=depthSkew(),lo=-.5,hi=.5,defaultFace=top?new Color(1):shaded(pigment,.72);
   const P=(x,y,z)=>vec3(x+s*z,stretchY(y),z);
@@ -437,25 +534,28 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
   if(top){
     if(walkabilityFacesEnabled())walkabilityFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],walkable);
     else if(depthColorsEnabled())gradientBandFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],depthRowColor(pulledDepth,start),vec3(0,1,0));
-    else squareFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],new Color(1),vec3(0,1,0));
+    else {
+      if(diamondShapesEnabled())diamondTopFace(m,(x,y,z)=>P(x,y,z),[lo,hi,start,start+depth],pigment);
+      else squareFace(m,(x,z)=>P(x,.5,z),[lo,hi,start,start+depth],new Color(1),vec3(0,1,0));
+    }
   }
   else {
     squareFace(m,(x,y)=>P(x,y,depth),[lo,hi,lo,hi],defaultFace,vec3(0,0,1));
     quad([hi,lo,0],[lo,lo,0],[lo,hi,0],[hi,hi,0]);
-    // The separate per-cell top meshes are the actual solid top surface.
-    // Do not leave a lighter full-depth top underneath the checkerboard.
-    quad([lo,lo,0],[hi,lo,0],[hi,lo,depth],[lo,lo,depth]);
+    // Per-cell top meshes provide the upper surface. This quad closes the bottom.
+    if(exposed.bottom)quad([lo,lo,0],[hi,lo,0],[hi,lo,depth],[lo,lo,depth]);
     const sx=side>0?lo:hi;
     const ox=side>0?hi:lo;
+    const nearVisible=side>0?exposed.left:exposed.right,farVisible=side>0?exposed.right:exposed.left;
     if(depthColorsEnabled()){
       for(let z=0;z<depth;z++){
         const face=depthRowColor(Math.ceil(depth),z);
-        gradientBandFace(m,(y,z)=>P(sx,y,z),[lo,hi,z,Math.min(depth,z+1)],face,vec3(Math.sign(sx),0,0),true);
-        gradientBandFace(m,(y,z)=>P(ox,y,z),[lo,hi,z,Math.min(depth,z+1)],face,vec3(Math.sign(ox),0,0),true);
+        if(nearVisible)gradientBandFace(m,(y,z)=>P(sx,y,z),[lo,hi,z,Math.min(depth,z+1)],face,vec3(Math.sign(sx),0,0),true);
+        if(farVisible)gradientBandFace(m,(y,z)=>P(ox,y,z),[lo,hi,z,Math.min(depth,z+1)],face,vec3(Math.sign(ox),0,0),true);
       }
     }else{
-      squareFace(m,(y,z)=>P(sx,y,z),[lo,hi,0,depth],sidePalette[color],vec3(Math.sign(sx),0,0));
-      squareFace(m,(y,z)=>P(ox,y,z),[lo,hi,0,depth],defaultFace,vec3(Math.sign(ox),0,0));
+      if(nearVisible)squareFace(m,(y,z)=>P(sx,y,z),[lo,hi,0,depth],sidePalette[color],vec3(Math.sign(sx),0,0));
+      if(farVisible)squareFace(m,(y,z)=>P(ox,y,z),[lo,hi,0,depth],defaultFace,vec3(Math.sign(ox),0,0));
     }
   }
   m.doubleSided=true;return m;
@@ -463,7 +563,7 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
 function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),palette[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
 let pieceDragPreview=null,pieceDragAnchor=null;
 function visualDepth(g){return g.depth+(pieceDragPreview?.piece===g?pieceDragPreview.offset:0)}
-function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const o of [...extrusionObjects,...extrusionOutlines])o.destroy();extrusionObjects=[];extrusionOutlines=[];topObjectInfo.clear();sideObjectInfo.clear();
+function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const o of [...extrusionObjects,...extrusionOutlines,...topPickObjects])o.destroy();extrusionObjects=[];extrusionOutlines=[];topPickObjects=[];topObjectInfo.clear();sideObjectInfo.clear();
   const reachable=walkabilityFacesEnabled()?reachableSurfaceKeys():null;
   for(const g of groups)if(!visualDepth(g)){
     const points=[worldPoint(-.5,.5,0),worldPoint(-.5,-.5,0),worldPoint(.5,-.5,0),worldPoint(.5,.5,0)];
@@ -473,10 +573,22 @@ function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const 
       extrusionOutlines.push(card);sideObjectInfo.set(card,g);g.lightboxSurfaces.push(card);
     }
   }
-  for(const g of groups)if(visualDepth(g))for(const c of g.cells){
-    const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),dark=makeSurface(base,prismMesh(c.x,c.y,visualDepth(g),viewSide,g.color,false),new Color(1));
-    extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);g.lightboxSurfaces.push(dark);
-    for(let z=0;z<visualDepth(g);z++){const top=makeSurface(base,prismMesh(c.x,c.y,Math.min(1,visualDepth(g)-z),viewSide,g.color,true,z,Math.ceil(visualDepth(g)),reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true),depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z));top.scale3D=vec3(1,1,1);topObjectInfo.set(top,{x:c.x,y:c.y,z});extrusionObjects.push(top);g.lightboxSurfaces.push(top)}
+  for(const g of groups)if(visualDepth(g)){
+    const combinedTop=new Mesh();
+    for(const c of g.cells){
+      const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),exposed={left:byCell[c.y]?.[c.x-1]!==g,right:byCell[c.y]?.[c.x+1]!==g,bottom:byCell[c.y+1]?.[c.x]!==g},dark=makeSurface(base,prismMesh(c.x,c.y,visualDepth(g),viewSide,g.color,false,0,visualDepth(g),true,exposed),new Color(1));
+      extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);g.lightboxSurfaces.push(dark);
+      for(let z=0;z<visualDepth(g);z++){
+        const walkable=reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true;
+        const tile=prismMesh(c.x,c.y,Math.min(1,visualDepth(g)-z),viewSide,g.color,true,z,Math.ceil(visualDepth(g)),walkable);
+        const color=depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z);
+        combinedTop.combine(tile,base,color);
+        const pick=makeSurface(base,tile,color);pick.render3D=()=>{};topPickObjects.push(pick);topObjectInfo.set(pick,{x:c.x,y:c.y,z});
+      }
+    }
+    combinedTop.doubleSided=true;
+    const top=makeSurface(vec3(),combinedTop,new Color(1));
+    extrusionObjects.push(top);g.lightboxSurfaces.push(top);
   }
 }
 let sceneryWallZ=null,wallJoinMesh,wallJoinKey,wallJoinStyle;
@@ -503,7 +615,9 @@ function drawWallGroundJoin(){
 function drawMapOutlines(){
   const material={shader:render3D.shader,receiveShadow:render3D.receiveShadow,lighting:render3D.lighting,emissive:render3D.emissive};render3D.shader=undefined;render3D.receiveShadow=false;render3D.lighting=false;render3D.emissive=1;
   drawWallGroundJoin();
-  const height=wrap.clientHeight,size=vec2(wrap.clientWidth,height),stroke=2.4*viewSpan()/height,bias=render3D.camera.getForward().scale(-.026),seen=new Set,joins=new Map;
+  const height=wrap.clientHeight,size=vec2(wrap.clientWidth,height),center=worldPoint(W/2,H/2,0),screenCenter=render3D.worldToScreen(center,size),screenX=render3D.worldToScreen(worldPoint(W/2+1,H/2,0),size),screenY=render3D.worldToScreen(worldPoint(W/2,H/2+1,0),size);
+  const cellPixels=screenCenter&&screenX&&screenY?Math.sqrt(Math.abs((screenX.x-screenCenter.x)*(screenY.y-screenCenter.y)-(screenX.y-screenCenter.y)*(screenY.x-screenCenter.x))):64;
+  const strokePixels=Math.max(2,Math.min(2.4,2.4*cellPixels/64)),stroke=strokePixels*viewSpan()/height,bias=render3D.camera.getForward().scale(-.026),seen=new Set,joins=new Map;
   const pointKey=p=>{const q=render3D.worldToScreen(p,size);return q?`${q.x.toFixed(1)},${q.y.toFixed(1)}`:null};
   const edge=(a,b)=>{a=puzzlePoint(a);b=puzzlePoint(b);const ka=pointKey(a),kb=pointKey(b),key=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`,aa=a.add(bias),bb=b.add(bias);if(!ka||!kb||seen.has(key))return;seen.add(key);joins.set(ka,aa);joins.set(kb,bb);render3D.drawLine(aa,bb,stroke,inkColor)};
   const sameBlock=(g,x,y)=>byCell[y]?.[x]===g;
@@ -523,9 +637,7 @@ function drawMapOutlines(){
   }}
   // Round caps bridge each pair of ribbon ends with the same width and depth bias.
   for(const point of joins.values())render3D.drawSphere(point,stroke,inkColor);
-  const studs=currentDesign().studs;
-  movementMarkers?.drawOutlines(studs.width*viewSpan()/height,{color:designColor(studs.color),opacity:studs.opacity},puzzlePoint);
-  drawSelectedOutline();drawReferenceSquares();drawHoverSpot();drawPomOcclusionShadow();
+  drawSelectedOutline();drawReferenceSquares();drawHoverSpot();
   render3D.flush();Object.assign(render3D,material);
 }
 // Boundary edges keep the selected material on their screen-right side, including holes.
@@ -595,7 +707,6 @@ function drawHoverSpot(){
   for(const spot of [hoverObject,studioTargetObject])if(spot&&spot.color.a>0&&!(spot===studioTargetObject&&movementMarkersEnabled()))render3D.drawMesh(spot.mesh,spot.getMatrix(),undefined,spot.color);render3D.flush();
   render3D.blend=state.blend;render3D.depthTest=state.depthTest;render3D.depthWrite=state.depthWrite;render3D.lighting=state.lighting;
 }
-function drawPomOcclusionShadow(){if(!playerObject||!pomParts.length)return;syncPomMatrix();render3D.flushTransparentQueue();render3D.flush();const state={blend:render3D.blend,depthWrite:render3D.depthWrite,depthTest:render3D.depthTest,lighting:render3D.lighting};render3D.blend=true;render3D.depthWrite=false;render3D.depthTest=false;render3D.lighting=false;render3D.drawMesh(playerObject.mesh,playerObject.getMatrix(),undefined,new Color(.13,.105,.08,.52));render3D.flush();render3D.depthTest=true;const pose=playerObject.pos3D.copy();playerObject.pos3D=pose.add(render3D.camera.getForward().scale(-.003));syncPomMatrix();playerObject.updateTransforms();const visible=pomParts.map(part=>({mesh:part.mesh,matrix:part.getMatrix().copy(),color:part.color.copy()}));playerObject.pos3D=pose;syncPomMatrix();playerObject.updateTransforms();for(const part of visible)render3D.drawMesh(part.mesh,part.matrix,undefined,part.color);render3D.flush();render3D.blend=state.blend;render3D.depthWrite=state.depthWrite;render3D.depthTest=state.depthTest;render3D.lighting=state.lighting}
 function syncFloorGrid(){
   if(worldPresentation()){syncStudyFloor();return}
   const showFloor=currentBackgroundConfiguration()?.showGuides??true,custom=customFloorGridEnabled(),floor=currentDesign().floorGrid;
@@ -641,14 +752,14 @@ function syncFloorGrid(){
 function syncDesignLighting(){
   const enabled=isDesignPlayground()?designPlayground.values.shadows.enabled:controlFeatures.enabled('pieceShadows');
   render3D.shadows=enabled;
-  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=enabled?solidPieceShadowShader:undefined;object.castShadow=false;object.receiveShadow=enabled}
-  // Prism sides and their per-cell tops form one closed casting surface. The
+  for(const object of [...blockObjects,...extrusionObjects,...extrusionOutlines]){object.emissive=1;object.shader=enabled?solidPieceShadowShader:solidPieceGlowShader;object.castShadow=false;object.receiveShadow=enabled}
+  // Prism sides and each piece's combined top form one closed casting surface. The
   // offset painted front only receives shadows; there is no duplicate top layer.
   for(const object of [...extrusionOutlines,...extrusionObjects])object.castShadow=enabled;
   // Resting pieces now have solid cardboard backs, which cast their shadows.
   // Their painted front overlays must not cast a second offset shadow.
   movementMarkers?.setShadowShader(enabled?pieceShadowShader:undefined);
-  for(const part of pomParts){part.emissive=1;part.shader=enabled?pieceShadowShader:undefined;part.castShadow=enabled&&part===playerObject;part.receiveShadow=enabled}
+  for(const part of pomParts){part.emissive=1;part.shader=enabled&&!pomGlowOn?pieceShadowShader:undefined;part.castShadow=enabled&&part===playerObject&&!pomGlowOn;part.receiveShadow=enabled&&!pomGlowOn}
   for(const part of [flagPole,flagCloth,flagVase,flagCap,flagPrint].filter(Boolean)){part.emissive=1;part.shader=enabled?pieceShadowShader:undefined;part.castShadow=enabled&&!!part.mesh&&part!==flagPrint;part.receiveShadow=enabled}
   if(!enabled){
     shadowFloor?.destroy();shadowFloor=undefined;render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);return;
@@ -667,7 +778,7 @@ function syncDesignLighting(){
   // Its projection therefore cannot paint the sky, even after panning or zooming.
   shadowFloor.scale3D=vec3((visual.right-visual.left+8)/2,1,4);shadowFloor.pos3D=worldPoint((visual.left+visual.right)/2,-.008,4.025);
 }
-let pulsePiece=null,pulseStart=0,selectionLightbox;
+let pulsePiece=null,pulseStart=0;
 function lightboxEnabled(){return worldPresentation()&&(cameraLab?cameraState.selectionEffect==='lightbox':controlFeatures.enabled('selectionLightbox'))}
 const reducedSelectionMotion=matchMedia('(prefers-reduced-motion:reduce)');
 function selectionPhase(now=performance.now()){
@@ -678,24 +789,15 @@ function selectedSurfaceColor(g,now=performance.now()){
   const color=palette[g.color];if(g!==selected||won)return color;
   const phase=selectionPhase(now);
   if(lightboxEnabled()){
-    const shifted=selectionColor(color,phase,cameraState.lightboxStrength);
+    const shifted=selectionColor(color,phase,Math.min(1,cameraState.lightboxStrength*1.25));
     return new Color(shifted.r,shifted.g,shifted.b);
   }
   return tinted(color,reducedSelectionMotion.matches?.12:.26*phase);
 }
 function updateSelectionLightbox(){
-  if(!selectionLightbox)return;
-  const group=lightboxEnabled()&&!won&&!introPlaying&&document.querySelector('#menuScreen').hidden?selected:null;
-  const pulse=selectionPhase(),strength=cameraState.lightboxStrength;
-  if(group){
-    for(const object of group.objects){object.emissive=1+strength*(.01+.03*pulse);object.shader=undefined}
-    // The luminous front is the selection cue. Keep its top/side materials
-    // steady. No local light sources or outside glow are created.
-    const shadows=controlFeatures.enabled('pieceShadows');
-    for(const object of group.lightboxSurfaces??[]){object.emissive=1;object.shader=shadows?solidPieceShadowShader:undefined}
-  }
-  selectionLightbox.update({group:pieceDragPreview&&group?{...group,depth:visualDepth(group)}:group,width:W,height:H,worldPoint,tint:group?selectedSurfaceColor(group):new Color(1),pulse,strength,glow:cameraState.lightboxGlow});
-  wrap.dataset.selectionGlow='inside';wrap.dataset.selectionSpill='false';wrap.dataset.selectionEffect=lightboxEnabled()?'lightbox':'original';wrap.dataset.selectionLightActive=String(!!group&&strength>0);wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
+  const pulse=selectionPhase();
+  for(const g of groups)for(const object of g.objects)object.shader=render3D.shadows?(g===selected&&!won&&lightboxEnabled()?highlightedPieceShadowShader:solidPieceShadowShader):solidPieceGlowShader;
+  wrap.dataset.selectionGlow='none';wrap.dataset.selectionSpill='false';wrap.dataset.selectionEffect=lightboxEnabled()?'lightbox':'original';wrap.dataset.selectionLightActive='false';wrap.dataset.selectionPulse=pulse.toFixed(3);wrap.dataset.cardboardThickness=String(CARDBOARD_THICKNESS);
 }
 function syncBlocks(){for(const g of groups)for(let i=0;i<g.cells.length;i++){const c=g.cells[i],o=g.objects[i],pose=blockPose(c,visualDepth(g)),face=selectedSurfaceColor(g);o.pos3D=vec3(pose.pos.x,pose.pos.y,pose.pos.z+.025);o.scale3D=vec3(1,stretchY(1),1);o.color=face}syncExtrusions();syncFloorGrid();syncDesignLighting();updateSelectionLightbox()}
 function worldPosition(n,offset=.5){const top=n.y===H?0:H-n.y;return worldPoint(n.x+.5,top+.22,n.z+offset)}
@@ -858,7 +960,7 @@ function updateUI(){
   cameraModeToggle.hidden=!cameraAvailable;
   cameraModeToggle.disabled=busy||won||levelLoading;
   if(!cameraAvailable&&cameraModeActive)setCameraMode(false);
-  cameraControlsPanel.hidden=!cameraAvailable||!cameraModeActive;
+  cameraControlsPanel.hidden=!cameraAvailable;
   cameraControlsPanel.inert=busy||won||levelLoading;
   if(viewReady)syncCameraSliders();
   wrap.classList.toggle('no-piece-selected',!selected);
@@ -884,9 +986,11 @@ function updateUI(){
 function syncMovementMarkers(){
   if(!movementMarkers)return;
   if(!movementMarkersEnabled()||won||introPlaying){movementMarkers.dispose();return}
-  movementMarkers.sync(standableReachable().filter(p=>p.y<H),standingSpotCenter,p=>platformTopColor(byCell[p.y][p.x],p.x,p.z),stretchY);
+  const targets=movementMarkerRouteTargets??standableReachable().filter(p=>p.y<H);
+  const highlighted=new Set((movementMarkerRoute?.slice(movementMarkerRouteIndex)??[]).map(nodeKey));
+  movementMarkers.sync(targets,standingSpotCenter,p=>reachableMarkerColor(byCell[p.y][p.x]),stretchY,highlighted,p=>reachableMarkerColor(byCell[p.y][p.x],.30),controlFeatures.movementMarkerShape);
 }
-function pickMovementMarker(ray){if(!movementMarkersEnabled()||!movementMarkers)return null;const occluders=[...blockObjects,...extrusionObjects,...extrusionOutlines];return puzzlePick([...movementMarkers.renderObjects,...occluders],()=>movementMarkers.pick(ray,occluders))}
+function pickMovementMarker(ray){if(!movementMarkersEnabled()||!movementMarkers)return null;const occluders=[...blockObjects,...topPickObjects,...extrusionOutlines];return puzzlePick([...movementMarkers.renderObjects,...occluders],()=>movementMarkers.pick(ray,occluders))}
 function hideHelp(){clearTimeout(toastTimer);toastTimer=undefined;helpKind=null;const el=document.querySelector('#toast');el.classList.remove('on');el.textContent=''}
 function showHelp(text,kind,duration=4800){
   if(levelPreferences.hideHelpText)return false;
@@ -948,6 +1052,8 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){if(cameraLab||interactionLab)return;unfinished.remove(activeLevel.id);if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
+  movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
+  pomGlowCovered=false;pomGlowOn=false;pomGlowStart=0;if(pomLight){pomLight.intensity=1;pomLight.glow=0}
   cameraModeActive=false;cameraModePrevious=null;syncCameraMode();
   levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
@@ -964,6 +1070,7 @@ function syncControlFeatureInputs(){
   for(const feature of CONTROL_FEATURES){const input=document.querySelector(`#${feature.id}`);if(input)input.checked=controlFeatures.enabled(feature.id)}
   const highlight=document.querySelector('#pieceHighlight');if(highlight)highlight.value=controlFeatures.enabled('selectionLightbox')?'lightbox':'original';
   const appearance=document.querySelector('#topFaceAppearance');if(appearance)appearance.value=controlFeatures.topFaceStyle;
+  const markerShape=document.querySelector('#movementMarkerShape');if(markerShape)markerShape.value=controlFeatures.movementMarkerShape;
 }
 // Bind the prototype's static Settings markup to the existing preference model.
 const pieceHighlight=document.querySelector('#pieceHighlight');
@@ -978,11 +1085,18 @@ topFaceAppearance.addEventListener('change',()=>{
   refreshControlFeatures();
   document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';
 });
+const movementMarkerShape=document.querySelector('#movementMarkerShape');
+movementMarkerShape.addEventListener('change',()=>{
+  const saved=controlFeatures.setMovementMarkerShape(movementMarkerShape.value);
+  refreshControlFeatures();
+  document.querySelector('#controlFeatureMessage').textContent=saved?'':'This control applies now, but could not be saved in this browser.';
+});
 for(const feature of CONTROL_FEATURES){
   const toggle=document.querySelector(`#${feature.id}`);
   if(!toggle)continue;
   toggle.addEventListener('change',()=>{
     const saved=controlFeatures.set(feature.id,toggle.checked);
+    if(feature.id==='movementArrow'&&!toggle.checked)clearRoutePreview();
     if(toggle.checked&&['stackedPieceButtons','pieceDragArrows'].includes(feature.id)){
       for(const id of ['stackedPieceButtons','pieceDragArrows'])if(id!==feature.id)controlFeatures.set(id,false);
     }
@@ -1192,8 +1306,8 @@ function updateStudyVisibility(){
 }
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
 const tappingUnit=()=>32/Math.max(.18,Math.sin(viewPitch));
-function stopIntro(){introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
-function finishIntro(){if(!cameraLab&&worldPresentation())resetStudyFollow({paused:false});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
+function stopIntro(){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
+function finishIntro(){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();if(!cameraLab&&worldPresentation())resetStudyFollow({paused:false});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
 function enterPlayFromIntro(){
   if(!introPlaying)return;
   stopIntro();viewTouched=true;keepInterruptedView=true;finishIntro();
@@ -1237,7 +1351,7 @@ function startBoardView(animate=true){
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
   if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
   autoSelectNearbyPiece();introPlaying=true;document.querySelector('.stage').classList.add('is-introducing');wrap.dataset.introPhase='overview';updateUI();
-  let start,lastFrame;
+  let start,lastFrame,introZoomShown=false;
   introTick=now=>{
     if(token!==introFrame||celebration)return;
     // The engine may do several simulation ticks before one render. Move the
@@ -1246,6 +1360,7 @@ function startBoardView(animate=true){
     const pose=sampleCameraIntro(now-start,fitUnit,endUnit);
     wrap.dataset.introPhase=pose.phase;
     if(pose.phase!=='overview'){
+      if(needsZoom&&!introZoomShown&&!cameraModeToggle.hidden){introZoomShown=true;showZoomFeedback(true)}
       viewUnit=pose.unit;viewTarget=from.lerp(target,pose.pan);applyBoardView(false);
     }
     if(pose.done)finishIntro();
@@ -1256,6 +1371,7 @@ function limitManualPan(){const p=limitStagePan(viewTarget,render3D.camera.getRi
 function panBoard(dx,dy){if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale(-dx/viewUnit)).add(render3D.camera.getUp().scale(dy/viewUnit));limitManualPan();return}viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
 function zoomBoard(unit,x,y){
   const old=viewUnit,f=sceneFrame(wrap.clientWidth,wrap.clientHeight),min=wrap.clientHeight/f.height;viewUnit=Math.max(min,Math.min(Math.max(tappingUnit(),min),unit));
+  if(!cameraModeActive&&gameReady&&viewReady&&!cameraModeToggle.hidden&&Math.abs(viewUnit-old)>.0001)showZoomFeedback();
   const scale=1/old-1/viewUnit;if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale((x-wrap.clientWidth/2)*scale)).add(render3D.camera.getUp().scale((wrap.clientHeight/2-y)*scale));limitManualPan();return}viewTarget=viewTarget.add(vec3((x-wrap.clientWidth/2)*scale,(wrap.clientHeight/2-y)*scale/Math.cos(viewPitch),0));
 }
 function cameraZoomBounds(){
@@ -1263,21 +1379,54 @@ function cameraZoomBounds(){
   return {min,max:Math.max(tappingUnit(),min)};
 }
 function syncCameraMode(){
-  cameraModeSliders.hidden=!cameraModeActive;
-  cameraControlsPanel.hidden=!cameraModeActive||cameraModeToggle.hidden;
+  cameraModeSliders.hidden=false;
+  cameraControlsPanel.hidden=cameraModeToggle.hidden;
   cameraControlsPanel.classList.toggle('is-active',cameraModeActive);
+  cameraDirection.hidden=!cameraModeActive;
+  clearTimeout(zoomFeedbackTimer);cameraControlsPanel.classList.remove('is-zoom-feedback');
   cameraModeToggle.setAttribute('aria-pressed',String(cameraModeActive));
   const label=cameraModeActive?'Close Camera':'Camera';
   cameraModeToggle.querySelector('.action__label').textContent=label;
   cameraModeToggle.title=label;
 }
+function showZoomFeedback(hold=false){
+  cameraControlsPanel.hidden=false;cameraModeSliders.hidden=false;cameraDirection.hidden=true;
+  cameraControlsPanel.classList.add('is-zoom-feedback');
+  clearTimeout(zoomFeedbackTimer);
+  if(!hold)zoomFeedbackTimer=setTimeout(()=>cameraControlsPanel.classList.remove('is-zoom-feedback'),1800);
+}
+function cameraModeViewForVisiblePom(previous){
+  const position=worldPosition(player),focus=cameraFocus??viewTarget,basePitch=previous.pitch*Math.PI/180,distance=render3D.camera.pos.subtract(focus).length(),currentYaw=cameraYaw();
+  const boxes=groups.flatMap(group=>group.cells.map(cell=>({min:{x:cell.x,y:H-cell.y-1,z:group.depth?0:-CARDBOARD_THICKNESS},max:{x:cell.x+1,y:H-cell.y,z:group.depth+.025}})));
+  const offsets=[22.5,-22.5,...Array.from({length:7},(_,index)=>[25+index*2.5,-25-index*2.5]).flat()];
+  const candidates=offsets.map(offset=>Math.max(-40,Math.min(40,previous.yaw+offset))).filter((yaw,index,all)=>all.findIndex(value=>Math.abs(value-yaw)<.001)===index);
+  let best=null;
+  for(const yaw of candidates){
+    const angle=studyStraight()&&cameraState.motion!=='track'?-yaw*Math.PI/180:currentYaw;
+    const options={position,focus,distance,yaw:angle,currentYaw,currentPitch:basePitch,perspective:studyPerspective(),boxes};
+    const visibility=visibilityAtPitch({...options,pitch:basePitch});
+    const candidate={yaw,pitch:basePitch,visibility,focus:visibilityCameraPose({...options,pitch:basePitch}).focus};
+    if(!best||visibility>best.visibility)best=candidate;
+    if(visibility>=8/9)return candidate;
+  }
+  best=null;
+  for(const yaw of candidates){
+    const angle=studyStraight()&&cameraState.motion!=='track'?-yaw*Math.PI/180:currentYaw;
+    const options={position,focus,distance,yaw:angle,currentYaw,currentPitch:basePitch,perspective:studyPerspective(),boxes};
+    const result=chooseVisibilityPitch({...options,basePitch}),candidate={yaw,pitch:result.pitch,visibility:result.visibility,focus:visibilityCameraPose({...options,pitch:result.pitch}).focus};
+    if(!best||candidate.visibility>best.visibility)best=candidate;
+    if(result.visibility>=8/9)return candidate;
+  }
+  return best;
+}
 function setCameraMode(active){
   if(active===cameraModeActive)return;
   if(active){
     enterPlayFromIntro();cameraModePrevious={yaw:cameraState.yaw,pitch:cameraState.pitch,unit:viewUnit,target:viewTarget.copy()};cameraModeActive=true;
-    cameraState.yaw=-12;cameraState.pitch=32;
-    viewTouched=true;clearBoardHover();syncCameraMode();applyCameraStudy({orbit:true,refit:true});
-    zoomBoard(viewUnit*1.2,wrap.clientWidth/2,wrap.clientHeight/2);applyBoardView(false);
+    const visibleView=cameraModeViewForVisiblePom(cameraModePrevious);
+    cameraState.yaw=visibleView.yaw;cameraState.pitch=visibleView.pitch*180/Math.PI;
+    viewTarget=vec3(visibleView.focus.x-(cameraState.motion==='track'?cameraState.truck*W/100:0),visibleView.focus.y,visibleView.focus.z);
+    viewTouched=true;clearBoardHover();syncCameraMode();applyCameraStudy({orbit:true});
   }else{
     cameraModeActive=false;
     if(cameraModePrevious){cameraState.yaw=cameraModePrevious.yaw;cameraState.pitch=cameraModePrevious.pitch;viewUnit=cameraModePrevious.unit;viewTarget=cameraModePrevious.target}
@@ -1293,6 +1442,8 @@ function syncCameraSliders(){
   const {min,max}=cameraZoomBounds(),zoom=cameraControlsPanel.querySelector('[data-camera-control="zoom"]');
   zoom.disabled=max<=min;zoom.value=max>min?String(Math.max(0,Math.min(100,Math.round(100*Math.log(viewUnit/min)/Math.log(max/min))))):'0';
   zoom.setAttribute('aria-valuetext',`${Math.round(viewUnit/min*100)}%`);
+  cameraControlsPanel.querySelector('[data-zoom-step="1"]').disabled=viewUnit>=max-.0001;
+  cameraControlsPanel.querySelector('[data-zoom-step="-1"]').disabled=viewUnit<=min+.0001;
   const cube=cameraControlCube(cameraState.yaw,cameraState.pitch);
   for(const name of ['front','top','side','edges'])cameraDirection.querySelector(`.camera-controls__cube-${name}`).setAttribute('d',cube[name]);
   for(const name of ['vertical','horizontal'])cameraDirection.querySelector(`.camera-controls__axis-${name}`).setAttribute('d',cube[name]);
@@ -1306,6 +1457,14 @@ cameraControlsPanel.addEventListener('input',event=>{
     const {min,max}=cameraZoomBounds();zoomBoard(min*(max/min)**(value/100),wrap.clientWidth/2,wrap.clientHeight/2);
     applyBoardView();resetStudyFollow();return;
   }
+});
+cameraControlsPanel.addEventListener('click',event=>{
+  const button=event.target.closest('[data-zoom-step]');
+  if(!button||button.disabled||!gameReady||!viewReady||levelLoading||busy||won)return;
+  enterPlayFromIntro();viewTouched=true;clearBoardHover();
+  const {min,max}=cameraZoomBounds(),factor=(max/min)**.1;
+  zoomBoard(viewUnit*(button.dataset.zoomStep==='1'?factor:1/factor),wrap.clientWidth/2,wrap.clientHeight/2);
+  applyBoardView();resetStudyFollow();
 });
 function setCameraDirection(yaw,pitch){
   if(!cameraModeActive||!gameReady||!viewReady||levelLoading||busy||won)return;
@@ -1327,13 +1486,13 @@ cameraDirection.addEventListener('keydown',event=>{
   const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
   if(!delta)return;event.preventDefault();setCameraDirection(cameraState.yaw+delta[0],cameraState.pitch+delta[1]);
 });
-function clearBoardHover(){hovered=null;movementMarkers?.setHovered(null);if(hoverObject)hoverObject.color=new Color(1,1,1,0)}
+function clearBoardHover(){hovered=null;if(hoverObject)hoverObject.color=new Color(1,1,1,0)}
 function boardPoint(e){const r=wrap.getBoundingClientRect();return {x:e.clientX-r.left-wrap.clientLeft,y:e.clientY-r.top-wrap.clientTop}}
 function draggableFrontPiece(e){
   if(!controlFeatures.enabled('pieceDragArrows')||controlFeatures.enabled('stackedPieceButtons')||busy||introPlaying||boardPointers.size||document.querySelector('.stage').inert)return null;
   const p=boardPoint(e),ray=render3D.screenToRay(vec2(p.x,p.y),vec2(wrap.clientWidth,wrap.clientHeight));
   if(puzzleProjectionState().enabled){
-    const hit=puzzleRaycast(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines])[0];
+    const hit=puzzleRaycast(ray,[...blockObjects,...topPickObjects,...extrusionOutlines])[0];
     const piece=groups.find(g=>g.objects.includes(hit));if(!piece||!canInteract(piece))return null;
     const z=visualDepth(piece)+.025,t=(z-ray.origin.z)/ray.direction.z;if(t<0||!Number.isFinite(t))return null;
     const point=logicalPuzzlePoint(ray.getPosition(t));return {piece,front:true,x:point.x,y:unStretchY(point.y),distance:t};
@@ -1344,6 +1503,130 @@ function draggableFrontPiece(e){
   return hit;
 }
 let sceneryGesture=null;
+let routePreview=null,routePreviewTimer,movementMarkerRoute=null,movementMarkerRouteTargets=null,movementMarkerRouteIndex=0;
+let routeCanvas,routeContext,routeMask,routeMaskContext;
+function routeDrawingContext(){
+  if(!routeCanvas){
+    routeCanvas=document.createElement('canvas');routeCanvas.setAttribute('aria-hidden','true');
+    Object.assign(routeCanvas.style,{position:'absolute',inset:'0',width:'100%',height:'100%',zIndex:'2',pointerEvents:'none'});
+    wrap.append(routeCanvas);routeContext=routeCanvas.getContext('2d');routeMask=document.createElement('canvas');routeMaskContext=routeMask.getContext('2d');
+  }
+  return routeContext;
+}
+function clearRoutePreview(){
+  clearTimeout(routePreviewTimer);routePreview=null;
+  if(routeCanvas&&routeContext)routeContext.clearRect(0,0,routeCanvas.width,routeCanvas.height);
+}
+function drawRoutePreview(){
+  if(!routePreview)return;
+  if(!controlFeatures.enabled('movementArrow')){clearRoutePreview();return}
+  const arrowHeadLength=7;
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),points=[],camera=render3D.camera,right=camera.getRight();
+  const canvas=routeCanvas?routeContext:routeDrawingContext(),ratio=window.devicePixelRatio||1,width=Math.round(size.x*ratio),height=Math.round(size.y*ratio);
+  if(routeCanvas.width!==width||routeCanvas.height!==height){routeCanvas.width=width;routeCanvas.height=height;routeMask.width=width;routeMask.height=height;routePreview.geometryKey=''}
+  const geometryKey=[size.x,size.y,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic,viewUnit,yStretch].join(':');
+  if(routePreview.geometryKey===geometryKey&&!routePreview.fadeAt)return;
+  routePreview.geometryKey=geometryKey;
+  canvas.setTransform(ratio,0,0,ratio,0,0);canvas.clearRect(0,0,size.x,size.y);
+  const drawing=routeMaskContext,alpha=.8*(routePreview.fadeAt?Math.max(0,1-(performance.now()-routePreview.fadeAt)/350):1);
+  drawing.setTransform(ratio,0,0,ratio,0,0);drawing.clearRect(0,0,size.x,size.y);
+  const screen=p=>render3D.worldToScreen(p,size);
+  const pixelScale=p=>{
+    const a=screen(p),b=screen(p.add(right.scale(.1)));
+    return a&&b?.x!==undefined ? .1/Math.max(.001,Math.hypot(b.x-a.x,b.y-a.y)) : 0;
+  };
+  // Place the overlay just above the surface Pom walks on, rather than at his
+  // raised movement anchor.
+  function routePoint(p){
+    const center=puzzlePoint(worldPoint(p.x,p.y,p.z));
+    const base=screen(center),raised=screen(puzzlePoint(worldPoint(p.x,p.y+1,p.z)));
+    const lift=base&&raised?2/Math.max(.001,Math.hypot(raised.x-base.x,raised.y-base.y)):pixelScale(center)*2;
+    return puzzlePoint(worldPoint(p.x,p.y-.22+unStretchY(lift),p.z));
+  }
+  const visiblePlans=routePreview.plans;
+  for(const plan of visiblePlans)for(const p of plan.points){
+    const point=routePoint(p);
+    if(!points.length||point.subtract(points.at(-1)).length()>.001)points.push(point);
+  }
+  let centers=[];
+  if(points.length<2){
+    if(routePreview.plans.length!==1)return;
+    const plan=routePreview.plans[0],tip=screen(routePoint(plan.points.at(-1))),before=screen(routePoint(plan.points[Math.max(0,plan.points.length-2)]));
+    if(!tip||!before)return;
+    const dx=tip.x-before.x,dy=tip.y-before.y,length=Math.hypot(dx,dy)||1,tail=arrowHeadLength+2;centers=[{x:tip.x-dx/length*tail,y:tip.y-dy/length*tail},tip];
+  }else{
+    const separated=[points[0]];
+    for(let i=1;i<points.length-1;i++){
+      const a=points[i-1],b=points[i];
+      let end=i;
+      while(end+1<points.length-1&&Math.abs(points[end+1].y-b.y)<=.03&&points[end+1].subtract(b).length()<.24)end++;
+      const c=points[end+1],from=screen(a),turn=screen(b),to=screen(c);
+      if(a.y>b.y+.03&&c.y>points[end].y+.03&&from&&turn&&to){
+        const ax=from.x-turn.x,ay=from.y-turn.y,bx=to.x-turn.x,by=to.y-turn.y;
+        const al=Math.hypot(ax,ay),bl=Math.hypot(bx,by);
+        if(al>1&&bl>1&&(ax*bx+ay*by)/(al*bl)>.85){
+          // Give overlapping descent and ascent their own sides of the turn.
+          const offset=right.scale(Math.min(.16,pixelScale(b)*7));
+          const direction=from.x>to.x?-1:1;
+          separated.push(b.subtract(offset.scale(direction)),...points.slice(i,end+1),points[end].add(offset.scale(direction)));
+          i=end;
+          continue;
+        }
+      }
+      separated.push(b);
+    }
+    separated.push(points.at(-1));
+    centers=separated.map(point=>screen(point)).filter(Boolean);
+    for(let i=centers.length-1;i>0;i--)if(Math.hypot(centers[i].x-centers[i-1].x,centers[i].y-centers[i-1].y)<.1)centers.splice(i,1);
+  }
+  if(centers.length<2)return;
+  const tip=centers.at(-1);let previous=centers.length-2;
+  while(previous>0&&Math.hypot(tip.x-centers[previous].x,tip.y-centers[previous].y)<2)previous--;
+  const before=centers[previous],dx=tip.x-before.x,dy=tip.y-before.y,len=Math.hypot(dx,dy)||1;
+  const head=[{x:tip.x-dx/len*7+dy/len*4.5,y:tip.y-dy/len*7-dx/len*4.5},tip,{x:tip.x-dx/len*7-dy/len*4.5,y:tip.y-dy/len*7+dx/len*4.5}];
+  function bodyPath(){
+    drawing.beginPath();drawing.moveTo(centers[0].x,centers[0].y);
+    for(let i=1;i<centers.length-1;i++){
+      const a=centers[i-1],b=centers[i],c=centers[i+1],ax=a.x-b.x,ay=a.y-b.y,bx=c.x-b.x,by=c.y-b.y,al=Math.hypot(ax,ay),bl=Math.hypot(bx,by);
+      if(al<.1||bl<.1)continue;
+      const radius=Math.min(14,al/2,bl/2);
+      drawing.lineTo(b.x+ax/al*radius,b.y+ay/al*radius);
+      drawing.quadraticCurveTo(b.x,b.y,b.x+bx/bl*radius,b.y+by/bl*radius);
+    }
+    drawing.lineTo(centers.at(-1).x,centers.at(-1).y);
+  }
+  const headPath=()=>{drawing.beginPath();drawing.moveTo(head[0].x,head[0].y);drawing.lineTo(head[1].x,head[1].y);drawing.lineTo(head[2].x,head[2].y)};
+  drawing.save();drawing.lineCap='round';drawing.lineJoin='round';drawing.strokeStyle='#ffd23f';drawing.lineWidth=8;
+  bodyPath();drawing.stroke();headPath();drawing.stroke();drawing.restore();
+  canvas.globalAlpha=alpha;canvas.drawImage(routeMask,0,0,width,height,0,0,size.x,size.y);canvas.globalAlpha=1;
+  const pomMesh=playerObject?.mesh,meshPoints=pomMesh?.points;
+  if(meshPoints?.length>2){
+    const matrix=playerObject.getMatrix(),gpuProjection=puzzleGPU?.active;
+    const contour=(pomReaching?meshPoints:meshPoints.slice(1)).map(point=>{
+      const world=matrix.transformPoint(point);
+      return screen(gpuProjection?puzzlePoint(world):world);
+    }).filter(Boolean);
+    if(contour.length>2){
+      canvas.save();canvas.globalCompositeOperation='destination-out';canvas.beginPath();canvas.moveTo(contour[0].x,contour[0].y);
+      for(const point of contour.slice(1))canvas.lineTo(point.x,point.y);
+      canvas.closePath();canvas.fill();canvas.lineWidth=1;canvas.lineJoin='round';canvas.stroke();canvas.restore();
+    }
+  }
+}
+function previewRoute(e){
+  clearRoutePreview();if(!controlFeatures.enabled('movementArrow')||busy||won||levelLoading)return;
+  const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
+  const stud=pickMovementMarker(ray);let target=stud??standableAt(ray,point);
+  if(!target){
+    const hits=puzzleRaycast(ray,[...blockObjects,...topPickObjects,...extrusionOutlines]);
+    if(hits.some(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o)))return;
+    const floor=pointOnFloor(ray);
+    if(floor){target=standableReachable().filter(p=>p.y===H).sort((a,b)=>{const pa=worldPosition(a),pb=worldPosition(b);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(target){const p=worldPosition(target);if(Math.hypot(p.x-floor.x,p.z-floor.z)>=1.15)target=null}}
+  }
+  if(!target)return;
+  const path=findPath(target);if(!path||path.length<2)return;
+  routePreview={pointer:e.pointerId,target,path,plans:path.slice(1).map((to,i)=>routeFor(path[i],to)),board:movementBoard(),start:nodeKey(player),stud:!!stud};drawRoutePreview();
+}
 function sceneryRay(e){const p=boardPoint(e);return render3D.screenToRay(vec2(p.x,p.y),vec2(wrap.clientWidth,wrap.clientHeight))}
 function boardDown(e){
   if(pieceDrag.active)return;
@@ -1355,10 +1638,11 @@ function boardDown(e){
       sceneryGesture={pointer:e.pointerId,hit,startX:item.x,startY:item.y,startZ:item.z};wrap.setPointerCapture(e.pointerId);resetStudyFollow();e.preventDefault();return;
     }
   }
-  const piece=viewportUI.pageZoomed?null:draggableFrontPiece(e);
+  const point=boardPoint(e),nearbyTop=nearbyMovementTarget(point,{topsOnly:true});
+  const piece=viewportUI.pageZoomed||nearbyTop?null:draggableFrontPiece(e);
   if(piece){selected=piece.piece;pieceDragAnchor=piece;updateUI();if(pieceDrag.beginFace(e))return}
   const p=boardPoint(e);boardPointers.set(e.pointerId,p);if(!viewportUI.pageZoomed)wrap.setPointerCapture(e.pointerId);
-  if(boardPointers.size===1)boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};else{boardGesture.multi=true;clearBoardHover()}
+  if(boardPointers.size===1){boardGesture={id:e.pointerId,x:p.x,y:p.y,moved:false,multi:false};previewRoute(e)}else{boardGesture.multi=true;clearRoutePreview();clearBoardHover()}
 }
 function boardMove(e){
   if(viewportUI.pageZoomed){
@@ -1367,7 +1651,7 @@ function boardMove(e){
     if(sceneryGesture?.pointer===e.pointerId||pieceDrag.active){boardUp(e,true);return}
     if(boardPointers.has(e.pointerId)){
       const p=boardPoint(e);boardPointers.set(e.pointerId,p);
-      if(boardGesture){boardGesture.moved||=Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6;boardGesture.multi||=boardPointers.size>1}
+      if(boardGesture){boardGesture.moved||=Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6;boardGesture.multi||=boardPointers.size>1;if(boardGesture.moved||boardGesture.multi)clearRoutePreview()}
     }
     return;
   }
@@ -1380,11 +1664,11 @@ function boardMove(e){
   if(!boardPointers.has(e.pointerId)){if(e.pointerType!=='touch')updateHover(e);return}
   const before=[...boardPointers.values()],old=boardPointers.get(e.pointerId),p=boardPoint(e);boardPointers.set(e.pointerId,p);
   if(boardPointers.size>=2){
-    boardGesture.multi=true;boardGesture.moved=true;const after=[...boardPointers.values()],a=before[0],b=before[1],c=after[0],d=after[1],oldDistance=Math.hypot(a.x-b.x,a.y-b.y),distance=Math.hypot(c.x-d.x,c.y-d.y),cx=(c.x+d.x)/2,cy=(c.y+d.y)/2;
+    boardGesture.multi=true;boardGesture.moved=true;clearRoutePreview();const after=[...boardPointers.values()],a=before[0],b=before[1],c=after[0],d=after[1],oldDistance=Math.hypot(a.x-b.x,a.y-b.y),distance=Math.hypot(c.x-d.x,c.y-d.y),cx=(c.x+d.x)/2,cy=(c.y+d.y)/2;
     panBoard(cx-(a.x+b.x)/2,cy-(a.y+b.y)/2);if(oldDistance>1)zoomBoard(viewUnit*distance/oldDistance,cx,cy);
   }else{
     if(Math.hypot(p.x-boardGesture.x,p.y-boardGesture.y)>6)boardGesture.moved=true;
-    if(!boardGesture.moved)return;panBoard(p.x-old.x,p.y-old.y);
+    if(!boardGesture.moved)return;clearRoutePreview();panBoard(p.x-old.x,p.y-old.y);
   }
   viewTouched=true;clearBoardHover();applyBoardView();resetStudyFollow();e.preventDefault();
 }
@@ -1395,7 +1679,10 @@ function boardUp(e,cancel=false){
   const tap=!cancel&&boardPointers.size===0&&boardGesture&&!boardGesture.moved&&!boardGesture.multi;
   if(wrap.hasPointerCapture(e.pointerId))wrap.releasePointerCapture(e.pointerId);
   if(boardPointers.size===0)boardGesture=null;
-  if(tap){viewTouched=true;clickBoard(e)}
+  const preview=routePreview;
+  if(tap&&preview&&preview.pointer===e.pointerId&&preview.board===movementBoard()&&preview.start===nodeKey(player)){
+    viewTouched=true;moveTo(preview.target,preview.stud,preview);preview.fadeAt=performance.now();routePreviewTimer=setTimeout(clearRoutePreview,350);
+  }else{clearRoutePreview();if(tap&&!preview){viewTouched=true;clickBoard(e)}}
 }
 function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function syncVictoryShowcase(now,sequence){
@@ -1460,7 +1747,7 @@ function syncPuzzleProjection(){
   if(gpu)puzzleMeshes.clear();else puzzleMeshes.begin(projection);
   const apply=object=>gpu?puzzleGPU.apply(object):puzzleMeshes.apply(object);
   for(const g of groups)for(const object of g.objects)apply(object);
-  for(const object of [...extrusionObjects,...extrusionOutlines,...(selectionLightbox?.renderObjects??[]),...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
+  for(const object of [...extrusionObjects,...extrusionOutlines,...topPickObjects,...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
   for(const object of [...pomParts,umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix())}
   if(!gpu)puzzleMeshes.end();
 }
@@ -1472,7 +1759,6 @@ function gameInit(){
   setCanvasClearColor(new Color(1,250/255,240/255));
   setDebugWatermark(false);puzzleGPU=createPuzzleGPUProjection({gl:glContext,cloneMesh:cloneProjectionMesh});new Render3DPlugin();puzzleGPU.attach(render3D);
   movementMarkers=createMovementMarkers();
-  selectionLightbox=createSelectionLightbox();
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);
   baseCameraHeight=fitCamera(bounds.width,bounds.height);render3D.camera.orthographic=baseCameraHeight;positionCameraForView(viewSide);
@@ -1489,6 +1775,7 @@ function gameInit(){
   hoverObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));hoverObject.transparent=true;hoverObject.render3D=()=>{};
   studioTargetObject=makeSurface(vec3(0,-100,0),standingSpotMesh(),new Color(1,1,1,0));studioTargetObject.transparent=true;studioTargetObject.render3D=()=>{};
   playerObject=new EngineObject3D(vec3(.5,.2,.14),pomBlob,undefined,inkColor);playerObject.scale3D=vec3(.72,.56,.018);playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.lighting=false;playerObject.softShadow=0;pomParts=[playerObject];
+  pomLight=new Light3D(vec3(),2,new Color(1,.88,.68),1);
   pomBody=new EngineObject3D(vec3(0,0,1),pomBlob,undefined,new Color(.97,.22,.16));pomBody.scale3D=vec3(.88,.88,1);pomBody.lighting=false;playerObject.addChild(pomBody);pomParts.push(pomBody);
   for(const x of [-.17,.17]){const white=new EngineObject3D(vec3(x,.19,2),pomEye,undefined,new Color(1,.95,.83)),black=new EngineObject3D(vec3(x,.19,2.2),pomEye,undefined,new Color(.12,.1,.09));white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1);white.lighting=false;black.lighting=false;playerObject.addChild(white);playerObject.addChild(black);pomEyes.push({white,black});pomParts.push(white,black)}
   const sweatContour=[...quadraticSegment([0,.6],[-.65,-.05],[-.35,-.3],10),...quadraticSegment([-.35,-.3],[0,-.7],[.35,-.3],10).slice(1),...quadraticSegment([.35,-.3],[.65,-.05],[0,.6],10).slice(1)],sweatMesh=makeFanMesh(sweatContour);
@@ -1510,31 +1797,54 @@ function gameInit(){
 }
 function gameUpdate(){
   introTick?.(timeReal*1000);
-  syncCellGeometry();syncPomMatrix();updateStudyFollow();updateStudyVisibility();
+  syncCellGeometry();syncPomMatrix();if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;
   updateSelectionLightbox();
   syncPuzzleProjection();
+  if(routePreview){
+    if(routePreview.fadeAt)drawRoutePreview();
+    else if(routePreview.board!==movementBoard()||routePreview.start!==nodeKey(player))clearRoutePreview();else drawRoutePreview();
+  }
 }
-function moveTo(p,pressMarker=false){
-  if(levelLoading||won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
-  const plans=path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
+function moveTo(p,pressMarker=false,preview=null){
+  if(levelLoading||won||busy||introPlaying||nodeKey(p)===nodeKey(player))return;const path=preview?.path??findPath(p);if(!path||path.length<2){showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');return}
+  const plans=preview?.plans??path.slice(1).map((to,i)=>routeFor(path[i],to)),profiles=movementProfiles(plans);
   const winningArrival=!isPreviewLevel(activeLevel)&&nodeKey(path.at(-1))===nodeKey(goalNode());
-  hideHelp();save();resumeStudyFollow();busy=true;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
-  const readyAt=performance.now()+(pressMarker?(movementMarkers?.press(p)??0):0);
+  const pressDestination=pressMarker||(movementMarkersEnabled()&&p.y<H);
+  movementMarkerRoute=pressDestination?path.slice(1):null;movementMarkerRouteTargets=pressDestination?standableReachable().filter(node=>node.y<H):null;movementMarkerRouteIndex=0;
+  hideHelp();save();resumeStudyFollow();busy=true;effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
+  const readyAt=performance.now()+(pressDestination?(movementMarkers?.press(p)??0):0);
   function tick(now){
     if(now<readyAt){requestAnimationFrame(tick);return}
     start??=now;
     // Carry elapsed time across cell boundaries instead of inserting a fresh
     // animation frame and a full stop at the beginning of every next step.
-    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};resetPomShape();if(index<plans.length||!winningArrival)saveUnfinished()}
+    const previousIndex=index;
+    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};if(movementMarkerRoute)movementMarkerRouteIndex=index;resetPomShape();playerObject.scale3D=vec3(.72,.56,.018);for(const {white,black} of pomEyes){white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1)}for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}if(index<plans.length||!winningArrival)saveUnfinished()}
+    if(index!==previousIndex&&movementMarkerRoute)syncMovementMarkers();
     if(index===plans.length){
-      falling=false;setUmbrellaVisible(false);busy=false;
+      falling=false;setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
       if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();document.querySelector('.stage').classList.add('is-won');startCelebration()}else autoSelectNearbyPiece();updateUI();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
-    const motion={pose:plan.stretch?shapePomReach(from,to,t,profile):jumpPose(from,to,t,profile),umbrella:plan.isFall&&t>.08&&t<.96,flight:t};
+    const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;
+    const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
+    const progress=plan.isJump?(t<.14?plan.takeoff*smooth(t/.14):t<.38?plan.takeoff:t<.82?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.82)/.18)):0;
+    const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;
+    const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
+    if(plan.isJump&&!reducedSelectionMotion.matches){
+      const windup=t<.38?smooth((t-.12)/.16):Math.max(0,1-flight/.12);
+      const launch=flight>0&&flight<.22?Math.sin(Math.PI*flight/.22):0;
+      const landing=t>=.82?Math.sin(Math.PI*(t-.82)/.18):0;
+      const squash=.16*windup+.14*landing-.13*launch;
+      playerObject.scale3D=vec3(.72*(1+squash),.56*(1-squash),.018);
+      motion.pose=motion.pose.add(vec3(0,stretchY(-.2*squash),0));
+      const effort=Math.min(1,windup+Math.sin(Math.PI*flight)*.8);
+      for(const {white,black} of pomEyes){white.scale3D=vec3(.2,.26*(1-.65*effort),1);black.scale3D=vec3(.085,.13*(1-.65*effort),1)}
+      for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(t-.18-i*.08)/.55)),alpha=Math.sin(Math.PI*q)*.9;drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.2-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
+    }
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     if(winningArrival&&index===plans.length-1){const offset=victoryArrival(t,reducedSelectionMotion.matches);motion.pose=motion.pose.add(vec3(offset.x,stretchY(offset.y),0))}
     playerObject.pos3D=motion.pose.add(render3D.camera.getForward().scale(-.045));if(falling)positionUmbrella(motion.flight);
@@ -1545,7 +1855,7 @@ function moveTo(p,pressMarker=false){
 }
 function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return ray.getPosition(t)}
 function nearbyMovementTarget(point,{topsOnly=false,floorsOnly=false}={}){
-  const size=vec2(wrap.clientWidth,wrap.clientHeight),objects=[...blockObjects,...extrusionObjects,...extrusionOutlines];
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),objects=[...blockObjects,...topPickObjects,...extrusionOutlines];
   const margin=floorsOnly?18:12;
   const candidates=standableReachable().filter(node=>(!topsOnly||node.y<H)&&(!floorsOnly||node.y===H)).map(node=>{
     const floor=node.y===H,y=floor?0:H-node.y;
@@ -1566,7 +1876,7 @@ function nearbyMovementTarget(point,{topsOnly=false,floorsOnly=false}={}){
 function standableAt(ray,point){
   const nearbyTop=nearbyMovementTarget(point,{topsOnly:true});if(nearbyTop)return nearbyTop;
   if(puzzleProjectionState().enabled){
-    const hit=puzzleRaycast(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines])[0];
+    const hit=puzzleRaycast(ray,[...blockObjects,...topPickObjects,...extrusionOutlines])[0];
     if(hit){const top=topObjectInfo.get(hit);return top?reachableTop(top):null}
   }else{
     const logical=boardRay(ray);let best=null,bestD=Infinity;
@@ -1580,7 +1890,7 @@ function standableAt(ray,point){
   const floor=pointOnFloor(ray);if(floor){const p=standableReachable().filter(n=>n.y===H).sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<.9)return p}}
   return null;
 }
-function updateHover(e){if(!hoverObject)return;if(introPlaying){clearBoardHover();return}const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight)),p=standableAt(ray,point);hovered=p;movementMarkers?.setHovered(!busy&&!won?(pickMovementMarker(ray)??(movementMarkersEnabled()&&p?.y<H?p:null)):null);if(!p||(movementMarkersEnabled()&&p.y<H)){hoverObject.color=new Color(1,1,1,0);return}hoverObject.pos3D=standingSpotCenter(p);hoverObject.color=new Color(1,1,1,.33)}
+function updateHover(e){if(!hoverObject)return;if(introPlaying){clearBoardHover();return}const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight)),p=standableAt(ray,point);hovered=p;if(!p||(movementMarkersEnabled()&&p.y<H)){hoverObject.color=new Color(1,1,1,0);return}hoverObject.pos3D=standingSpotCenter(p);hoverObject.color=new Color(1,1,1,.33)}
 function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
   const stud=pickMovementMarker(ray);if(stud){moveTo(stud,true);return}
   // A reachable top wins over the front or side of a piece within the touch margin.
@@ -1590,7 +1900,7 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
   if(!puzzleProjectionState().enabled){
   const logicalRay=boardRay(ray);let best=null,bestD=Infinity;for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+depthSkew()*(p.z+.5);if(Math.abs(logicalRay.direction.y)<1e-6)continue;const t=(h-logicalRay.origin.y)/logicalRay.direction.y;if(t<0)continue;const q=logicalRay.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best){moveTo(best);return}
   }
-  const hits=puzzleRaycast(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines]),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(walkabilityFacesEnabled()?top:reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){hideHelp();selected=g;updateUI()}else showHelp('Pom cannot push or pull this piece from here. Move him beside an exposed edge.','wall');return}}
+  const hits=puzzleRaycast(ray,[...blockObjects,...topPickObjects,...extrusionOutlines]),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(walkabilityFacesEnabled()?top:reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){hideHelp();selected=g;updateUI()}else showHelp('Pom cannot push or pull this piece from here. Move him beside an exposed edge.','wall');return}}
   const nearby=nearbyMovementTarget(point,{floorsOnly:true});if(nearby){selected=null;updateUI();moveTo(nearby);return}
   // Match a visible point on the floor plane to the nearest reachable step.
   const floor=pointOnFloor(ray);if(floor){selected=null;updateUI();const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15){moveTo(p);return}}
@@ -1599,7 +1909,7 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
   }
 }
 function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;autoSelectNearbyPiece();animateEffort();saveUnfinished();updateUI()}
-function restore(s){hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();saveUnfinished();applyBoardView();updateUI()}
+function restore(s){movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();saveUnfinished();applyBoardView();updateUI()}
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
 const safariZoom=installSafariZoom(wrap,{
   enabled:()=>!viewportUI.pageZoomed&&!levelLoading&&!won&&viewReady&&!pieceDrag.active&&boardPointers.size<2&&document.querySelector('#menuScreen').hidden,

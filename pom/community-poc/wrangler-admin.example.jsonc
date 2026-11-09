@@ -1,0 +1,9 @@
+{
+  "name": "little-ledges-poc-review",
+  "main": "admin-worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {"ADMIN_ORIGIN": "https://santiesteban.github.io", "ADMIN_GITHUB_ID": "1551027", "GITHUB_CLIENT_ID": "Ov23liNhFsRZ7UTOU6wO", "ADMIN_PAGE_URL": "https://santiesteban.github.io/little-ledges-community-poc/community-admin.html", "OAUTH_CALLBACK_URL": "https://little-ledges-poc-review.community-poc.workers.dev/auth/callback"},
+  "d1_databases": [{"binding": "DB", "database_name": "little-ledges-submissions-poc", "database_id": "4e515f08-ced5-4a7e-a8ea-050dc9440726"}]
+}

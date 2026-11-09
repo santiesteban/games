@@ -23,3 +23,10 @@ export function puzzleThumbnail(level){
   if(level.goal){const {x,y}=level.goal,flag=document.createElementNS(SVG_NS,'path');flag.setAttribute('d',`M${x+.35} ${y+.83}V${y+.15}l.5 .18-.5 .17`);flag.setAttribute('fill','#f65d17');flag.setAttribute('stroke','#292537');flag.setAttribute('stroke-width','.06');flag.setAttribute('stroke-linejoin','round');svg.append(flag)}
   return svg;
 }
+
+export function userPuzzleThumbnail(level){
+  const svg=puzzleThumbnail(level);let left=Infinity,right=-1,top=Infinity,bottom=-1;
+  level.grid.forEach((row,y)=>[...row].forEach((slot,x)=>{if(slot!=='.'){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}));
+  if(right>=left&&bottom>=top)svg.setAttribute('viewBox',`${left-.5} ${top-.5} ${right-left+2} ${bottom-top+2}`);
+  return svg;
+}

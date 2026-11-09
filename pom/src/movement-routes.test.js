@@ -95,3 +95,25 @@ test('the right edge floor column is reachable without adding platforms outside 
   assert.deepEqual(board.nodesAt(board.width+1,board.height),[]);
   assert.deepEqual(board.nodesAt(-2,board.height),[]);
 });
+
+test('jump across a gap requires an immediate takeoff and a clear flight',()=>{
+  const board=createMovementBoard(['RR.R'],[1,1]);
+  const nodesAt=board.nodesAt;board.nodesAt=(x,y)=>y===board.height?[]:nodesAt(x,y);
+  const edge={x:1,y:0,z:0},landing={x:3,y:0,z:0},far={x:0,y:0,z:0};
+  const jump=planMovement(board,edge,landing);
+  assert(jump?.isJump);
+  assert.deepEqual(findMovementPath(board,edge,landing),[edge,landing]);
+  assert.equal(findMovementPath(board,far,landing),null);
+  for(let i=1;i<jump.points.length;i++)assert(movementSegmentClear(board,jump.points[i-1],jump.points[i]));
+});
+
+test('jump distance and direction depend on landing height',()=>{
+  const from={x:4,y:5,z:4};
+  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+    for(const [drop,span,allowed] of [[0,2,true],[-1,2,!(dx&&dz)],[1,3,true],[0,3,false],[-2,2,false]]){
+      const to={x:from.x+dx*span,y:from.y+drop,z:from.z+dz*span};
+      const board={height:10,blocks:[],validNode:p=>[from,to].some(n=>n.x===p.x&&n.y===p.y&&n.z===p.z)};
+      assert.equal(Boolean(planMovement(board,from,to)),allowed,`direction ${dx},${dz}, height ${drop}, distance ${span}`);
+    }
+  }
+});

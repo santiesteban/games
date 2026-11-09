@@ -42,6 +42,7 @@ export function startMenu(){
     for(const feature of CONTROL_FEATURES){const input=document.querySelector(`#${feature.id}`);if(input)input.checked=features.enabled(feature.id)}
     document.querySelector('#pieceHighlight').value=features.enabled('selectionLightbox')?'lightbox':'original';
     document.querySelector('#topFaceAppearance').value=features.topFaceStyle;
+    document.querySelector('#movementMarkerShape').value=features.movementMarkerShape;
   }
   function preferenceMessage(id,saved){document.querySelector(id).textContent=saved?'':'This setting applies now, but could not be saved in this browser.'}
   runtime.open=()=>show('levels');
@@ -62,6 +63,7 @@ export function startMenu(){
   for(const feature of CONTROL_FEATURES){const toggle=document.querySelector(`#${feature.id}`);if(!toggle)continue;toggle.addEventListener('change',()=>{const saved=features.set(feature.id,toggle.checked);if(toggle.checked&&['stackedPieceButtons','pieceDragArrows'].includes(feature.id))features.set(feature.id==='stackedPieceButtons'?'pieceDragArrows':'stackedPieceButtons',false);syncFeatures();preferenceMessage('#controlFeatureMessage',saved)},options)}
   document.querySelector('#pieceHighlight').addEventListener('change',event=>preferenceMessage('#pieceHighlightMessage',features.set('selectionLightbox',event.target.value==='lightbox')),options);
   document.querySelector('#topFaceAppearance').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setTopFaceStyle(event.target.value));syncFeatures()},options);
+  document.querySelector('#movementMarkerShape').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setMovementMarkerShape(event.target.value));syncFeatures()},options);
   for(const name of ['hideKnownIssues','hideHelpText']){const toggle=document.querySelector(`#${name}`);toggle.checked=preferences[name];toggle.addEventListener('change',()=>{preferenceMessage('#preferenceMessage',preferences.set(name,toggle.checked));runtime.change()},options)}
   document.querySelector('#clearProgress').addEventListener('click',()=>{document.querySelector('#clearProgress').hidden=true;document.querySelector('#clearProgressConfirm').hidden=false;document.querySelector('#cancelClearProgress').focus()},options);
   document.querySelector('#cancelClearProgress').addEventListener('click',()=>{document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#clearProgress').focus()},options);

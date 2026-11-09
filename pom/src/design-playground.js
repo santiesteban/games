@@ -120,11 +120,8 @@ export function createDesignPlayground(panel,onChange,onApply){
     toggle(selection,'Show selection outlines',values.selection.enabled,n=>values.selection.enabled=n,DEFAULT_DESIGN.selection.enabled);
     color(selection,'Selection line color',values.selection.color,n=>values.selection.color=n,DEFAULT_DESIGN.selection.color);
     choice(selection,'Selection line style',values.selection.style,[['dashed','Dashed'],['solid','Solid']],n=>values.selection.style=n,DEFAULT_DESIGN.selection.style);
-    const studs=section(body,'Stud outlines');
-    toggle(studs,'Show platform studs',values.studs.enabled,n=>values.studs.enabled=n,DEFAULT_DESIGN.studs.enabled);
-    range(studs,'Stud line thickness',values.studs.width,0,6,.1,n=>values.studs.width=n,n=>`${n}px`,DEFAULT_DESIGN.studs.width);
-    color(studs,'Stud line color',values.studs.color,n=>values.studs.color=n,DEFAULT_DESIGN.studs.color);
-    range(studs,'Stud line opacity',values.studs.opacity*100,0,100,1,n=>values.studs.opacity=n/100,n=>`${n}%`,DEFAULT_DESIGN.studs.opacity*100);
+    const studs=section(body,'Reachable platform circles');
+    toggle(studs,'Show reachable circles',values.studs.enabled,n=>values.studs.enabled=n,DEFAULT_DESIGN.studs.enabled);
     const floor=section(body,'Floor grid');
     const floorCopy=document.createElement('p');floorCopy.className='design-copy';floorCopy.textContent='Grid squares mark reachable floor; diagonals mark the rest. Fill and foreground wash start transparent. Line width is measured in screen pixels.';floor.append(floorCopy);
     toggle(floor,'Customize floor grid',values.floorGrid.enabled,n=>values.floorGrid.enabled=n,DEFAULT_DESIGN.floorGrid.enabled);

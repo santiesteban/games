@@ -11,8 +11,8 @@ function axes(yaw,pitch){
 }
 // Rotate the frame around Pom while preserving his camera-space position and
 // scale. This also works when he is deliberately off-center after a pan.
-export function visibilityCameraPose({position,focus,distance,yaw,currentPitch,pitch}){
-  const before=axes(yaw,currentPitch),after=axes(yaw,pitch),relative=sub(position,focus);
+export function visibilityCameraPose({position,focus,distance,yaw,currentYaw=yaw,currentPitch,pitch}){
+  const before=axes(currentYaw,currentPitch),after=axes(yaw,pitch),relative=sub(position,focus);
   const offset=add(add(mul(after.right,dot(relative,before.right)),mul(after.up,dot(relative,before.up))),mul(after.back,dot(relative,before.back)));
   const target=sub(position,offset);
   return {...after,focus:target,eye:add(target,mul(after.back,distance))};

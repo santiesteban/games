@@ -76,9 +76,9 @@
           </svg>
         </div>
         <div class="camera-controls__zoom">
-          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6m-3-3v6"/></svg>
+          <button type="button" class="camera-controls__zoom-button" data-zoom-step="1" aria-label="Zoom in" title="Zoom in"><svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6m-3-3v6"/></svg></button>
           <input type="range" data-camera-control="zoom" aria-label="Zoom" title="Zoom" min="0" max="100" step="1" orient="vertical">
-          <svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6"/></svg>
+          <button type="button" class="camera-controls__zoom-button" data-zoom-step="-1" aria-label="Zoom out" title="Zoom out"><svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6"/></svg></button>
         </div>
       </div>
     </div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
@@ -220,6 +220,13 @@
         <h2 id="gameplay-title">Gameplay</h2>
         <div class="setting">
           <div class="setting__copy">
+            <label class="setting__label" for="movementArrow">Show movement arrow</label>
+            <p class="setting__description" id="movementArrow-description">Show the route arrow while choosing where Pom should move.</p>
+          </div>
+          <input class="switch" id="movementArrow" type="checkbox" role="switch" aria-describedby="movementArrow-description">
+        </div>
+        <div class="setting">
+          <div class="setting__copy">
             <label class="setting__label" for="hideHelpText">Hide help text</label>
             <p class="setting__description" id="hideHelpText-description">Hide the hint banner above the puzzle.</p>
           </div>
@@ -228,7 +235,7 @@
         <div class="setting setting--select">
           <div class="setting__copy">
             <label class="setting__label" for="pieceHighlight">Piece highlight</label>
-            <p class="setting__description" id="pieceHighlight-description">Choose a pulsing inner light or the classic outline and tint.</p>
+            <p class="setting__description" id="pieceHighlight-description">Choose a pulsing color or the classic outline and tint.</p>
           </div>
           <select id="pieceHighlight" aria-describedby="pieceHighlight-description">
             <option value="lightbox">Pulsing light box</option>
@@ -264,10 +271,21 @@
         </div>
         <div class="setting">
           <div class="setting__copy">
-            <label class="setting__label" for="movementStuds">Reachable platform studs</label>
-            <p class="setting__description" id="movementStuds-description">Show small raised bumps on platforms Pom can reach. Tap a bump to press it down and move there.</p>
+            <label class="setting__label" for="movementStuds">Reachable platform markers</label>
+            <p class="setting__description" id="movementStuds-description">Show small markers on platforms Pom can reach. Tap a marker to move there.</p>
           </div>
           <input class="switch" id="movementStuds" type="checkbox" role="switch" aria-describedby="movementStuds-description">
+        </div>
+        <div class="setting setting--select">
+          <div class="setting__copy">
+            <label class="setting__label" for="movementMarkerShape">Platform marker shape</label>
+            <p class="setting__description" id="movementMarkerShape-description">Choose the shape of reachable platform markers.</p>
+          </div>
+          <select id="movementMarkerShape" aria-describedby="movementMarkerShape-description">
+            <option value="diamond">Diamond</option>
+            <option value="square">Square</option>
+            <option value="circle">Circle</option>
+          </select>
         </div>
         <div class="setting">
           <div class="setting__copy">
@@ -279,12 +297,14 @@
         <div class="setting setting--select">
           <div class="setting__copy">
             <label class="setting__label" for="topFaceAppearance">Top-face appearance</label>
-            <p class="setting__description" id="topFaceAppearance-description">Choose checkerboard, pull-distance colors, or a grid with diagonal lines on platforms Pom cannot reach.</p>
+            <p class="setting__description" id="topFaceAppearance-description">Choose flat color, checkerboard, pull-distance colors, a walkability grid, or diamond shapes that grow with each pull.</p>
           </div>
           <select id="topFaceAppearance" aria-describedby="topFaceAppearance-description">
+            <option value="flat">Flat</option>
             <option value="pull-depth">Pull-distance colors</option>
             <option value="checkerboard">Checkerboard</option>
             <option value="walkability">Grid with diagonal lines</option>
+            <option value="diamond-shapes">Diamond shapes</option>
           </select>
         </div>
         <div class="setting">
