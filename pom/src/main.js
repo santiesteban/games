@@ -35,7 +35,7 @@ import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
-import { createVictoryEffects, victoryArrival, victoryCenter, victoryFrameUnit } from './victory-effects.js';
+import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryFrameUnit } from './victory-effects.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
@@ -1686,12 +1686,7 @@ function boardUp(e,cancel=false){
 }
 function ease(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function expandVictoryBoard(rect,progress){
-  const mix=(start,end)=>`${start+(end-start)*progress}px`;
-  wrap.style.setProperty('--victory-board-left',mix(rect.left,-2));
-  wrap.style.setProperty('--victory-board-top',mix(rect.top,-2));
-  wrap.style.setProperty('--victory-board-width',mix(rect.width,window.innerWidth+4));
-  wrap.style.setProperty('--victory-board-height',mix(rect.height,window.innerHeight+4));
-  wrap.style.setProperty('--victory-board-radius',mix(rect.radius,0));
+  wrap.style.clipPath=progress>=1?'':victoryBoardClip(wrap.getBoundingClientRect(),rect,progress);
 }
 function keepVictoryPomVisible(width,height,yaw,pitch){
   const size=vec2(width,height),pom=playerObject.pos3D,point=render3D.worldToScreen(pom,size);
@@ -1746,9 +1741,14 @@ function syncVictoryShowcase(now,sequence){
 }
 function startCelebration(){
   hideHelp();stopIntro();selected=null;clearBoardHover();
-  const rect=wrap.getBoundingClientRect(),boardRect={left:rect.left,top:rect.top,width:rect.width,height:rect.height,radius:parseFloat(getComputedStyle(wrap).borderTopLeftRadius)||0};
-  const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,yaw:cameraYaw(),baseHeight:viewSpan(),baseTarget:(cameraFocus??viewTarget).copy(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches,boardRect};
-  setUmbrellaVisible(false);victoryEffects.start(activeLevel.name);expandVictoryBoard(boardRect,0);document.querySelector('.stage').classList.add('is-won');requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
+  const rect=wrap.getBoundingClientRect(),boardRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height,radius:parseFloat(getComputedStyle(wrap).borderTopLeftRadius)||0};
+  const height=viewSpan(),target=(cameraFocus??viewTarget).copy(),right=render3D.camera.getRight(),up=render3D.camera.getUp();
+  const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,yaw:cameraYaw(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches,boardRect};
+  setUmbrellaVisible(false);victoryEffects.start(activeLevel.name);document.querySelector('.stage').classList.add('is-won');
+  const expanded=wrap.getBoundingClientRect(),worldPerPixel=height/Math.max(1,rect.height);
+  sequence.baseHeight=height*expanded.height/Math.max(1,rect.height);
+  sequence.baseTarget=target.add(right.scale((expanded.left+expanded.width/2-rect.left-rect.width/2)*worldPerPixel)).add(up.scale((rect.top+rect.height/2-expanded.top-expanded.height/2)*worldPerPixel));
+  expandVictoryBoard(boardRect,0);requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
 function cloneProjectionMesh(source){
   const mesh=new Mesh().combine(source);mesh.doubleSided=source.doubleSided;mesh.dynamicDraw=true;return mesh;

@@ -390,6 +390,8 @@ html[data-screen="home"] #menuScreen{display:block;padding:0;overflow-x:hidden;o
 
 
 .level-loading{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#fffaf0;text-align:center}
+.stage.screen--level .level-loading__star{display:block;width:122px;height:122px;flex:none;fill:#cdebd8;stroke:#111;stroke-width:3;stroke-linejoin:round}
+.level-loading:has(#retryLevelAssets:not([hidden])) .level-loading__star{display:none}
 .level-loading[hidden]{display:none}.level-loading p{margin:0;font-size:18px;font-weight:600;line-height:1.5;max-width:30em}
 .stage.is-level-loading .canvas-wrap{background:#fffaf0}.stage.is-level-loading .canvas-wrap::before,.stage.is-level-loading .canvas-wrap::after{display:none}
 .stage.is-level-loading .canvas-wrap canvas,.stage.is-level-loading .canvas-actions,.stage.is-level-loading .toast,.stage.is-level-loading .studio-controls{visibility:hidden;pointer-events:none}

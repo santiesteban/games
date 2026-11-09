@@ -11,4 +11,5 @@ try{
   const back=document.createElement('a');back.className='btn';back.href=deploymentUrls().creator;back.textContent='Back to Puzzle Creator';panel.append(text,back);document.body.replaceChildren(panel);
   throw error;
 }
+void import('./loading-star.js').then(({initLoadingStar})=>initLoadingStar()).catch(()=>{});
 await import('./main.js');

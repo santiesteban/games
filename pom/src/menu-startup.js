@@ -52,6 +52,7 @@ export function startMenu(){
     menu.hidden=true;document.querySelector('.stage').inert=false;
     document.querySelector('#levelLoading').hidden=false;
     document.querySelector('#levelLoadingMessage').textContent='Loading puzzle…';
+    void import('./loading-star.js').then(({initLoadingStar})=>initLoadingStar()).catch(()=>{});
     try{const game=await import('./main.js');await game.openMenuLevel(level)}
     catch(error){console.error('Unable to load game',error);document.querySelector('#levelLoadingMessage').textContent='The game could not start. Please reload and try again.'}
   };

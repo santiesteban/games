@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {victoryArrival,victoryFrameUnit} from './victory-effects.js';
+import {victoryArrival,victoryBoardClip,victoryFrameUnit} from './victory-effects.js';
 import {nodePose} from '../shared/movement-routes.js';
 
 test('victory arrival stays over the goal support, including Peach’s single-square summit',()=>{
@@ -31,4 +31,11 @@ test('celebration framing keeps Pom small on short levels and fits large puzzles
     assert.ok(large*(15+.8)<=width-32+1e-9);
     assert.ok(large*(12+1.15)<=height-48+1e-9);
   }
+});
+test('victory expansion reveals the full canvas without resizing it',()=>{
+  const board={left:-2,top:-2,right:392,bottom:846};
+  const original={left:15,top:100,right:375,bottom:700,radius:10};
+  assert.equal(victoryBoardClip(board,original,0),'inset(102px 17px 146px 17px round 10px)');
+  assert.equal(victoryBoardClip(board,original,.5),'inset(51px 8.5px 73px 8.5px round 5px)');
+  assert.equal(victoryBoardClip(board,original,1),'inset(0px 0px 0px 0px round 0px)');
 });

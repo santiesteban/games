@@ -17,6 +17,16 @@ export function victoryFrameUnit(width,height,visualWidth,visualHeight){
   return Math.max(1,Math.min((width-32)/(visualWidth+.8),(height-48)/(visualHeight+1.15),starSize*.32/.72));
 }
 
+// The full-sized canvas stays allocated while its visible area expands.
+export function victoryBoardClip(board,original,progress){
+  const remaining=1-Math.max(0,Math.min(1,progress));
+  const top=Math.max(0,original.top-board.top)*remaining;
+  const right=Math.max(0,board.right-original.right)*remaining;
+  const bottom=Math.max(0,board.bottom-original.bottom)*remaining;
+  const left=Math.max(0,original.left-board.left)*remaining;
+  return `inset(${top}px ${right}px ${bottom}px ${left}px round ${original.radius*remaining}px)`;
+}
+
 // Celebrate over the goal's supporting square. The collected flag is hidden
 // on completion, so no sideways displacement is needed to make room for it.
 export function victoryArrival(t,reducedMotion=false){
