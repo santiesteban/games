@@ -4,7 +4,7 @@ import {limitStagePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
   timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Light3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
-  Color, render3D, glContext, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
+  Color, render3D, glContext, engineAddPlugin, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
   setInputPreventDefault, inputClear,
 } from 'littlejsengine';
 import catalog from '#level-catalog';
@@ -35,7 +35,8 @@ import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
-import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryFrameUnit } from './victory-effects.js';
+import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryExpandedFov, victoryFrameUnit } from './victory-effects.js';
+import {createVictoryLiveMask} from './victory-live-mask.js';
 import {setLoadingPalette} from './loading-palette.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
@@ -1218,11 +1219,11 @@ function sceneFrame(width,height,side=viewSide){
   return {height:height/unit,target:vec3((minX+maxX)/2,(targetY+s)/c,1),minX,maxX,minY,maxY,top,bottom,margin};
 }
 function fitCamera(width,height){return sceneFrame(width,height).height}
-function configureStudyCamera(span,target,yaw,pitch){
+function configureStudyCamera(span,target,yaw,pitch,fov=cameraState.fov){
   cameraFrameHeight=span;cameraFocus=target.copy();
   const camera=render3D.camera,perspective=studyPerspective();
   camera.orthographic=perspective?0:span;
-  if(perspective)camera.fov=cameraState.fov*Math.PI/180;
+  if(perspective)camera.fov=fov*Math.PI/180;
   const distance=perspective?Math.max(2,span/(2*Math.tan(camera.fov/2))):15;
   camera.orbit(target,distance,yaw,pitch);
 }
@@ -1691,7 +1692,7 @@ function expandVictoryBoard(rect,progress){
   wrap.style.clipPath=progress>=1?'':victoryBoardClip(expanded,rect,progress);
   victoryEffects.setExpansionOutline(rect,expanded,progress);
 }
-function keepVictoryPomVisible(width,height,yaw,pitch){
+function keepVictoryPomVisible(width,height,yaw,pitch,fov){
   const size=vec2(width,height),pom=playerObject.pos3D,point=render3D.worldToScreen(pom,size);
   if(!point)return;
   const edge=render3D.worldToScreen(pom.add(render3D.camera.getRight().scale(.5)),size);
@@ -1701,7 +1702,7 @@ function keepVictoryPomVisible(width,height,yaw,pitch){
   const ray=render3D.screenToRay(vec2(x,y),size),forward=render3D.camera.getForward(),denominator=ray.direction.dot(forward);
   if(Math.abs(denominator)<1e-6)return;
   const distance=pom.subtract(ray.origin).dot(forward)/denominator;
-  configureStudyCamera(viewSpan(),cameraFocus.add(pom.subtract(ray.getPosition(distance))),yaw,pitch);
+  configureStudyCamera(viewSpan(),cameraFocus.add(pom.subtract(ray.getPosition(distance))),yaw,pitch,fov);
   render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
 }
 function syncVictoryShowcase(now,sequence){
@@ -1716,11 +1717,12 @@ function syncVictoryShowcase(now,sequence){
   const visual=puzzleVisualBounds(),unit=victoryFrameUnit(width,height,visual.right-visual.left,visual.height);
   // This is the camera endpoint at zero pitch, where yStretch is exactly 1.
   const finalHeight=height/unit,target=vec3((visual.left+visual.right)/2+extrusion(1.5).x,(visual.height+.85)/2+(top-bottom)/(2*unit),1.5);
-  configureStudyCamera(sequence.baseHeight+(finalHeight-sequence.baseHeight)*turn,sequence.baseTarget.lerp(target,turn),yaw,pitch);
-  // Four hops, then settle on the goal square before the star closes.
-  sequence.jump=!sequence.reducedMotion&&elapsed<2320?.32*Math.sin(Math.PI*(elapsed%580)/580):0;
+  const fov=sequence.baseFov+(cameraState.fov-sequence.baseFov)*turn;
+  configureStudyCamera(sequence.baseHeight+(finalHeight-sequence.baseHeight)*turn,sequence.baseTarget.lerp(target,turn),yaw,pitch,fov);
+  // Keep Pom celebrating through the camera move and the rotating star.
+  sequence.jump=!sequence.reducedMotion?.32*Math.sin(Math.PI*(elapsed%580)/580):0;
   render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
-  keepVictoryPomVisible(width,height,yaw,pitch);
+  keepVictoryPomVisible(width,height,yaw,pitch,fov);
   const fade=ease((elapsed-250)/2000),strength=currentDesign().shadows.strength*(1-fade);
   render3D.sunColor=new Color(strength,strength,strength);
   wrap.dataset.view='completed';wrap.dataset.cameraPitch=pitch.toFixed(2);
@@ -1732,6 +1734,7 @@ function syncVictoryShowcase(now,sequence){
     const offset=playerObject.pos3D.subtract(ray.getPosition(distance)),baseTarget=cameraFocus.copy(),span=viewSpan();
     const recenter=progress=>{
       if(celebration!==sequence)return;
+      if(!sequence.reducedMotion)sequence.jump=.32*Math.sin(Math.PI*((performance.now()-sequence.start)%580)/580);
       configureStudyCamera(span,baseTarget.add(offset.scale(progress)),yaw,pitch);
       render3D.updateMatrices(width/height);syncCellGeometry();syncBackground();syncFloorGrid();syncPlayer();syncPuzzleProjection();
     };
@@ -1745,11 +1748,13 @@ function syncVictoryShowcase(now,sequence){
 function startCelebration(){
   hideHelp();stopIntro();selected=null;clearBoardHover();
   const rect=wrap.getBoundingClientRect(),boardRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height,radius:parseFloat(getComputedStyle(wrap).borderTopLeftRadius)||0};
-  const height=viewSpan(),target=(cameraFocus??viewTarget).copy(),right=render3D.camera.getRight(),up=render3D.camera.getUp();
+  const height=viewSpan(),originalHeight=wrap.clientHeight,target=(cameraFocus??viewTarget).copy(),right=render3D.camera.getRight(),up=render3D.camera.getUp();
   const sequence=celebration={start:performance.now(),levelId:activeLevel.id,pitch:viewPitch,yaw:cameraYaw(),reducedMotion:matchMedia('(prefers-reduced-motion:reduce)').matches,boardRect};
   setUmbrellaVisible(false);victoryEffects.start(activeLevel.name);document.querySelector('.stage').classList.add('is-won');
-  const expanded=wrap.getBoundingClientRect(),worldPerPixel=height/Math.max(1,rect.height);
-  sequence.baseHeight=height*expanded.height/Math.max(1,rect.height);
+  const expanded=wrap.getBoundingClientRect(),expandedHeight=wrap.clientHeight,ratio=expandedHeight/Math.max(1,originalHeight),worldPerPixel=height/Math.max(1,originalHeight);
+  setCanvasFixedSize(vec2(Math.max(1,wrap.clientWidth),Math.max(1,expandedHeight)));
+  sequence.baseHeight=height*ratio;
+  sequence.baseFov=studyPerspective()?victoryExpandedFov(cameraState.fov,ratio):cameraState.fov;
   sequence.baseTarget=target.add(right.scale((expanded.left+expanded.width/2-rect.left-rect.width/2)*worldPerPixel)).add(up.scale((rect.top+rect.height/2-expanded.top-expanded.height/2)*worldPerPixel));
   expandVictoryBoard(boardRect,0);requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
@@ -1789,6 +1794,7 @@ function gameInit(){
   const bounds=wrap.getBoundingClientRect();setCanvasFixedSize(vec2(Math.max(1,bounds.width),Math.max(1,bounds.height)));
   setCanvasClearColor(new Color(1,250/255,240/255));
   setDebugWatermark(false);puzzleGPU=createPuzzleGPUProjection({gl:glContext,cloneMesh:cloneProjectionMesh});new Render3DPlugin();puzzleGPU.attach(render3D);
+  const victoryMask=createVictoryLiveMask(glContext);victoryEffects.setLiveMask(victoryMask);engineAddPlugin(undefined,()=>victoryMask.render());
   movementMarkers=createMovementMarkers();
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);
