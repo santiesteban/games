@@ -49,6 +49,7 @@ import { createMovementBoard, planMovement, sampleMovement, movementSegmentClear
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 import { cameraControlCube } from './camera-control-cube.js';
+import { nearestMovementTarget } from './movement-targets.js';
 
 const buildLabel=document.querySelector('#buildNumber');
 // The initial screen is Home; only a level may claim browser input defaults.
@@ -1543,7 +1544,27 @@ function moveTo(p,pressMarker=false){
   requestAnimationFrame(tick);
 }
 function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return ray.getPosition(t)}
-function standableAt(ray){
+function nearbyMovementTarget(point,{topsOnly=false,floorsOnly=false}={}){
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),objects=[...blockObjects,...extrusionObjects,...extrusionOutlines];
+  const margin=floorsOnly?18:12;
+  const candidates=standableReachable().filter(node=>(!topsOnly||node.y<H)&&(!floorsOnly||node.y===H)).map(node=>{
+    const floor=node.y===H,y=floor?0:H-node.y;
+    const polygon=[[node.x,node.z],[node.x+1,node.z],[node.x+1,node.z+1],[node.x,node.z+1]].map(([x,z])=>{
+      const world=worldPoint(x,y,z),projected=floor?world:puzzlePoint(world);
+      return render3D.worldToScreen(projected,size);
+    });
+    return {node,polygon};
+  });
+  if(!nearestMovementTarget(point,candidates,{margin}))return null;
+  return puzzlePick(objects,()=>nearestMovementTarget(point,candidates,{margin,visible:({node},sample)=>{
+    const ray=render3D.screenToRay(vec2(sample.x,sample.y),size),hit=engineObjectsRaycast3D(ray,objects)[0];
+    if(node.y===H)return !hit;
+    const top=topObjectInfo.get(hit);
+    return !!top&&top.x===node.x&&top.y===node.y&&top.z===node.z;
+  }}));
+}
+function standableAt(ray,point){
+  const nearbyTop=nearbyMovementTarget(point,{topsOnly:true});if(nearbyTop)return nearbyTop;
   if(puzzleProjectionState().enabled){
     const hit=puzzleRaycast(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines])[0];
     if(hit){const top=topObjectInfo.get(hit);return top?reachableTop(top):null}
@@ -1555,18 +1576,22 @@ function standableAt(ray){
     }
     if(best)return best;
   }
+  const nearby=nearbyMovementTarget(point,{floorsOnly:true});if(nearby)return nearby;
   const floor=pointOnFloor(ray);if(floor){const p=standableReachable().filter(n=>n.y===H).sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<.9)return p}}
   return null;
 }
-function updateHover(e){if(!hoverObject)return;if(introPlaying){clearBoardHover();return}const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight)),p=standableAt(ray);hovered=p;movementMarkers?.setHovered(!busy&&!won?pickMovementMarker(ray):null);if(!p||(movementMarkersEnabled()&&p.y<H)){hoverObject.color=new Color(1,1,1,0);return}hoverObject.pos3D=standingSpotCenter(p);hoverObject.color=new Color(1,1,1,.33)}
+function updateHover(e){if(!hoverObject)return;if(introPlaying){clearBoardHover();return}const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight)),p=standableAt(ray,point);hovered=p;movementMarkers?.setHovered(!busy&&!won?(pickMovementMarker(ray)??(movementMarkersEnabled()&&p?.y<H?p:null)):null);if(!p||(movementMarkersEnabled()&&p.y<H)){hoverObject.color=new Color(1,1,1,0);return}hoverObject.pos3D=standingSpotCenter(p);hoverObject.color=new Color(1,1,1,.33)}
 function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();const point=boardPoint(e),ray=render3D.screenToRay(vec2(point.x,point.y),vec2(wrap.clientWidth,wrap.clientHeight));
   const stud=pickMovementMarker(ray);if(stud){moveTo(stud,true);return}
+  // A reachable top wins over the front or side of a piece within the touch margin.
+  const nearbyTop=nearbyMovementTarget(point,{topsOnly:true});if(nearbyTop){moveTo(nearbyTop,movementMarkersEnabled());return}
   // Resolve visible, walkable cube tops before wall faces. The wall can be
   // nearer along the ray even when the pointer is visually on a platform top.
   if(!puzzleProjectionState().enabled){
   const logicalRay=boardRay(ray);let best=null,bestD=Infinity;for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+depthSkew()*(p.z+.5);if(Math.abs(logicalRay.direction.y)<1e-6)continue;const t=(h-logicalRay.origin.y)/logicalRay.direction.y;if(t<0)continue;const q=logicalRay.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best){moveTo(best);return}
   }
   const hits=puzzleRaycast(ray,[...blockObjects,...extrusionObjects,...extrusionOutlines]),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(walkabilityFacesEnabled()?top:reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){hideHelp();selected=g;updateUI()}else showHelp('Pom cannot push or pull this piece from here. Move him beside an exposed edge.','wall');return}}
+  const nearby=nearbyMovementTarget(point,{floorsOnly:true});if(nearby){selected=null;updateUI();moveTo(nearby);return}
   // Match a visible point on the floor plane to the nearest reachable step.
   const floor=pointOnFloor(ray);if(floor){selected=null;updateUI();const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15){moveTo(p);return}}
     const x=floor.x-depthSkew()*floor.z;

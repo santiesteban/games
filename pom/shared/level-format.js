@@ -3,7 +3,7 @@ import { createMovementBoard } from './movement-routes.js';
 export const LEVEL_FORMAT='little-ledges';
 export const LEVEL_SCHEMA_VERSION=1;
 export const DEFAULT_PALETTE={R:[255,113,56],O:[242,160,90],G:[121,166,110],B:[85,169,174],Y:[255,223,63]};
-const legacyIssues=new Set([5,6,7,11,15,16,17,18,21,23,24,25,30,32,33,34,35,38,39,40,43]);
+const legacyIssues=new Set([11,17,21,23,24,25,30,32,33,34,35,38,40,43]);
 const defaultGroups=[
   {id:'basic-lessons',name:'Basic Lessons'},
   {id:'first-challenges',name:'First Challenges'},
