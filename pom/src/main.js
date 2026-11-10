@@ -46,7 +46,7 @@ import { canReachPiece, safePieceChange } from '../shared/rules.js';
 import { decodePuzzle, puzzleLevel } from '../shared/puzzle.js';
 import { deploymentUrls } from '../shared/deployment.js';
 import { reachTiming, reachOutline, reachFaceDepth, triangulateContour } from './reach-motion.js';
-import { createMovementBoard, planMovement, sampleMovement, sampleMovementProgress, movementSegmentClear, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
+import { createMovementBoard, planMovement, sampleMovement, sampleMovementProgress, movementSegmentClear, isSingleMove, movementNeighbors, findMovementPath, movementProfiles } from './movement-routes.js';
 import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 import { cameraControlCube } from './camera-control-cube.js';
@@ -373,12 +373,21 @@ function shapePomReach(from,to,t,profile){
   playerObject.setMesh(mesh(outline));pomBody.setMesh(mesh(fill));pomBody.scale3D=vec3(1,1,1);setPomFaceDepth(reachFaceDepth(outline,fill));pomReaching=true;
   return head;
 }
-function neighbors(p){return movementNeighbors(movementBoard(),p,routeFor)}
 function findPath(target){return findMovementPath(movementBoard(),player,target,routeFor)}
 function standableReachable(){
   const board=movementBoard(),key=`${nodeKey(player)}:${movementBoardKey}`;if(key===reachableKey)return reachableValue;
   const q=[player],seen=new Set([nodeKey(player)]),shown=new Set(seen),out=[];
-  while(q.length){const p=q.shift();for(const n of neighbors(p)){const k=nodeKey(n),jump=routeFor(p,n).isJump;if(jump&&nodeKey(p)!==nodeKey(player))continue;if(!shown.has(k)){shown.add(k);out.push(n)}if(!jump&&!seen.has(k)){seen.add(k);q.push(n)}}}
+  const walkPlan=(from,to)=>isSingleMove(from,to)?routeFor(from,to):null;
+  while(q.length){
+    const p=q.shift();
+    // Only a jump directly from Pom can appear as a movement target.
+    const getPlan=p===player?routeFor:walkPlan;
+    for(const n of movementNeighbors(board,p,getPlan)){
+      const k=nodeKey(n);
+      if(!shown.has(k)){shown.add(k);out.push(n)}
+      if(isSingleMove(p,n)&&!seen.has(k)){seen.add(k);q.push(n)}
+    }
+  }
   reachableKey=key;reachableValue=out.filter(p=>board.validNode(p));return reachableValue;
 }
 function reachableTop(target){return target}

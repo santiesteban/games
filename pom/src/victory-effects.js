@@ -1,4 +1,4 @@
-import { VICTORY_STARS } from './victory-stars.js';
+import { VICTORY_STAR_SAMPLES } from './victory-star-samples.js';
 
 const SVG_NS='http://www.w3.org/2000/svg';
 const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t)};
@@ -92,7 +92,7 @@ export function createVictoryEffects(app){
   function prepareShape(shape){
     const rect=board.getBoundingClientRect(),radius=Math.min(parseFloat(getComputedStyle(board).borderTopLeftRadius)||0,rect.width/2,rect.height/2),left=1.25,top=1.25,right=rect.width-1.25,bottom=rect.height-1.25,r=Math.max(0,radius-1.25);
     rectanglePoints=samplePath(`M${left+r} ${top}H${right-r}Q${right} ${top} ${right} ${top+r}V${bottom-r}Q${right} ${bottom} ${right-r} ${bottom}H${left+r}Q${left} ${bottom} ${left} ${bottom-r}V${top+r}Q${left} ${top} ${left+r} ${top}Z`);
-    const source=samplePath(shape),reference=rectanglePoints.map(p=>({x:p.x/rect.width*200,y:p.y/rect.height*200}));let best=source,bestScore=Infinity;
+    const source=Array.from({length:shape.length/2},(_,i)=>({x:shape[i*2],y:shape[i*2+1]})),reference=rectanglePoints.map(p=>({x:p.x/rect.width*200,y:p.y/rect.height*200}));let best=source,bestScore=Infinity;
     for(const candidate of [source,[...source].reverse()])for(let offset=0;offset<source.length;offset++){
       let score=0;for(let i=0;i<source.length;i++){const a=reference[i],b=candidate[(i+offset)%source.length];score+=(a.x-b.x)**2+(a.y-b.y)**2}
       if(score<bestScore){bestScore=score;best=source.map((_,i)=>candidate[(i+offset)%source.length])}
@@ -125,7 +125,7 @@ export function createVictoryEffects(app){
   }
   async function transitionTo(recenter,reveal){
     const token=generation;
-    const stars=Object.values(VICTORY_STARS),shape=stars[Math.floor(Math.random()*stars.length)];
+    const stars=Object.values(VICTORY_STAR_SAMPLES),shape=stars[Math.floor(Math.random()*stars.length)];
     iris.removeAttribute('hidden');prepareShape(shape);
     try{if(liveMask){usingLiveMask=true;board.classList.add('is-victory-masked');drawIris(reducedMotion?1:0)}}catch{usingLiveMask=false;liveMask?.clear();board.classList.remove('is-victory-masked')}
     drawIris(reducedMotion?1:0);recenter(reducedMotion?1:0);
