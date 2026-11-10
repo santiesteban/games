@@ -18,7 +18,7 @@ import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds } from './floor-grid.js';
 import { outsidePolygonSegments } from './surface-patterns.js';
 import { createLevelLoadGate } from './level-loading.js';
-import { sampleCameraIntro, initialCameraUnit } from './camera-intro.js';
+import { sampleCameraIntro, initialCameraUnit, openingFrameFits } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
 import { installViewportSafety } from './viewport-safety.js';
 import { installSafariZoom } from './safari-zoom.js';
@@ -1318,14 +1318,14 @@ function updateStudyVisibility(){
 const mobileBoard=()=>wrap.clientWidth<=780||(matchMedia('(pointer:coarse)').matches&&wrap.clientWidth<=1024);
 const tappingUnit=()=>32/Math.max(.18,Math.sin(viewPitch));
 function stopIntro(){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();introFrame++;introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready'}
-function finishIntro(){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();if(!cameraLab&&worldPresentation())resetStudyFollow({paused:false});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
+function finishIntro({holdOpeningFrame=false}={}){if(introPlaying&&cameraControlsPanel.classList.contains('is-zoom-feedback'))showZoomFeedback();if(!cameraLab&&worldPresentation())resetStudyFollow({paused:holdOpeningFrame});introPlaying=false;introTick=null;document.querySelector('.stage').classList.remove('is-introducing');wrap.dataset.introPhase='ready';autoSelectNearbyPiece();updateUI();if(document.querySelector('#menuScreen').hidden)showOpeningHelp()}
 function enterPlayFromIntro(){
   if(!introPlaying)return;
   stopIntro();viewTouched=true;keepInterruptedView=true;finishIntro();
 }
 function clampBoardView(){
-  const width=wrap.clientWidth,height=wrap.clientHeight,f=sceneFrame(width,height),fitUnit=height/f.height;
-  viewUnit=Math.max(fitUnit,Math.min(Math.max(tappingUnit(),fitUnit),viewUnit));
+  const width=wrap.clientWidth,height=wrap.clientHeight,f=sceneFrame(width,height),fitUnit=height/f.height,{min,max}=cameraZoomBounds(fitUnit);
+  viewUnit=Math.max(min,Math.min(max,viewUnit));
   // An interrupted intro can be between the normal framing bounds. Keep that
   // exact view and allow the player's gesture to continue without a camera snap.
   if(keepInterruptedView||worldPresentation())return;
@@ -1345,6 +1345,25 @@ function applyBoardView(clamp=true){
   if(worldPresentation()){cameraLab?.reportTilt(viewPitch*180/Math.PI);wrap.dataset.autoTiltDegrees=(viewPitch*180/Math.PI).toFixed(2);wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraMotion=cameraState.motion;wrap.dataset.cameraTruck=String(cameraState.truck);wrap.dataset.cameraFollowing=String(cameraState.followX||cameraState.followY);wrap.dataset.cameraFollowPaused=String(followAnchor?.paused??true);wrap.dataset.cameraTargetX=cameraFocus.x.toFixed(4);wrap.dataset.cameraTargetY=cameraFocus.y.toFixed(4);wrap.dataset.cameraFov=studyPerspective()?String(cameraState.fov):'';wrap.dataset.cameraDistance=render3D.camera.pos.subtract(cameraFocus).length().toFixed(4);wrap.dataset.cameraLens=String(render3D.camera.orthographic);const pom=render3D.worldToScreen(busy?playerObject.pos3D:worldPosition(player),vec2(wrap.clientWidth,wrap.clientHeight));if(pom){wrap.dataset.pomScreenX=(pom.x/wrap.clientWidth*100).toFixed(3);wrap.dataset.pomScreenY=(pom.y/wrap.clientHeight*100).toFixed(3)}}
   syncCameraSliders();
 }
+function openingCameraTarget(width,height,unit){
+  const camera=render3D.camera,right=camera.getRight(),up=camera.getUp(),size=vec2(width,height);
+  const cells=groups.flatMap(group=>group.cells);
+  const left=Math.min(...cells.map(cell=>cell.x)),rightEdge=Math.max(...cells.map(cell=>cell.x+1));
+  const bottom=Math.min(...cells.map(cell=>H-cell.y-1)),top=Math.max(...cells.map(cell=>H-cell.y));
+  const depth=Math.max(0,...groups.map(group=>group.depth));
+  const center=(left+rightEdge)/2,pom=worldPosition(player),onFloor=player.y===H;
+  const framing=(anchor,x,y)=>anchor.add(right.scale((.5-x)*width/unit)).add(up.scale((y-.5)*height/unit));
+  const centered=framing(worldPoint(center,onFloor?0:(bottom+top)/2,0),.5,onFloor?.73:.5);
+  positionCameraForView(viewSide,centered);render3D.updateMatrices(width/height);
+  const outline=[];
+  for(const x of [left,rightEdge])for(const y of [bottom,top])for(const z of [0,depth])outline.push(worldPoint(x,y,z));
+  outline.push(pom,worldPoint(goalCell.x+.5,H-goalCell.y+.45,0));
+  if(openingFrameFits(outline.map(point=>render3D.worldToScreen(point,size)),width,height))return centered;
+
+  const toward=worldPoint(center,0,0).subtract(worldPoint(player.x+.5,0,0)).dot(right);
+  const screenX=Math.abs(toward)<1?.5:toward>0?.38:.62;
+  return framing(onFloor?worldPoint(player.x+.5,0,player.z+.5):pom,screenX,onFloor?.73:.65);
+}
 function startBoardView(animate=true){
   if(levelLoading)return;
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
@@ -1353,14 +1372,15 @@ function startBoardView(animate=true){
   const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
   if(isPreviewLevel(activeLevel)||activeLevel.studioExample||!document.querySelector('#menuScreen').hidden){finishIntro();return}
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const token=introFrame,from=viewTarget.copy(),unit=initialCameraUnit({fitUnit,width:viewWidth,height:viewHeight,mobile:viewMobile}),pom=worldPosition(player),rise=Math.min(1.2,Math.max(0,(viewHeight/2-f.bottom)/unit)/Math.cos(viewPitch));
-  const needsZoom=unit>fitUnit*1.01;
-  if(cameraLab){viewUnit=fitUnit;viewTarget=f.target;applyBoardView(false);resetStudyFollow();finishIntro();return}
-  viewUnit=unit;viewTarget=needsZoom?(worldPresentation()?pom.copy():pom.add(vec3(Math.min(.8,viewWidth/unit*.2),rise,0))):from.copy();clampBoardView();
-  if(worldPresentation()&&studyStraight())viewTarget=boundedStudyTarget(viewTarget,pom,viewHeight/viewUnit);
-  const target=viewTarget.copy(),endUnit=viewUnit;
+  const token=introFrame,from=viewTarget.copy();
+  if(cameraLab){resetStudyFollow();finishIntro();return}
+  resetStudyFollow();
+  const endUnit=initialCameraUnit({width:viewWidth,height:viewHeight});
+  const needsZoom=Math.abs(Math.log(endUnit/fitUnit))>.01;
+  viewUnit=endUnit;
+  const target=openingCameraTarget(viewWidth,viewHeight,endUnit);
   viewUnit=fitUnit;viewTarget=from;applyBoardView(false);
-  if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro();return}
+  if(!animate||reduced){viewUnit=endUnit;viewTarget=target;applyBoardView(false);finishIntro({holdOpeningFrame:true});return}
   autoSelectNearbyPiece();introPlaying=true;document.querySelector('.stage').classList.add('is-introducing');wrap.dataset.introPhase='overview';updateUI();
   let start,lastFrame,introZoomShown=false;
   introTick=now=>{
@@ -1374,20 +1394,20 @@ function startBoardView(animate=true){
       if(needsZoom&&!introZoomShown&&!cameraModeToggle.hidden){introZoomShown=true;showZoomFeedback(true)}
       viewUnit=pose.unit;viewTarget=from.lerp(target,pose.pan);applyBoardView(false);
     }
-    if(pose.done)finishIntro();
+    if(pose.done)finishIntro({holdOpeningFrame:true});
   };
 }
 
 function limitManualPan(){const p=limitStagePan(viewTarget,render3D.camera.getRight(),render3D.camera.getUp(),puzzleVisualBounds(),isBackgroundStudio());viewTarget=vec3(p.x,p.y,p.z)}
 function panBoard(dx,dy){if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale(-dx/viewUnit)).add(render3D.camera.getUp().scale(dy/viewUnit));limitManualPan();return}viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
 function zoomBoard(unit,x,y){
-  const old=viewUnit,f=sceneFrame(wrap.clientWidth,wrap.clientHeight),min=wrap.clientHeight/f.height;viewUnit=Math.max(min,Math.min(Math.max(tappingUnit(),min),unit));
+  const old=viewUnit,{min,max}=cameraZoomBounds();viewUnit=Math.max(min,Math.min(max,unit));
   if(!cameraModeActive&&gameReady&&viewReady&&!cameraModeToggle.hidden&&Math.abs(viewUnit-old)>.0001)showZoomFeedback();
   const scale=1/old-1/viewUnit;if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale((x-wrap.clientWidth/2)*scale)).add(render3D.camera.getUp().scale((wrap.clientHeight/2-y)*scale));limitManualPan();return}viewTarget=viewTarget.add(vec3((x-wrap.clientWidth/2)*scale,(wrap.clientHeight/2-y)*scale/Math.cos(viewPitch),0));
 }
-function cameraZoomBounds(){
-  const min=wrap.clientHeight/sceneFrame(wrap.clientWidth,wrap.clientHeight).height;
-  return {min,max:Math.max(tappingUnit(),min)};
+function cameraZoomBounds(fitUnit=wrap.clientHeight/sceneFrame(wrap.clientWidth,wrap.clientHeight).height){
+  const opening=activeLevel.kind==='puzzle'&&!cameraLab&&!activeLevel.studioExample?initialCameraUnit({width:wrap.clientWidth,height:wrap.clientHeight}):fitUnit;
+  return {min:Math.min(fitUnit,opening),max:Math.max(tappingUnit(),fitUnit,opening)};
 }
 function syncCameraMode(){
   cameraModeSliders.hidden=false;
@@ -2063,5 +2083,6 @@ new ResizeObserver(()=>{
   const mobile=mobileBoard(),changedMode=mobile!==viewMobile;viewWidth=r.width;viewHeight=r.height;baseCameraHeight=fitCamera(r.width,r.height);
   if(celebration){render3D.updateMatrices(r.width/r.height);return}
   if(changedMode||introPlaying){startBoardView();return}
+  if(!viewTouched&&followAnchor?.paused&&activeLevel.kind==='puzzle'&&!cameraLab){startBoardView(false);return}
   stopIntro();if(!mobile&&!viewTouched){viewUnit=r.height/baseCameraHeight;viewTarget=sceneFrame(r.width,r.height).target}applyBoardView();
 }).observe(wrap);

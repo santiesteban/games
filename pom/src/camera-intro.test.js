@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sampleCameraIntro,initialCameraUnit,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
+import {sampleCameraIntro,initialCameraUnit,openingFrameFits,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
 
 test('overview holds, then pans and zooms together to the exact endpoint',()=>{
   assert.deepEqual(sampleCameraIntro(hold-1,20,80),{phase:'overview',pan:0,unit:20,done:false});
@@ -21,10 +21,17 @@ test('views that already fit end after the overview hold',()=>{
   assert.deepEqual(sampleCameraIntro(hold,80,80),{phase:'ready',pan:1,unit:80,done:true});
 });
 
-test('small-screen opening zoom leaves room around Pom without restricting manual zoom',()=>{
-  assert.equal(initialCameraUnit({fitUnit:20,width:390,height:600,mobile:true}),48.75);
-  assert.equal(initialCameraUnit({fitUnit:20,width:320,height:480,mobile:true}),40);
-  assert.equal(initialCameraUnit({fitUnit:20,width:700,height:200,mobile:true}),40);
-  assert.equal(initialCameraUnit({fitUnit:70,width:390,height:600,mobile:true}),70);
-  assert.equal(initialCameraUnit({fitUnit:20,width:1280,height:600,mobile:false}),64);
+test('opening scale uses the tighter play area dimension',()=>{
+  assert.equal(initialCameraUnit({width:814,height:1110}),110);
+  assert.equal(initialCameraUnit({width:1280,height:600}),60);
+  assert.equal(initialCameraUnit({width:370,height:600}),50);
+});
+
+test('the intro can ease out from a closer overview',()=>{
+  assert.equal(sampleCameraIntro(hold+(pan+zoom)/2,80,20).unit,40);
+});
+
+test('occupied geometry must fit with room around the edges',()=>{
+  assert.equal(openingFrameFits([{x:80,y:75},{x:280,y:350}],370,600),true);
+  assert.equal(openingFrameFits([{x:350,y:75}],370,600),false);
 });
