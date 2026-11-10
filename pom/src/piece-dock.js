@@ -7,7 +7,6 @@ const shapes=[
   ['M3.5 3.5H14.5L20 9H9Z','M3.5 3.5L9 9V20L3.5 14.5Z','M9 9h11v11H9Z'],
   ['M3.5 3.5H14.5L22.3 11.3H11.3Z','M3.5 3.5L11.3 11.3V22.3L3.5 14.5Z','M11.3 11.3h11v11h-11Z'],
 ];
-const labelCenters=[10.8,12.5,14.5,16.8];
 
 // Use the canonical board and rules, including collision safety, at every update.
 export function pieceDockState(board,player,selectedId,{paused=false,tabs=true}={}){
@@ -69,18 +68,12 @@ export function createPieceDock(root,onSelect){
         button.setAttribute('aria-label',`${position[0].toUpperCase()+position.slice(1)} piece${piece?`, ${piece.color}, depth ${piece.depth}`:''}`);
         if(!piece){delete button.dataset.pieceId;continue}
         button.dataset.pieceId=String(piece.id);
-        button.dataset.pullCount=String(piece.depth);
         const color=colors(palette[piece.color]);
         root.style.setProperty(`--color-piece-${position}-fill`,color.fill);
         root.style.setProperty(`--color-piece-${position}`,color.fill);
         root.style.setProperty(`--color-piece-${position}-background`,color.background);
         root.style.setProperty(`--color-piece-${position}-control-text`,color.text);
-        button.style.setProperty('--piece-label-color',color.text);
         button.querySelectorAll('path').forEach((path,index)=>path.setAttribute('d',shapes[piece.depth][index]));
-        const label=button.querySelector('.piece-pull-count');
-        label.textContent=piece.depth?String(piece.depth):'';
-        label.setAttribute('x',String(labelCenters[piece.depth]));
-        label.setAttribute('y',String(labelCenters[piece.depth]));
       }
       for(const action of ['push','pull']){
         const button=root.querySelector(`[data-mode="${action}"]`);

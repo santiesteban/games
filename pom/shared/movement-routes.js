@@ -49,11 +49,24 @@ function segmentClear(blocks,a,b){
 }
 export function movementSegmentClear(board,a,b){return segmentClear(board.blocks,a,b)}
 
+export function isJumpCandidate(from,to){
+  const dx=Math.abs(to.x-from.x),dz=Math.abs(to.z-from.z),span=Math.max(dx,dz),drop=to.y-from.y;
+  const diagonalGap=drop===0&&span===2&&Math.min(dx,dz)===1;
+  return span>=2&&span<=(drop>0?3:2)&&drop>=-1
+    &&(dx===0||dz===0||dx===dz||diagonalGap)
+    &&!(drop<0&&dx!==0&&dz!==0);
+}
+
 function planJump(board,from,to){
+  if(!isJumpCandidate(from,to))return null;
   const dx=to.x-from.x,dz=to.z-from.z,span=Math.max(Math.abs(dx),Math.abs(dz)),drop=to.y-from.y;
-  if(span<2||span>(drop>0?3:2)||drop< -1||Math.min(Math.abs(dx),Math.abs(dz))!==0&&Math.abs(dx)!==Math.abs(dz)||drop<0&&dx!==0&&dz!==0)return null;
   if(!board.validNode(from)||!board.validNode(to))return null;
-  for(let i=1;i<span;i++)if(board.validNode({x:from.x+dx*i/span,y:from.y,z:from.z+dz*i/span}))return null;
+  for(let i=1;i<span;i++){
+    const x=from.x+dx*i/span,z=from.z+dz*i/span;
+    for(const cellX of new Set([Math.floor(x),Math.ceil(x)]))for(const cellZ of new Set([Math.floor(z),Math.ceil(z)])){
+      if(board.validNode({x:cellX,y:from.y,z:cellZ}))return null;
+    }
+  }
   const a=nodePose(board,from),b=nodePose(board,to),edgeA={...a,x:a.x+dx/span*.2,z:a.z+dz/span*.2},edgeB={...b,x:b.x-dx/span*.2,z:b.z-dz/span*.2},points=[a];
   // Rise early enough to clear a higher landing; descend late on long drops.
   const top=Math.max(a.y,b.y)+.55;

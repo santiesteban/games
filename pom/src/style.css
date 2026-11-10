@@ -8,6 +8,9 @@
 @media(max-height:480px){.game-header{padding-block:6px}.brand-caption,.heading p,.brandmark{display:none}.brand-name{font-size:25px}.heading h1{font-size:16px}.canvas-actions{bottom:10px}.block-action{min-height:37px;min-width:118px;font-size:12px}.block-action span{font-size:18px}.btn,.view-toggle{min-height:34px;padding-block:5px}.selected-help{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
 .canvas-actions{gap:10px}.block-action{flex:1;min-width:0;position:relative;justify-content:center}.block-action span{position:absolute;left:14px}#pull span{left:auto;right:14px}
 
 /* Contextual hints appear briefly above the playfield, clear of the controls. */

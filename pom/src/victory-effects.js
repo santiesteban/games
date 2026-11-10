@@ -37,12 +37,16 @@ export function victoryBoardBounds(board,original,progress){
   const {top,right,bottom,left}=victoryBoardInsets(board,original,progress);
   return{left:board.left+left,top:board.top+top,width:board.width-left-right,height:board.height-top-bottom};
 }
-export function victoryMorphPath(rectangle,star,center,size,progress,angle){
+export function victoryMorphShape(rectangle,star,center,size,progress,angle){
   const radians=angle*Math.PI/180,c=Math.cos(radians),s=Math.sin(radians),scale=size/200;
-  return star.map((point,i)=>{
+  const points=star.map((point,i)=>{
     const dx=(point.x-100)*scale,dy=(point.y-100)*scale,targetX=center.x+c*dx-s*dy,targetY=center.y+s*dx+c*dy,initial=rectangle[i];
-    return `${i?'L':'M'}${(initial.x+(targetX-initial.x)*progress).toFixed(2)} ${(initial.y+(targetY-initial.y)*progress).toFixed(2)}`;
-  }).join('')+'Z';
+    return [(initial.x+(targetX-initial.x)*progress).toFixed(2),(initial.y+(targetY-initial.y)*progress).toFixed(2)];
+  });
+  return {
+    path:points.map(([x,y],i)=>`${i?'L':'M'}${x} ${y}`).join('')+'Z',
+    clip:`polygon(${points.map(([x,y])=>`${x}px ${y}px`).join(',')})`,
+  };
 }
 
 // Celebrate over the goal's supporting square. The collected flag is hidden
@@ -62,14 +66,13 @@ export function createVictoryEffects(app){
   arrow.classList.add('victory-continue__arrow');arrow.setAttribute('viewBox','0 0 24 24');arrow.setAttribute('aria-hidden','true');arrowPath.setAttribute('d','M19 12H5M11 6l-6 6 6 6');arrow.append(arrowPath);continueButton.append(arrow);
   const iris=document.createElementNS(SVG_NS,'svg');iris.classList.add('victory-transition');iris.setAttribute('hidden','');iris.setAttribute('aria-hidden','true');
   const expansionOutline=document.createElement('div');expansionOutline.className='victory-expansion-outline';expansionOutline.hidden=true;expansionOutline.setAttribute('aria-hidden','true');
-  const defs=document.createElementNS(SVG_NS,'defs'),clip=document.createElementNS(SVG_NS,'clipPath'),clipShape=document.createElementNS(SVG_NS,'path'),rim=document.createElementNS(SVG_NS,'path');
-  clip.id='victory-star-clip';clip.setAttribute('clipPathUnits','userSpaceOnUse');clip.append(clipShape);defs.append(clip);
-  rim.setAttribute('fill','none');rim.setAttribute('stroke','#111');rim.setAttribute('stroke-width','2.5');rim.setAttribute('stroke-linejoin','round');iris.append(defs,rim);
+  const rim=document.createElementNS(SVG_NS,'path');
+  rim.setAttribute('fill','none');rim.setAttribute('stroke','#111');rim.setAttribute('stroke-width','2.5');rim.setAttribute('stroke-linejoin','round');iris.append(rim);
   stage.append(message);document.body.append(expansionOutline,iris);
-  let generation=0,frame=0,finishAnimation,reducedMotion=false,liveMask,usingLiveMask=false,starPoints,rectanglePoints;
+  let generation=0,frame=0,finishAnimation,reducedMotion=false,starPoints,rectanglePoints;
   function reset(){
     generation++;cancelAnimationFrame(frame);finishAnimation?.(false);finishAnimation=undefined;
-    message.hidden=true;continueButton.hidden=true;continueButton.disabled=false;continueButton.onclick=null;iris.setAttribute('hidden','');rim.removeAttribute('d');expansionOutline.hidden=true;liveMask?.clear();usingLiveMask=false;board.classList.remove('is-victory-masked');board.style.clipPath='';board.style.opacity='';app.inert=false;
+    message.hidden=true;continueButton.hidden=true;continueButton.disabled=false;continueButton.onclick=null;iris.setAttribute('hidden','');rim.removeAttribute('d');expansionOutline.hidden=true;board.classList.remove('is-victory-masked');board.style.clipPath='';board.style.opacity='';app.inert=false;
   }
   function start(name){
     reset();reducedMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -86,7 +89,7 @@ export function createVictoryEffects(app){
     expansionOutline.hidden=false;
   }
   function samplePath(d,count=256){
-    const path=document.createElementNS(SVG_NS,'path');path.setAttribute('d',d);defs.append(path);
+    const path=document.createElementNS(SVG_NS,'path');path.setAttribute('d',d);iris.append(path);
     try{const length=path.getTotalLength();return Array.from({length:count},(_,i)=>path.getPointAtLength(length*i/count))}finally{path.remove()}
   }
   function prepareShape(shape){
@@ -105,11 +108,11 @@ export function createVictoryEffects(app){
     const finalSize=Math.max(1,Math.min(rect.width*.56,window.innerHeight*.29,1.4*x,1.4*(rect.width-x),1.4*y,1.4*(rect.height-y)));
     Object.assign(iris.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});
     iris.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
-    const d=victoryMorphPath(rectanglePoints,starPoints,{x,y},finalSize,progress,angle);
-    if(usingLiveMask){
-      if(!rim.hasAttribute('d'))rim.setAttribute('d',d);
-      liveMask.setFrame({contentWidth:board.clientWidth,contentHeight:board.clientHeight,insetX:board.clientLeft,insetY:board.clientTop,path:d,onPresented:()=>rim.setAttribute('d',d)});
-    }else{clipShape.setAttribute('d',d);rim.setAttribute('d',d);board.style.clipPath='url(#victory-star-clip)'}
+    const {path,clip}=victoryMorphShape(rectanglePoints,starPoints,{x,y},finalSize,progress,angle);
+    // Clip the composed board and draw its rim from the same coordinates.
+    // This keeps the WebGL scene intact and avoids a separate framebuffer pass.
+    board.style.clipPath=clip;
+    rim.setAttribute('d',path);
   }
   function animate(duration,draw,token){
     return new Promise(resolve=>{
@@ -127,7 +130,7 @@ export function createVictoryEffects(app){
     const token=generation;
     const stars=Object.values(VICTORY_STAR_SAMPLES),shape=stars[Math.floor(Math.random()*stars.length)];
     iris.removeAttribute('hidden');prepareShape(shape);
-    try{if(liveMask){usingLiveMask=true;board.classList.add('is-victory-masked');drawIris(reducedMotion?1:0)}}catch{usingLiveMask=false;liveMask?.clear();board.classList.remove('is-victory-masked')}
+    board.classList.add('is-victory-masked');
     drawIris(reducedMotion?1:0);recenter(reducedMotion?1:0);
     const closed=await animate(reducedMotion?1:1050,(t,progress)=>{
       if(!reducedMotion){drawIris(t,progress*45*1.05);recenter(t)}
@@ -149,9 +152,9 @@ export function createVictoryEffects(app){
       continueButton.onclick=async()=>{
         continueButton.disabled=true;message.hidden=true;cancelAnimationFrame(frame);finishAnimation=undefined;
         try{const card=await reveal();resolve(token===generation?card:null)}
-        finally{if(token===generation){iris.setAttribute('hidden','');liveMask?.clear();usingLiveMask=false;board.classList.remove('is-victory-masked');board.style.clipPath='';board.style.opacity='';continueButton.disabled=false}}
+        finally{if(token===generation){iris.setAttribute('hidden','');board.classList.remove('is-victory-masked');board.style.clipPath='';board.style.opacity='';continueButton.disabled=false}}
       };
     });
   }
-  return{start,reset,setExpansionOutline,setLiveMask:mask=>{liveMask=mask},transitionTo};
+  return{start,reset,setExpansionOutline,transitionTo};
 }

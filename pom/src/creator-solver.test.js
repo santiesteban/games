@@ -34,3 +34,12 @@ test('the geometry filter preserves every move and jump accepted by the game',()
     }
   }
 });
+
+test('the creator accepts the same three gap-jump landings as gameplay',()=>{
+  const board=createMovementBoard(['R.R'],[3,3]),from={x:0,y:0,z:1};
+  for(const z of [0,1,2]){
+    const to={x:2,y:0,z};
+    assert(planMovement(board,from,to)?.isJump);
+    assert(possibleMovement(from,to));
+  }
+});

@@ -1,13 +1,11 @@
 import {validatePuzzle} from '../../shared/puzzle.js';
 import {canReachPiece,manipulateState,goalPosition,nodeKey,replaySolution} from '../../shared/rules.js';
-import {createMovementBoard,isSingleMove,movementNeighbors,planMovement} from '../../shared/movement-routes.js';
+import {createMovementBoard,isSingleMove,isJumpCandidate,movementNeighbors,planMovement} from '../../shared/movement-routes.js';
 
 // Reject only geometric combinations that neither a regular move nor a jump
 // can possibly accept. The actual decision still belongs to planMovement.
 export function possibleMovement(from,to){
-  if(isSingleMove(from,to))return true;
-  const dx=to.x-from.x,dz=to.z-from.z,span=Math.max(Math.abs(dx),Math.abs(dz)),drop=to.y-from.y;
-  return !(span<2||span>(drop>0?3:2)||drop< -1||(Math.min(Math.abs(dx),Math.abs(dz))!==0&&Math.abs(dx)!==Math.abs(dz))||(drop<0&&dx!==0&&dz!==0));
+  return isSingleMove(from,to)||isJumpCandidate(from,to);
 }
 
 class Heap{

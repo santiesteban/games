@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {victoryArrival,victoryBoardBounds,victoryBoardClip,victoryExpandedFov,victoryFrameUnit,victoryMorphPath} from './victory-effects.js';
+import {victoryArrival,victoryBoardBounds,victoryBoardClip,victoryExpandedFov,victoryFrameUnit,victoryMorphShape} from './victory-effects.js';
 import {nodePose} from '../shared/movement-routes.js';
 
 test('victory arrival stays over the goal support, including Peach’s single-square summit',()=>{
@@ -42,8 +42,8 @@ test('victory expansion reveals the full canvas without resizing it',()=>{
 });
 test('the shared victory outline starts at the canvas and ends at the rotating shape',()=>{
   const rectangle=[{x:0,y:0},{x:200,y:0}],star=[{x:100,y:0},{x:200,y:100}],center={x:100,y:100};
-  assert.equal(victoryMorphPath(rectangle,star,center,200,0,0),'M0.00 0.00L200.00 0.00Z');
-  assert.equal(victoryMorphPath(rectangle,star,center,200,1,90),'M200.00 100.00L100.00 200.00Z');
+  assert.deepEqual(victoryMorphShape(rectangle,star,center,200,0,0),{path:'M0.00 0.00L200.00 0.00Z',clip:'polygon(0.00px 0.00px,200.00px 0.00px)'});
+  assert.deepEqual(victoryMorphShape(rectangle,star,center,200,1,90),{path:'M200.00 100.00L100.00 200.00Z',clip:'polygon(200.00px 100.00px,100.00px 200.00px)'});
 });
 test('expanding the canvas preserves the initial perspective camera distance',()=>{
   const fov=35,ratio=1.8,expandedFov=victoryExpandedFov(fov,ratio);

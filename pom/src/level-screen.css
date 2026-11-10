@@ -1,12 +1,5 @@
 /* Approved level_static.html interface. Puzzle rendering remains in main.js. */
 :root[data-screen="game"] { --screen-top-color: #f5f5f5; }
-@font-face {
-  font-family: "Silkscreen";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./assets/interface/silkscreen-regular.ttf') format('truetype');
-}
 
 /* Shared by all screens */
 
@@ -242,15 +235,6 @@
   visibility: hidden;
 }
 
-.stage.screen--level .piece-pull-count {
-  fill: currentColor;
-  stroke: none;
-  font-family: "Silkscreen", "Courier New", monospace;
-  font-size: 7px;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
-}
 
 .stage.screen--level .dock__bar {
   display: flex;
@@ -487,7 +471,6 @@
 .stage.screen--level .dock.is-selected-only { margin-top: 0; }
 .stage.screen--level .dock.is-selected-only .dock__tabs { display: none; }
 .stage.screen--level .dock__tab:disabled:not([data-state="disabled"]) { visibility: visible; }
-.stage.screen--level .dock__tab .piece-pull-count { fill: var(--piece-label-color, #111); }
 .stage.screen--level .dock[data-active-piece="none"] .mode__option:disabled { opacity: 1; }
 .stage.screen--level.is-won .dock { visibility: hidden; }
 .stage.screen--level.is-won { background: #fff; }
@@ -539,7 +522,4 @@
 }
 .stage.screen--level .dock__tab[data-state="paused"] .dock__tab-icon path {
   fill: transparent;
-}
-.stage.screen--level .dock__tab[data-state="paused"] .piece-pull-count {
-  fill: var(--color-piece-disabled);
 }

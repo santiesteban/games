@@ -4,7 +4,7 @@ import {limitStagePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
   timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Light3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
-  Color, render3D, glContext, engineAddPlugin, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
+  Color, render3D, glContext, setCanvasFixedSize, setCanvasPixelRatio, setCanvasClearColor, glSetAntialias, setDebugWatermark, setLoadingScreen, engineObjectsRaycast3D,
   setInputPreventDefault, inputClear,
 } from 'littlejsengine';
 import catalog from '#level-catalog';
@@ -36,7 +36,6 @@ import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, e
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
 import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryExpandedFov, victoryFrameUnit } from './victory-effects.js';
-import {createVictoryLiveMask} from './victory-live-mask.js';
 import {setLoadingPalette} from './loading-palette.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
@@ -1823,7 +1822,6 @@ function gameInit(){
   const bounds=wrap.getBoundingClientRect();setCanvasFixedSize(vec2(Math.max(1,bounds.width),Math.max(1,bounds.height)));
   setCanvasClearColor(new Color(1,250/255,240/255));
   setDebugWatermark(false);puzzleGPU=createPuzzleGPUProjection({gl:glContext,cloneMesh:cloneProjectionMesh});new Render3DPlugin();puzzleGPU.attach(render3D);
-  const victoryMask=createVictoryLiveMask(glContext);victoryEffects.setLiveMask(victoryMask);engineAddPlugin(undefined,()=>victoryMask.render());
   movementMarkers=createMovementMarkers();
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);

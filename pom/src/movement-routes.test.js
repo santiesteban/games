@@ -117,3 +117,33 @@ test('jump distance and direction depend on landing height',()=>{
     }
   }
 });
+
+test('a one-cell gap permits all three same-height landings on the opposite ledge',()=>{
+  const board=createMovementBoard(['R.R'],[3,3]),from={x:0,y:0,z:1};
+  for(const z of [0,1,2]){
+    const to={x:2,y:0,z},plan=planMovement(board,from,to);
+    assert(plan?.isJump,JSON.stringify(to));
+    assert.deepEqual(findMovementPath(board,from,to),[from,to]);
+    for(let i=1;i<plan.points.length;i++)assert(movementSegmentClear(board,plan.points[i-1],plan.points[i]));
+    assert(planMovement(board,to,from)?.isJump);
+  }
+});
+
+test('offset jumps work in every direction and remain restricted to equal height',()=>{
+  const from={x:4,y:5,z:4};
+  for(const [dx,dz] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){
+    for(const drop of [-1,0,1]){
+      const to={x:from.x+dx,y:from.y+drop,z:from.z+dz};
+      const board={height:10,blocks:[],validNode:p=>[from,to].some(n=>n.x===p.x&&n.y===p.y&&n.z===p.z)};
+      assert.equal(Boolean(planMovement(board,from,to)),drop===0,JSON.stringify({dx,dz,drop}));
+    }
+  }
+});
+
+test('offset jumps still require a gap and a clear flight',()=>{
+  const from={x:0,y:0,z:1},to={x:2,y:0,z:0};
+  assert.equal(planMovement(createMovementBoard(['RRR'],[3]),from,to),null);
+  const board=createMovementBoard(['R.R'],[3,3]);
+  board.blocks.push({min:{x:.9,y:1.3,z:0},max:{x:2.1,y:2,z:2}});
+  assert.equal(planMovement(board,from,to),null);
+});
