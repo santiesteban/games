@@ -1,0 +1,62 @@
+import {Color, EngineObject3D, Mesh, TextureInfo, buildLathe, vec3} from 'littlejsengine';
+import {WARP_PIPE_COLORS} from '../shared/warp-pipes.js';
+
+const DARK=new Color(.20,.08,.28);
+const fromHex=hex=>new Color(...[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255));
+
+function texture(paint){
+  const canvas=document.createElement('canvas');
+  canvas.width=canvas.height=256;
+  paint(canvas.getContext('2d'));
+  return new TextureInfo(canvas,true,false,false);
+}
+
+function badgeTexture(index,labeled){
+  const colors=WARP_PIPE_COLORS[index%WARP_PIPE_COLORS.length];
+  return texture(context=>{
+    context.beginPath();context.roundRect(18,18,220,220,40);
+    context.fillStyle='#33263b';context.fill();
+    context.beginPath();context.roundRect(28,28,200,200,32);
+    context.fillStyle='#fff3d0';context.fill();
+    context.fillStyle=colors.body;context.beginPath();context.roundRect(77,130,102,62,[0,0,18,18]);context.fill();
+    context.beginPath();context.roundRect(57,80,142,60,12);
+    context.fillStyle=colors.rim;context.fill();
+    context.beginPath();context.ellipse(128,82,71,25,0,0,Math.PI*2);
+    context.fillStyle=colors.rim;context.fill();
+    context.beginPath();context.ellipse(128,82,43,13,0,0,Math.PI*2);
+    context.fillStyle='#3a184a';context.fill();
+    if(labeled){context.fillStyle='#33263b';context.font='bold 50px sans-serif';context.textAlign='center';context.fillText(String(index+1),199,220)}
+  });
+}
+
+function quad(width,height){
+  const mesh=new Mesh().addQuad(vec3(-width/2,height/2,0),vec3(-width/2,-height/2,0),vec3(width/2,-height/2,0),vec3(width/2,height/2,0));
+  mesh.doubleSided=true;
+  return mesh;
+}
+
+// Each end uses the same meshes and has independent state and placement.
+export function createWarpPipeAssets(){
+  const body=buildLathe([[.18,0],[.18,.23],[.19,.24],[.19,0],[.18,0]],32,true,false);
+  const rim=buildLathe([[.17,.22],[.245,.22],[.245,.37],[.17,.37],[.17,.22]],32,false,false);
+  const cap=buildLathe([[0,.371],[.17,.371]],32,false,true);
+  const opening=buildLathe([[0,.30],[.17,.30]],32,false,true);
+  const badge=quad(.56,.56);
+  const textures=new Map();
+  function createEnd(index=0,labeled=false){
+    const palette=WARP_PIPE_COLORS[index%WARP_PIPE_COLORS.length],key=`${index}:${labeled}`;
+    if(!textures.has(key))textures.set(key,badgeTexture(index,labeled));
+    const make=(mesh,color,textureInfo)=>{
+      const object=new EngineObject3D(vec3(),mesh,textureInfo,color);
+      object.lighting=false;object.emissive=1;object.castShadow=false;object.receiveShadow=false;
+      return object;
+    };
+    const pieces={
+      body:make(body,fromHex(palette.body)),rim:make(rim,fromHex(palette.rim)),cap:make(cap,fromHex(palette.rim)),opening:make(opening,DARK),
+      badge:make(badge,new Color(1),textures.get(key)),
+    };
+    pieces.badge.transparent=true;
+    return pieces;
+  }
+  return {createEnd,meshes:{body,rim,cap,opening,badge},textures};
+}

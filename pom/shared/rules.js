@@ -15,11 +15,22 @@ export function manipulateState(board,p,id,dir){
   return {depths:board.groups.map(b=>b.depth+(b===g?dir:0)),player:{...p,z:p.z+dir}};
 }
 export function goalPosition(board,goal){return {...goal,z:Math.max(0,(board.byCell[goal.y]?.[goal.x]?.depth??0)-1)}}
+// Both endpoints need an exposed top square at their current depth.
+export function warpDestination(board,p,pairs=[]){
+  for(const pair of pairs){
+    const nodes=pair.map(cell=>{const group=board.byCell[cell.y]?.[cell.x];if(!group||group.depth<=0)return null;const node={x:cell.x,y:cell.y,z:group.depth-1};return board.validNode(node)?node:null});
+    if(!nodes[0]||!nodes[1])continue;
+    if(nodeKey(p)===nodeKey(nodes[0]))return nodes[1];
+    if(nodeKey(p)===nodeKey(nodes[1]))return nodes[0];
+  }
+  return null;
+}
 export function replaySolution(puzzle,actions){
   if(!Array.isArray(actions)||actions.length>10000)return false;
   let board=createMovementBoard(puzzle.grid,puzzle.initialDepths),p={...puzzle.start};
   for(const a of actions){
     if(a.type==='move'){if(!a.to||!planMovement(board,p,a.to))return false;p=a.to}
+    else if(a.type==='warp'){const to=warpDestination(board,p,puzzle.warpPairs);if(!to)return false;p=to}
     else if(a.type==='piece'){const next=manipulateState(board,p,a.id,a.dir);if(!next)return false;board=createMovementBoard(puzzle.grid,next.depths);p=next.player}
     else return false;
   }

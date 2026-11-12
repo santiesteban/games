@@ -1,7 +1,7 @@
 import {validatePuzzle} from '../shared/puzzle.js';
 
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-const keys = new Set(['format','schemaVersion','rulesVersion','id','name','grid','palette','start','goal','initialDepths','revision']);
+const keys = new Set(['format','schemaVersion','rulesVersion','id','name','grid','palette','start','goal','initialDepths','revision','warpPairs']);
 const text = (value,max,label) => {
   if (typeof value !== 'string' || value.trim().length === 0 || new TextEncoder().encode(value.trim()).length > max)
     throw new Error(`${label} is required and must be at most ${max} bytes.`);

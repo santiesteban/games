@@ -1,5 +1,5 @@
 import {validatePuzzle} from '../../shared/puzzle.js';
-import {canReachPiece,manipulateState,goalPosition,nodeKey,replaySolution} from '../../shared/rules.js';
+import {canReachPiece,manipulateState,goalPosition,nodeKey,replaySolution,warpDestination} from '../../shared/rules.js';
 import {createMovementBoard,isSingleMove,isJumpCandidate,movementNeighbors,planMovement} from '../../shared/movement-routes.js';
 
 // Reject only geometric combinations that neither a regular move nor a jump
@@ -46,6 +46,8 @@ export function solvePuzzle(input,{timeLimitMs=180000,maxStates,heuristicWeight=
         if(nodeKey(to)===goal){const actions=[{type:'move',to}];let i=head;while(states[i].parent!==-1){actions.push(states[i].action);i=states[i].parent}actions.reverse();if(!replaySolution(puzzle,actions))throw new Error('Solution replay failed.');return result('solvable',{actions})}
         if(!enqueue({depths:current.depths,player:to},{type:'move',to}))return result('undetermined',{reason:'state limit'});
       }
+      const warp=warpDestination(board,current.player,puzzle.warpPairs);
+      if(warp&&!enqueue({depths:current.depths,player:warp},{type:'warp'}))return result('undetermined',{reason:'state limit'});
       for(const group of board.groups)if(canReachPiece(board,group,current.player))for(const dir of [1,-1]){
         if(timedOut())return result('undetermined',{reason:'time limit'});
         const next=manipulateState(board,current.player,group.id,dir);if(next&&!enqueue(next,{type:'piece',id:group.id,dir}))return result('undetermined',{reason:'state limit'});

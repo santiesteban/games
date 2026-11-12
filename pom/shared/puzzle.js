@@ -8,7 +8,7 @@ const slots='0123456789';
 const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const assert=(ok,message)=>{if(!ok)throw new Error(message)};
 export function checksum(bytes){let n=2166136261;for(const b of bytes)n=Math.imul(n^b,16777619);return (n>>>0).toString(16).padStart(8,'0')}
-export function geometryRevision(p){return checksum(encoder.encode(JSON.stringify([RULES_VERSION,p.grid,p.palette,p.start,p.goal,p.initialDepths])))}
+export function geometryRevision(p){const fields=[RULES_VERSION,p.grid,p.palette,p.start,p.goal,p.initialDepths];if(p.warpPairs?.length)fields.push(p.warpPairs);return checksum(encoder.encode(JSON.stringify(fields)))}
 export function validatePuzzle(value){
   assert(value&&typeof value==='object'&&!Array.isArray(value),'Choose a Little Ledges puzzle JSON file.');
   assert(value.format===PUZZLE_FORMAT,'This is not a Little Ledges Puzzle Maker file.');
@@ -20,20 +20,33 @@ export function validatePuzzle(value){
   const level=loadLevelCatalog({format:'little-ledges',schemaVersion:1,groups:[{id:'my-puzzles',name:'My Puzzles'}],levels:[input]}).levels[0];
   assert(level.compatibility.playable,level.compatibility.reasons.join(' '));
   assert(new Set(Object.values(level.palette).map(rgb=>rgb.join(','))).size===Object.keys(level.palette).length,'Palette colors must be distinct. Merge matching colors in Puzzle Maker.');
-  const count=createMovementBoard(level.grid).groups.length;
+  const board=createMovementBoard(level.grid),count=board.groups.length;
+  const pairs=value.warpPairs??[];assert(Array.isArray(pairs)&&pairs.length<=10,'Use at most 10 warp pipe pairs.');
+  const occupied=new Set();
+  for(const pair of pairs){
+    assert(Array.isArray(pair)&&pair.length===2,'Each warp pipe needs a partner.');
+    for(const cell of pair){
+      assert(cell&&Number.isInteger(cell.x)&&Number.isInteger(cell.y)&&cell.x>=0&&cell.x<32&&cell.y>=0&&cell.y<32&&board.byCell[cell.y]?.[cell.x],'Place each warp pipe on a painted piece.');
+      const group=board.byCell[cell.y][cell.x],key=`${cell.x},${cell.y}`;
+      assert(board.byCell[cell.y-1]?.[cell.x]!==group,'Place each warp pipe at the top edge of its piece.');
+      assert(!occupied.has(key),'Each warp pipe needs its own square.');
+      assert(cell.x!==level.goal.x||cell.y!==level.goal.y,'Place warp pipes away from the flag.');occupied.add(key);
+    }
+  }
   const keys=Object.keys(level.palette),canonicalPalette=Object.fromEntries(keys.map((key,i)=>[slots[i],level.palette[key]])),canonicalGrid=level.grid.map(row=>[...row].map(c=>c==='.'?'.':slots[keys.indexOf(c)]).join(''));
   const p={format:PUZZLE_FORMAT,schemaVersion:SCHEMA_VERSION,rulesVersion:RULES_VERSION,id:value.id,name:level.name,grid:canonicalGrid,palette:canonicalPalette,start:{x:level.start.x,y:level.start.y,z:level.start.z},goal:{x:level.goal.x,y:level.goal.y},initialDepths:level.initialDepths??Array(count).fill(0)};
+  if(pairs.length)p.warpPairs=pairs.map(pair=>pair.map(({x,y})=>({x,y})));
   p.revision=geometryRevision(p);
   if(value.revision!==undefined)assert(value.revision===p.revision,'The puzzle checksum does not match its contents. Re-export it from Puzzle Maker.');
   return p;
 }
 export function parsePuzzle(text){assert(typeof text==='string'&&text.length<=65536,'The puzzle file is too large (maximum 64 KB).');try{return validatePuzzle(JSON.parse(text))}catch(error){if(error instanceof SyntaxError)throw new Error('This file is not valid JSON.');throw error}}
-export function puzzleLevel(input){const p=validatePuzzle(input);return {id:`user:${p.id}`,number:'★',group:'my-puzzles',kind:'puzzle',name:p.name,description:'A community puzzle',coordinateOrigin:'top-left',emptyCell:'.',width:32,height:32,grid:p.grid,palette:p.palette,goal:p.goal,start:p.start,initialDepths:p.initialDepths,objects:{switches:[],manholes:[]},compatibility:{playable:true,reasons:[]},userPuzzle:p}}
+export function puzzleLevel(input){const p=validatePuzzle(input);return {id:`user:${p.id}`,number:'★',group:'my-puzzles',kind:'puzzle',name:p.name,description:'A community puzzle',coordinateOrigin:'top-left',emptyCell:'.',width:32,height:32,grid:p.grid,palette:p.palette,goal:p.goal,start:p.start,initialDepths:p.initialDepths,warpPairs:p.warpPairs??[],objects:{switches:[],manholes:[]},compatibility:{playable:true,reasons:[]},userPuzzle:p}}
 export function newPuzzleId(){return crypto.randomUUID()}
 export function defaultStart(grid,depths){const board=createMovementBoard(grid,depths);for(let x=0;x<32;x++)if(grid[31][x]!=='.'){const nodes=board.nodesAt(x,32);if(nodes.length)return nodes[0]}return {x:0,y:32,z:0}}
 export function encodePuzzle(input){
   const p=validatePuzzle(input),keys=Object.keys(p.palette),count=p.initialDepths.length;
-  const meta=encoder.encode(JSON.stringify([p.id,p.name,keys.map(k=>p.palette[k]),p.start.x,p.start.y,p.start.z,p.goal.x,p.goal.y,count]));
+  const meta=encoder.encode(JSON.stringify([p.id,p.name,keys.map(k=>p.palette[k]),p.start.x,p.start.y,p.start.z,p.goal.x,p.goal.y,count,...(p.warpPairs?.length?[p.warpPairs]:[])]));
   const bytes=new Uint8Array(3+meta.length+512+Math.ceil(count/4)+4);bytes[0]=1;bytes[1]=meta.length>>8;bytes[2]=meta.length&255;bytes.set(meta,3);
   const offset=3+meta.length;
   for(let i=0;i<1024;i++){const c=p.grid[i>>5][i%32],n=c==='.'?0:keys.indexOf(c)+1;bytes[offset+(i>>1)]|=n<<(i%2?0:4)}
@@ -47,12 +60,12 @@ export function decodePuzzle(token){
   assert(bytes.length>=520&&bytes[0]===1,'Unsupported puzzle link version.');
   assert(parseInt(checksum(bytes.subarray(0,-4)),16)===new DataView(bytes.buffer).getUint32(bytes.length-4),'This puzzle link is damaged or incomplete.');
   const length=bytes[1]*256+bytes[2];assert(length<1024&&3+length+516<=bytes.length,'Invalid puzzle link header.');
-  const [id,name,colors,sx,sy,sz,gx,gy,count]=JSON.parse(decoder.decode(bytes.subarray(3,3+length)));
+  const [id,name,colors,sx,sy,sz,gx,gy,count,warpPairs]=JSON.parse(decoder.decode(bytes.subarray(3,3+length)));
   assert(Array.isArray(colors)&&colors.length>=1&&colors.length<=10&&Number.isInteger(count)&&count>=1&&count<=1024,'Invalid puzzle link data.');
   const offset=3+length;assert(bytes.length===offset+512+Math.ceil(count/4)+4,'Invalid puzzle link size.');
   const grid=Array.from({length:32},(_,y)=>Array.from({length:32},(_,x)=>{const i=y*32+x,n=(bytes[offset+(i>>1)]>>(i%2?0:4))&15;assert(n<=colors.length,'Invalid puzzle color.');return n?slots[n-1]:'.'}).join(''));
   const initialDepths=Array.from({length:count},(_,i)=>(bytes[offset+512+(i>>2)]>>((3-i%4)*2))&3);
-  return validatePuzzle({format:PUZZLE_FORMAT,schemaVersion:1,rulesVersion:1,id,name,grid,palette:Object.fromEntries(colors.map((c,i)=>[slots[i],c])),start:{x:sx,y:sy,z:sz},goal:{x:gx,y:gy},initialDepths});
+  return validatePuzzle({format:PUZZLE_FORMAT,schemaVersion:1,rulesVersion:1,id,name,grid,palette:Object.fromEntries(colors.map((c,i)=>[slots[i],c])),start:{x:sx,y:sy,z:sz},goal:{x:gx,y:gy},initialDepths,warpPairs});
 }
 export function gameUrl(base,mode,input){const url=new URL(base);url.hash=`${mode}=${encodePuzzle(input)}`;return url.href}
 export function downloadBlob(blob,name){return saveFile(blob,name)}

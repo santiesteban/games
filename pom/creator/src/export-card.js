@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import {WARP_PIPE_COLORS} from '../../shared/warp-pipes.js';
 import { encodePuzzle, decodePuzzle, gameUrl, downloadBlob, fileName } from '../../shared/puzzle.js';
 const color=rgb=>`rgb(${rgb.join(',')})`;
 
@@ -24,6 +25,13 @@ export async function exportCard(puzzle,base){
   for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++)if(puzzle.grid[y][x]!=='.'){
     const x1=Math.round(artX+(x-left)*cell),x2=Math.round(artX+(x-left+1)*cell),y1=Math.round(artY+(y-top)*cell),y2=Math.round(artY+(y-top+1)*cell);
     c.fillStyle=color(puzzle.palette[puzzle.grid[y][x]]);c.fillRect(x1,y1,x2-x1,y2-y1);
+  }
+  for(const [index,pair] of (puzzle.warpPairs??[]).entries())for(const pipe of pair){
+    const x=artX+(pipe.x-left)*cell,y=artY+(pipe.y-top)*cell,colors=WARP_PIPE_COLORS[index%WARP_PIPE_COLORS.length];
+    c.fillStyle='#fff3d0';c.strokeStyle='#292537';c.lineWidth=Math.max(2,cell*.04);c.beginPath();c.roundRect(x+cell*.12,y+cell*.12,cell*.76,cell*.76,cell*.12);c.fill();c.stroke();
+    c.fillStyle=colors.body;c.fillRect(x+cell*.28,y+cell*.45,cell*.44,cell*.24);c.fillStyle=colors.rim;c.beginPath();c.ellipse(x+cell*.5,y+cell*.43,cell*.29,cell*.10,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#321744';c.beginPath();c.ellipse(x+cell*.5,y+cell*.42,cell*.15,cell*.04,0,0,Math.PI*2);c.fill();
+    if(puzzle.warpPairs.length>1){c.fillStyle='#292537';c.font=`bold ${Math.max(8,cell*.19)}px sans-serif`;c.textAlign='center';c.fillText(String(index+1),x+cell*.75,y+cell*.79)}
   }
   const gx=artX+(puzzle.goal.x-left+.4)*cell,gy=artY+(puzzle.goal.y-top+.15)*cell;
   c.strokeStyle='#292537';c.lineWidth=Math.max(2,cell*.06);c.beginPath();c.moveTo(gx,gy+cell*.8);c.lineTo(gx,gy);c.stroke();c.fillStyle='#ff9d1c';c.beginPath();c.moveTo(gx,gy);c.lineTo(gx+cell*.6,gy+cell*.2);c.lineTo(gx,gy+cell*.4);c.fill();

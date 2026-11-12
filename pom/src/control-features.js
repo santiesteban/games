@@ -8,6 +8,7 @@ export const CONTROL_FEATURES=[
   {id:'selectionLightbox',defaultEnabled:true,label:'Pulsing piece highlight',description:'Pulse the selected piece color. Turn off for the classic outline and tint.'},
   {id:'movementArrow',defaultEnabled:false,label:'Show movement arrow',description:'Show the route arrow while choosing where Pom should move.'},
   {id:'movementStuds',defaultEnabled:DEFAULT_DESIGN.studs.enabled,label:'Reachable platform markers',description:'Show small markers on platforms Pom can reach. Tap a marker to move there.'},
+  {id:'floorMarkers',defaultEnabled:false,label:'Reachable floor markers',description:'Show reachable markers on the floor instead of the grid.'},
   {id:'autoSelectPieces',defaultEnabled:true,label:'Automatically select nearby pieces',description:'After Pom moves, select a piece he can push or pull: behind him first, then right, then left.'},
   {id:'pullDepthColors',defaultEnabled:false,label:'Color top faces by pull distance',description:'Green at the front, yellow on the second row, and red on the third, with gentle gradients and subtle square grid lines on the tops and sides.'},
   {id:'walkabilityTopFaces',defaultEnabled:false,label:'Walkability grid on top faces',description:'Grid squares mark platforms Pom can reach; diagonal lines mark platforms that are out of reach.'},
