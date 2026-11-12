@@ -89,6 +89,13 @@
       </div>
     </div>
     <div class="camera-tuning" id="cameraTuning" role="group" aria-label="Camera tuning" hidden>
+        <label>Tracking
+          <select id="cameraTrackingMode">
+            <option value="current">Current</option>
+            <option value="soft">Damped / soft</option>
+            <option value="deadzone">Deadzone / cage</option>
+          </select>
+        </label>
         <label><input id="cameraTuningEnabled" type="checkbox" checked> Apply tuning</label>
         <label>Pitch <output for="cameraTuningPitch">20°</output>
           <input id="cameraTuningPitch" type="range" min="5" max="45" step="1" value="20">

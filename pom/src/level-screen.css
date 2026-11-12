@@ -437,6 +437,7 @@
 }
 .camera-tuning label { display: block; margin-top: 8px; }
 .camera-tuning output { float: right; }
+.camera-tuning select { display: block; width: 100%; margin-top: 3px; }
 .camera-tuning input[type="range"] { display: block; width: 100%; margin: 3px 0 0; }
 .camera-tuning button { margin-top: 6px; }
 .stage.screen--level .camera-controls__sliders { display: flex; align-items: center; gap: 8px; }

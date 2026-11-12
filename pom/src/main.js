@@ -93,6 +93,7 @@ const cameraDirection=document.querySelector('#cameraDirection');
 let cameraModeActive=false,cameraModePrevious=null,zoomFeedbackTimer;
 const cameraTuning=document.querySelector('#cameraTuning'),tuningToggle=document.querySelector('#cameraTuningToggle'),tuningEnabled=document.querySelector('#cameraTuningEnabled');
 const tuningPitch=document.querySelector('#cameraTuningPitch'),tuningDepth=document.querySelector('#cameraTuningDepth');
+const trackingMode=document.querySelector('#cameraTrackingMode');
 let experimentalPitch=null,extrusionScale=1;
 keepNativeInputLocal(cameraControlsPanel);
 keepNativeInputLocal(cameraTuning);
@@ -1289,8 +1290,17 @@ function updateStudyFollow(){
   const camera=render3D.camera,position=busy?playerObject.pos3D.add(render3D.camera.getForward().scale(.045)):worldPosition(player),offset=position.subtract(cameraFocus),right=camera.getRight(),up=camera.getUp();
   // Follow in the camera plane so depth and downward pitch cannot introduce a
   // screen-space offset. Translation leaves camera direction and zoom intact.
-  const desired=viewTarget.add(right.scale(cameraState.followX?offset.dot(right):0)).add(up.scale(cameraState.followY?offset.dot(up):0));
-  const framed=boundedStudyTarget(desired,position),next=viewTarget.lerp(framed,1-Math.exp(-dt/.18));
+  const mode=trackingMode.value;
+  let x=offset.dot(right),y=offset.dot(up);
+  if(mode==='deadzone'){
+    const horizontal=wrap.clientWidth/viewUnit*.16,vertical=wrap.clientHeight/viewUnit*.16;
+    x=Math.sign(x)*Math.max(0,Math.abs(x)-horizontal);
+    y=Math.sign(y)*Math.max(0,Math.abs(y)-vertical);
+    if((!cameraState.followX||x===0)&&(!cameraState.followY||y===0))return;
+  }
+  const desired=viewTarget.add(right.scale(cameraState.followX?x:0)).add(up.scale(cameraState.followY?y:0));
+  const framed=boundedStudyTarget(desired,position);
+  const next=mode==='deadzone'?framed:viewTarget.lerp(framed,1-Math.exp(-dt/(mode==='soft'?.65:.18)));
   if(next.subtract(viewTarget).length()<.0001)return;
   viewTarget=next;applyBoardView(false);
 }
@@ -1513,6 +1523,7 @@ function setCameraDirection(yaw,pitch){
   cameraState.yaw=Math.max(-40,Math.min(40,yaw));cameraState.pitch=Math.max(5,Math.min(45,pitch));
   viewTouched=true;clearBoardHover();applyCameraStudy({orbit:true});
 }
+trackingMode.addEventListener('change',()=>{wrap.dataset.cameraTrackingMode=trackingMode.value;followTime=timeReal});
 tuningToggle.addEventListener('click',()=>{
   const open=cameraTuning.hidden;
   cameraTuning.hidden=!open;
