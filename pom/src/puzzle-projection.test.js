@@ -66,3 +66,16 @@ test('corrected culling bounds contain transformed points throughout rotated box
  }
  const nearEye={min:{x:0,y:0,z:p.eyeZ-.0001},max:{x:1,y:1,z:p.eyeZ+1}},identity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];assert.equal(projectedPuzzleBounds(p,nearEye,identity),null);
 });
+
+test('experimental extrusion scales rendered depth and maps picks back to the logical grid',()=>{
+  const original={x:2,y:3,z:2};
+  for(const enabled of [false,true]){
+    const projection=puzzleProjection({...camera(16,.18),enabled,depthScale:1.5});
+    const stretched=projectPuzzlePoint(projection,original);
+    near(stretched.z,3);
+    const recovered=unprojectPuzzlePoint(projection,stretched);
+    near(recovered.x,original.x);
+    near(recovered.y,original.y);
+    near(recovered.z,original.z);
+  }
+});

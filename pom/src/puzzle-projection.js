@@ -1,8 +1,8 @@
 // Render-space compensation only. Logical grids, depths and collision rules
 // remain unchanged. At a fixed depth, one cell projects to a screen square.
-export function puzzleProjection({enabled=true,eye,forward,up}){
+export function puzzleProjection({enabled=true,eye,forward,up,depthScale=1}){
   enabled=!!enabled&&Math.abs(forward.x)<.001&&Math.abs(up.x)<.001;
-  return {enabled,eyeX:eye.x,eyeY:eye.y,eyeZ:eye.z,fy:forward.y,fz:forward.z,uy:up.y,uz:up.z};
+  return {enabled:enabled||depthScale!==1,square:enabled,depthScale,eyeX:eye.x,eyeY:eye.y,eyeZ:eye.z,fy:forward.y,fz:forward.z,uy:up.y,uz:up.z};
 }
 function plane(p,z){
   const d=-p.eyeY*p.fy+(z-p.eyeZ)*p.fz;
@@ -11,16 +11,20 @@ function plane(p,z){
 }
 export function projectPuzzlePoint(p,point){
   if(!p.enabled)return {...point};
-  const {d,b}=plane(p,point.z),den=b-p.fy*point.y;
-  if(d<=.001||b<=.001||den<=.001)return {...point};
+  const z=point.z*p.depthScale;
+  if(!p.square)return {...point,z};
+  const {d,b}=plane(p,z),den=b-p.fy*point.y;
+  if(d<=.001||b<=.001||den<=.001)return {...point,z};
   const y=d*point.y/den,scale=(d+p.fy*y)/d;
-  return {x:p.eyeX+(point.x-p.eyeX)*scale,y,z:point.z};
+  return {x:p.eyeX+(point.x-p.eyeX)*scale,y,z};
 }
 export function unprojectPuzzlePoint(p,point){
   if(!p.enabled)return {...point};
+  const z=point.z/p.depthScale;
+  if(!p.square)return {...point,z};
   const {d,b}=plane(p,point.z),den=d+p.fy*point.y;
-  if(d<=.001||b<=.001||den<=.001)return {...point};
-  return {x:p.eyeX+(point.x-p.eyeX)*d/den,y:point.y*b/den,z:point.z};
+  if(d<=.001||b<=.001||den<=.001)return {...point,z};
+  return {x:p.eyeX+(point.x-p.eyeX)*d/den,y:point.y*b/den,z};
 }
 
 // Clone shared meshes once per object. Recompute only when the camera, source
@@ -57,7 +61,7 @@ export function createPuzzleMeshProjection(cloneMesh){
         for(let i=0;i<r.points.length;i++){
           const q=r.points[i],world={x:p.x+q.x*s.x,y:p.y+q.y*s.y,z:p.z+q.z*s.z};
           const out=projectPuzzlePoint(projection,world);
-          r.mesh.points[i].set((out.x-p.x)/s.x,(out.y-p.y)/s.y,q.z);
+          r.mesh.points[i].set((out.x-p.x)/s.x,(out.y-p.y)/s.y,(out.z-p.z)/s.z);
         }
         Object.assign(r,{version,x:p.x,y:p.y,z:p.z,sx:s.x,sy:s.y,sz:s.z});
       }

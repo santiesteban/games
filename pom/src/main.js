@@ -91,7 +91,11 @@ const cameraControlsPanel=document.querySelector('#cameraControlsPanel');
 const cameraModeToggle=document.querySelector('#cameraModeToggle'),cameraModeSliders=document.querySelector('#cameraModeSliders');
 const cameraDirection=document.querySelector('#cameraDirection');
 let cameraModeActive=false,cameraModePrevious=null,zoomFeedbackTimer;
+const cameraTuning=document.querySelector('#cameraTuning'),tuningToggle=document.querySelector('#cameraTuningToggle'),tuningEnabled=document.querySelector('#cameraTuningEnabled');
+const tuningPitch=document.querySelector('#cameraTuningPitch'),tuningDepth=document.querySelector('#cameraTuningDepth');
+let experimentalPitch=null,extrusionScale=1;
 keepNativeInputLocal(cameraControlsPanel);
+keepNativeInputLocal(cameraTuning);
 const victoryEffects=createVictoryEffects(document.querySelector('.app'));
 let cameraFrameHeight=0,cameraFocus,followAnchor,followTime=0;
 let visibilityStudy={target:null,lastCheck:-1,lastTime:0,lastBlocked:-1,boxes:[],board:null,key:null};
@@ -250,7 +254,11 @@ function platformTopColor(group,x,z,fraction=.5){
   if(walkabilityFacesEnabled())return topPalette[group.color];
   if(diamondShapesEnabled())return new Color(1);
   if(topFaceStyle()==='flat')return palette[group.color];
-  const color=palette[group.color],shade=topFaceShade(x,z,color);
+  const color=palette[group.color];
+  // Near-black tiles need a lighter alternate square for the pattern to show.
+  const lift=(.26-Math.max(color.r,color.g,color.b))*.75;
+  if(lift>0)return (x+z)%2===1?tinted(color,lift):color;
+  const shade=topFaceShade(x,z,color);
   return new Color(color.r*shade.r,color.g*shade.g,color.b*shade.b);
 }
 function reachableMarkerColor(group,contrast=.10){
@@ -415,7 +423,7 @@ function resumeUnfinished(){
 function safeManipulation(g,next,dir){return safePieceChange(movementBoard(),movementBoard().groups[g.id],player,next,dir)}
 function canInteract(g){return g&&canReach(g)&&((g.depth<3&&safeManipulation(g,g.depth+1,1))||(g.depth>0&&safeManipulation(g,g.depth-1,-1)))}
 function autoSelectNearbyPiece(){
-  if(!controlFeatures.enabled('autoSelectPieces')||busy||won)return;
+  if(!controlFeatures.enabled('autoSelectPieces')||busy||won||canInteract(selected))return;
   const row=byCell[player.y-1];
   // Board coordinates keep right/left consistent at every camera angle.
   const candidates=[row?.[player.x],row?.[player.x+1],row?.[player.x-1]];
@@ -971,6 +979,10 @@ function updateUI(){
   if(!cameraAvailable&&cameraModeActive)setCameraMode(false);
   cameraControlsPanel.hidden=!cameraAvailable;
   cameraControlsPanel.inert=busy||won||levelLoading;
+  tuningToggle.hidden=!cameraAvailable;
+  tuningToggle.disabled=busy||won||levelLoading;
+  cameraTuning.hidden=!cameraAvailable||won||tuningToggle.getAttribute('aria-expanded')!=='true';
+  cameraTuning.inert=busy||levelLoading;
   if(viewReady)syncCameraSliders();
   wrap.classList.toggle('no-piece-selected',!selected);
   document.querySelector('#levelSettings').disabled=busy||won||introPlaying||levelLoading;
@@ -1067,7 +1079,7 @@ function resetLevelState(level){
   cameraModeActive=false;cameraModePrevious=null;syncCameraMode();
   levelAssetGate.cancel();levelLoading=true;viewReady=false;stopIntro();document.querySelector('.stage').classList.add('is-level-loading');levelLoadingPanel.hidden=false;levelLoadingRetry.hidden=true;levelLoadingMessage.textContent='Loading puzzle…';
   victoryEffects.reset();
-  pieceDragAnchor=null;activeLevel=level;if(isBackgroundStudio())backgroundStudio.setPreviewLevel(level.studioSourceId);if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
+  pieceDragAnchor=null;activeLevel=level;if(isBackgroundStudio())backgroundStudio.setPreviewLevel(level.studioSourceId);if(interactionLevel){interactionLevel.value=level.id;interactionCase.hidden=level.legacyId!==1}document.querySelector('.stage').classList.toggle('is-design',isDesignPlayground());document.querySelector('.stage').classList.toggle('has-studio-panel',!cameraLab&&isPreviewLevel(level));document.querySelector('#designPanel').hidden=!isDesignPlayground();document.querySelector('#backgroundPanel').hidden=!isBackgroundStudio();document.querySelector('#backgroundPanel').setAttribute('aria-label','Environment Studio controls');useLevelPalette(level);W=level.width;H=level.height;if(!cameraLab){cameraState.yaw=0;cameraState.pitch=(tuningEnabled.checked?experimentalPitch:null)??20;cameraState.truck=0;cameraState.backgroundDistance=puzzleBackgroundDistance(puzzleArtworkWidth(level))}mural=level.grid.map(row=>[...row]);goalCell={...level.goal};
   clearMovementRoutes();followAnchor=undefined;visibilityStudy.target=null;visibilityStudy.lastCheck=-1;visibilityStudy.lastBlocked=-1;
   groups=[];byCell=Array.from({length:H},()=>Array(W).fill(null));makeGroups();player={x:level.start.x,y:level.start.y??H,z:level.start.z};selected=null;hovered=null;history=[];won=false;busy=false;falling=false;viewSide=worldPresentation()?0:DEFAULT_VIEW.horizontal;viewHeightStep=0;viewPitch=cameraPitch();cameraLab?.setLevel(level.id);celebration=null;resumeUnfinished();
   hideHelp();interactionHelpKey=null;setUmbrellaVisible(false);rebuildBlockMeshes();autoSelectNearbyPiece();updateUI();loadLevelAssets();
@@ -1190,13 +1202,13 @@ function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
   const visible=cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides);
-  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),visible,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
   // Keep an empty transparent guide layer when hidden; removing its mesh can
   // alter the engine's transparent pass and hide the character overlay.
   const mesh=new Mesh(),tint=new Color(.28,.32,.25,visible?.5:0);
   const strip=(x0,z0,x1,z1)=>{
-    const a=render3D.worldToScreen(worldPoint(x0,.008,z0),size),b=render3D.worldToScreen(worldPoint(x1,.008,z1),size);
+    const a=render3D.worldToScreen(worldPoint(x0,.008,z0*extrusionScale),size),b=render3D.worldToScreen(worldPoint(x1,.008,z1*extrusionScale),size);
     if(!a||!b)return;
     const delta=b.subtract(a);if(delta.length()<.001)return;
     const normal=vec2(-delta.y,delta.x).normalize(1),screen=[a.add(normal),b.add(normal),b.subtract(normal),a.subtract(normal)];
@@ -1261,7 +1273,7 @@ function boundedStudyTarget(desired,position,span=viewSpan()){
   const visual=puzzleVisualBounds(),depth=Math.max(0,...groups.map(g=>g.depth)),points=[];
   // Use the puzzle's complete footprint, including the flag, rather than the
   // scenery or its floor guide. A small margin keeps outlines off the edges.
-  for(const x of [visual.left-.25,visual.right+.25])for(const y of [-.15,visual.height+.7])for(const z of [0,depth])points.push(worldPoint(x,y,z));
+  for(const x of [visual.left-.25,visual.right+.25])for(const y of [-.15,visual.height+.7])for(const z of [0,depth])points.push(worldPoint(x,y,z*extrusionScale));
   const project=p=>{const offset=p.subtract(desired),scale=studyPerspective()?distance/Math.max(.1,distance+offset.dot(forward)):1;return{x:{position:offset.dot(right),scale},y:{position:offset.dot(up),scale}}};
   const projected=points.map(project),pom=project(position),top=64,bottom=Math.min(132,height*.28),margin=Math.min(24,width*.06);
   const dx=cameraState.followX?boundedCameraAxis({points:projected.map(p=>p.x),min:(margin-width/2)/unit,max:(width/2-margin)/unit,subject:pom.x,padding:.45}):0;
@@ -1285,7 +1297,7 @@ function updateStudyFollow(){
 function updateStudyVisibility(){
   if(pieceDrag.active)return;
   if(!studyStraight()||!gameReady||!viewReady||won||celebration||!cameraFocus||!playerObject||!document.querySelector('#menuScreen').hidden)return;
-  const base=cameraPitch(),enabled=cameraState.autoTilt&&base>=5*Math.PI/180;
+  const base=cameraPitch(),enabled=(!tuningEnabled.checked||experimentalPitch===null)&&cameraState.autoTilt&&base>=5*Math.PI/180;
   const dt=Math.min(.1,Math.max(0,timeReal-visibilityStudy.lastTime));visibilityStudy.lastTime=timeReal;
   // Panning/explicit camera controls pause automatic changes until gameplay
   // resumes. Disabling the option still restores the requested base angle.
@@ -1355,7 +1367,7 @@ function openingCameraTarget(width,height,unit){
   const centered=framing(worldPoint(center,onFloor?0:(bottom+top)/2,0),.5,onFloor?.73:.5);
   positionCameraForView(viewSide,centered);render3D.updateMatrices(width/height);
   const outline=[];
-  for(const x of [left,rightEdge])for(const y of [bottom,top])for(const z of [0,depth])outline.push(worldPoint(x,y,z));
+  for(const x of [left,rightEdge])for(const y of [bottom,top])for(const z of [0,depth])outline.push(worldPoint(x,y,z*extrusionScale));
   outline.push(pom,worldPoint(goalCell.x+.5,H-goalCell.y+.45,0));
   if(openingFrameFits(outline.map(point=>render3D.worldToScreen(point,size)),width,height))return centered;
 
@@ -1501,6 +1513,32 @@ function setCameraDirection(yaw,pitch){
   cameraState.yaw=Math.max(-40,Math.min(40,yaw));cameraState.pitch=Math.max(5,Math.min(45,pitch));
   viewTouched=true;clearBoardHover();applyCameraStudy({orbit:true});
 }
+tuningToggle.addEventListener('click',()=>{
+  const open=cameraTuning.hidden;
+  cameraTuning.hidden=!open;
+  tuningToggle.setAttribute('aria-expanded',String(open));
+});
+function applyCameraTuning({updatePitch=false}={}){
+  extrusionScale=tuningEnabled.checked?Number(tuningDepth.value)/100:1;
+  if(updatePitch){
+    cameraState.pitch=(tuningEnabled.checked?experimentalPitch:null)??20;
+    if(cameraModePrevious)cameraModePrevious.pitch=cameraState.pitch;
+  }
+  tuningPitch.previousElementSibling.value=tuningPitch.value+'°';
+  tuningDepth.previousElementSibling.value=tuningDepth.value+'%';
+  enterPlayFromIntro();viewTouched=true;clearBoardHover();clearRoutePreview();
+  applyCameraStudy({orbit:true});
+}
+tuningEnabled.addEventListener('change',()=>applyCameraTuning({updatePitch:true}));
+tuningPitch.addEventListener('input',()=>{
+  experimentalPitch=Number(tuningPitch.value);
+  applyCameraTuning({updatePitch:tuningEnabled.checked});
+});
+tuningDepth.addEventListener('input',()=>applyCameraTuning());
+document.querySelector('#resetCameraTuning').addEventListener('click',()=>{
+  experimentalPitch=null;tuningPitch.value='20';tuningDepth.value='100';
+  applyCameraTuning({updatePitch:true});
+});
 let cameraDirectionDrag=null;
 cameraDirection.addEventListener('pointerdown',event=>{
   if(event.button!==0||!cameraModeActive)return;
@@ -1524,7 +1562,7 @@ function draggableFrontPiece(e){
   if(puzzleProjectionState().enabled){
     const hit=puzzleRaycast(ray,[...blockObjects,...topPickObjects,...extrusionOutlines])[0];
     const piece=groups.find(g=>g.objects.includes(hit));if(!piece||!canInteract(piece))return null;
-    const z=visualDepth(piece)+.025,t=(z-ray.origin.z)/ray.direction.z;if(t<0||!Number.isFinite(t))return null;
+    const z=(visualDepth(piece)+.025)*extrusionScale,t=(z-ray.origin.z)/ray.direction.z;if(t<0||!Number.isFinite(t))return null;
     const point=logicalPuzzlePoint(ray.getPosition(t));return {piece,front:true,x:point.x,y:unStretchY(point.y),distance:t};
   }
   const logical=boardRay(ray),skew=depthSkew();
@@ -1796,15 +1834,15 @@ let projectionCamera;
 function puzzleProjectionState(){
   const camera=render3D.camera,p=camera.pos,r=camera.rotation;
   const enabled=!cameraModeActive&&!cameraLab&&(!isPreviewLevel(activeLevel)||isBackgroundStudio())&&studyPerspective(),old=projectionCamera;
-  if(!old||old.enabled!==enabled||old.x!==p.x||old.y!==p.y||old.z!==p.z||old.rx!==r.x||old.ry!==r.y||old.rz!==r.z){
-    projectionCamera={enabled,x:p.x,y:p.y,z:p.z,rx:r.x,ry:r.y,rz:r.z,value:puzzleProjection({enabled,eye:p,forward:camera.getForward(),up:camera.getUp()})};
+  if(!old||old.enabled!==enabled||old.depthScale!==extrusionScale||old.x!==p.x||old.y!==p.y||old.z!==p.z||old.rx!==r.x||old.ry!==r.y||old.rz!==r.z){
+    projectionCamera={enabled,depthScale:extrusionScale,x:p.x,y:p.y,z:p.z,rx:r.x,ry:r.y,rz:r.z,value:puzzleProjection({enabled,depthScale:extrusionScale,eye:p,forward:camera.getForward(),up:camera.getUp()})};
   }
   return projectionCamera.value;
 }
 function puzzlePoint(point){const p=projectPuzzlePoint(puzzleProjectionState(),point);return vec3(p.x,p.y,p.z)}
 function logicalPuzzlePoint(point){const p=unprojectPuzzlePoint(puzzleProjectionState(),point);return vec3(p.x,p.y,p.z)}
 function syncPuzzleProjection(){
-  const projection=puzzleProjectionState();puzzleGPU?.begin(projection,requestGPUProjection);
+  const projection=puzzleProjectionState();puzzleGPU?.begin(projection,requestGPUProjection&&extrusionScale===1);
   const gpu=puzzleGPU?.active;
   const backend=projection.enabled?(gpu?'gpu':'cpu'):'native';
   if(wrap.dataset.puzzleProjection!==backend)wrap.dataset.puzzleProjection=backend;
@@ -1886,11 +1924,17 @@ function moveTo(p,pressMarker=false,preview=null){
     // Carry elapsed time across cell boundaries instead of inserting a fresh
     // animation frame and a full stop at the beginning of every next step.
     const previousIndex=index;
-    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};if(movementMarkerRoute)movementMarkerRouteIndex=index;resetPomShape();playerObject.scale3D=vec3(.72,.56,.018);for(const {white,black} of pomEyes){white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1)}for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}if(index<plans.length||!winningArrival)saveUnfinished()}
+    while(index<plans.length&&now-start>=plans[index].duration){start+=plans[index].duration;player={...path[++index]};if(movementMarkerRoute)movementMarkerRouteIndex=index;resetPomShape();playerObject.scale3D=vec3(.72,.56,.018);for(const {white,black} of pomEyes){white.scale3D=vec3(.2,.26,1);black.scale3D=vec3(.085,.13,1)}for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}if(index<plans.length)saveUnfinished()}
     if(index!==previousIndex&&movementMarkerRoute)syncMovementMarkers();
     if(index===plans.length){
       falling=false;setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
-      if(!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();startCelebration()}else autoSelectNearbyPiece();updateUI();return;
+      if(winningArrival){won=true;recordCompletedLevel();startCelebration()}
+      else {
+        if(!canInteract(selected))selected=null;
+        autoSelectNearbyPiece();
+        saveUnfinished();
+      }
+      updateUI();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;
@@ -1917,14 +1961,14 @@ function moveTo(p,pressMarker=false,preview=null){
   }
   requestAnimationFrame(tick);
 }
-function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return ray.getPosition(t)}
+function pointOnFloor(ray){if(Math.abs(ray.direction.y)<1e-6)return null;const t=(0-ray.origin.y)/ray.direction.y;if(t<0)return null;return logicalPuzzlePoint(ray.getPosition(t))}
 function nearbyMovementTarget(point,{topsOnly=false,floorsOnly=false}={}){
   const size=vec2(wrap.clientWidth,wrap.clientHeight),objects=[...blockObjects,...topPickObjects,...extrusionOutlines];
   const margin=floorsOnly?18:12;
   const candidates=standableReachable().filter(node=>(!topsOnly||node.y<H)&&(!floorsOnly||node.y===H)).map(node=>{
     const floor=node.y===H,y=floor?0:H-node.y;
     const polygon=[[node.x,node.z],[node.x+1,node.z],[node.x+1,node.z+1],[node.x,node.z+1]].map(([x,z])=>{
-      const world=worldPoint(x,y,z),projected=floor?world:puzzlePoint(world);
+      const projected=puzzlePoint(worldPoint(x,y,z));
       return render3D.worldToScreen(projected,size);
     });
     return {node,polygon};
@@ -1965,9 +2009,9 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
   const logicalRay=boardRay(ray);let best=null,bestD=Infinity;for(const p of standableReachable().filter(p=>p.y<H)){const h=H-p.y,z=p.z+.5,x=p.x+.5+depthSkew()*(p.z+.5);if(Math.abs(logicalRay.direction.y)<1e-6)continue;const t=(h-logicalRay.origin.y)/logicalRay.direction.y;if(t<0)continue;const q=logicalRay.getPosition(t),d=Math.hypot(q.x-x,q.z-z);if(d<bestD&&d<.72){best=p;bestD=d}}if(best){moveTo(best);return}
   }
   const hits=puzzleRaycast(ray,[...blockObjects,...topPickObjects,...extrusionOutlines]),hit=hits.find(o=>blockObjects.includes(o)||topObjectInfo.has(o)||sideObjectInfo.has(o));if(hit){const top=topObjectInfo.get(hit);if(top){moveTo(walkabilityFacesEnabled()?top:reachableTop(top));return}const g=sideObjectInfo.get(hit)||groups.find(g=>g.objects.includes(hit));if(g){if(canInteract(g)){hideHelp();selected=g;updateUI()}else showHelp('Pom cannot push or pull this piece from here. Move him beside an exposed edge.','wall');return}}
-  const nearby=nearbyMovementTarget(point,{floorsOnly:true});if(nearby){selected=null;updateUI();moveTo(nearby);return}
+  const nearby=nearbyMovementTarget(point,{floorsOnly:true});if(nearby){moveTo(nearby);return}
   // Match a visible point on the floor plane to the nearest reachable step.
-  const floor=pointOnFloor(ray);if(floor){selected=null;updateUI();const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15){moveTo(p);return}}
+  const floor=pointOnFloor(ray);if(floor){const candidates=standableReachable().filter(p=>p.y===H);const p=candidates.sort((a,b)=>{const pa=worldPosition(a,.5),pb=worldPosition(b,.5);return Math.hypot(pa.x-floor.x,pa.z-floor.z)-Math.hypot(pb.x-floor.x,pb.z-floor.z)})[0];if(p){const q=worldPosition(p,.5);if(Math.hypot(q.x-floor.x,q.z-floor.z)<1.15){moveTo(p);return}}
     const x=floor.x-depthSkew()*floor.z;
     if(x>=-1&&x<W+1&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }

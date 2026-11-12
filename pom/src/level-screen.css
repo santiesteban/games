@@ -366,6 +366,9 @@
   grid-column: 1 / -1;
   grid-row: 2;
   justify-self: end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  max-width: 100%;
   align-items: center;
   margin-left: 0;
 }
@@ -420,6 +423,22 @@
   pointer-events: auto;
   transition-delay: 0s;
 }
+.camera-tuning {
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  left: 8px;
+  width: 160px;
+  padding: 8px;
+  color: #222;
+  background: var(--color-paper);
+  border: 1px solid currentColor;
+  border-radius: 8px;
+}
+.camera-tuning label { display: block; margin-top: 8px; }
+.camera-tuning output { float: right; }
+.camera-tuning input[type="range"] { display: block; width: 100%; margin: 3px 0 0; }
+.camera-tuning button { margin-top: 6px; }
 .stage.screen--level .camera-controls__sliders { display: flex; align-items: center; gap: 8px; }
 .stage.screen--level .camera-controls__sliders[hidden] { display: none; }
 .stage.screen--level .camera-controls__direction[hidden] { display: none; }

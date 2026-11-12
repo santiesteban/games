@@ -1,6 +1,7 @@
 import {mountSceneryToPuzzle} from './scenery-mount.js';
 import {EngineObject3D,Mesh,Color,vec2,vec3} from 'littlejsengine';
 import {cardboardMesh,CARDBOARD_THICKNESS} from './cardboard.js';
+import {pieceShadowShader} from './shadow-materials.js';
 
 // World-anchored scenery for the camera study. Scenery never enters gameplay
 // collision or picking. The original registered images are reused unchanged.
@@ -53,6 +54,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     // Centering it on the actual orbit pivot holds projected height at fixed
     // tilt/scale, including after a pan. Ground and props remain world anchored.
     const wallPoint=(x,y)=>following?vec3(pivot.x+Math.sin(yaw)*back+Math.cos(yaw)*x,y,pivot.z+Math.cos(yaw)*back-Math.sin(yaw)*x):vec3(cx+x,y,back);
+    let backdrop;
     if(curved){
       // Leave the front half open so the side returns cannot sweep across the
       // puzzle's silhouette at the ±40° orbit limits.
@@ -63,12 +65,17 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
         const end=environment.fullTextures?1:anchor;
         mesh.addQuad(point(a,wallHeight),point(b,wallHeight),point(b,0),point(a,0),state.background?new Color(1):color('#eee9df'),[vec2(i/segments,0),vec2((i+1)/segments,0),vec2((i+1)/segments,end),vec2(i/segments,end)]);
       }
-      add(mesh,state.background?textures[0]:undefined);
+      backdrop=add(mesh,state.background?textures[0]:undefined);
       reference={curved:true,points:[point(-yaw-.4,0),point(-yaw,0),point(-yaw+.4,0)]};
     }else{
       const wall=[wallPoint(-span/2,wallHeight),wallPoint(span/2,wallHeight),wallPoint(span/2,0),wallPoint(-span/2,0)];
-      patch(wall,state.background?textures[0]:undefined,uv(0,environment.fullTextures?1:anchor),state.background?new Color(1):color('#eee9df'));
+      backdrop=patch(wall,state.background?textures[0]:undefined,uv(0,environment.fullTextures?1:anchor),state.background?new Color(1):color('#eee9df'));
       reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
+    }
+    if(environment.id==='dreamscape'){
+      backdrop.receiveShadow=true;
+      backdrop.shader=pieceShadowShader;
+      reference.shadowReceivers=1;
     }
     const groundBack=landscape||following||curved?-40:back;
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];

@@ -52,6 +52,12 @@
           </svg>
           <span class="action__label">Camera</span>
         </button>
+        <button class="action" id="cameraTuningToggle" type="button" aria-expanded="false" aria-controls="cameraTuning" hidden>
+          <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h4m4 0h8M4 12h8m4 0h4M4 18h3m4 0h9M8 4v4m8 2v4m-9 2v4" />
+          </svg>
+          <span class="action__label">Tuning</span>
+        </button>
         <button class="action" id="levelSettings" type="button" aria-label="Settings" title="Settings">
           <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v2m0 13v2m8.5-8.5h-2m-13 0h-2m14.5-6-1.5 1.5m-9 9L6 18m12 0-1.5-1.5m-9-9L6 6" />
@@ -81,7 +87,18 @@
           <button type="button" class="camera-controls__zoom-button" data-zoom-step="-1" aria-label="Zoom out" title="Zoom out"><svg class="camera-controls__zoom-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="m15 15 5 5M7 10h6"/></svg></button>
         </div>
       </div>
-    </div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
+    </div>
+    <div class="camera-tuning" id="cameraTuning" role="group" aria-label="Camera tuning" hidden>
+        <label><input id="cameraTuningEnabled" type="checkbox" checked> Apply tuning</label>
+        <label>Pitch <output for="cameraTuningPitch">20°</output>
+          <input id="cameraTuningPitch" type="range" min="5" max="45" step="1" value="20">
+        </label>
+        <label>Extrusion depth <output for="cameraTuningDepth">100%</output>
+          <input id="cameraTuningDepth" type="range" min="100" max="175" step="5" value="100">
+        </label>
+        <button type="button" id="resetCameraTuning">Reset tuning</button>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div><div class="studio-controls" id="studioControls" hidden><select id="movementCase" aria-label="Movement example"></select><button class="btn" id="previewClimb">Replay movement</button></div></main>
     <footer class="dock" id="pieceDock" data-active-piece="none">
       <div class="dock__tabs">
         <button class="dock__tab" type="button" disabled data-piece="left" data-state="disabled" aria-label="Left piece" aria-pressed="false">
