@@ -32,7 +32,6 @@ import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
 import { chooseVisibilityPitch, visibilityCameraPose, visibilityAtPitch } from './camera-visibility.js';
 import { createGoalBadge } from './goal-badge.js';
 import { createWarpPipeAssets } from './warp-pipe-assets.js';
-import { WARP_PIPE_COLORS } from '../shared/warp-pipes.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
@@ -907,19 +906,19 @@ function syncFlag(){
   flagCap.pos3D=base.add(vec3(0,stretchY(.78),0));
 }
 let warpPreviewAssets,warpPreviewEnds=[],warpPreviewPlayerKey='',warpPreviewAnimation=0,warpPreviewMouth=1,warpPreviewWarping=false,warpPreviewOpeningVisible=false;
-const warpPipeMotion=[],warpOpeningMotion=[];let warpPipesMoving=false,warpAction;
+const warpPipeMotion=[],warpOpeningMotion=[];let warpPipesMoving=false,warpPulsePair=null;
 function warpEndpoints(){
   if(warpPipePreview)return groups.slice(0,2).map(group=>({group,cell:group.cells.reduce((best,cell)=>cell.y<best.y?cell:best)}));
   return (activeLevel.warpPairs??[]).flatMap(pair=>pair.map(cell=>({group:byCell[cell.y]?.[cell.x],cell}))).filter(end=>end.group);
 }
 function setupWarpEnds(){
   for(const parts of warpPreviewEnds)for(const object of Object.values(parts))object.destroy();
-  warpPreviewEnds=[];warpPipeMotion.length=warpOpeningMotion.length=0;warpPreviewPlayerKey='';warpPipesMoving=false;
+  warpPreviewEnds=[];warpPipeMotion.length=warpOpeningMotion.length=0;warpPreviewPlayerKey='';warpPipesMoving=false;warpPulsePair=null;
   const count=warpPipePreview?2:(activeLevel.warpPairs?.length??0)*2;
   if(!count)return;
   warpPreviewAssets??=createWarpPipeAssets();
   warpPreviewEnds=Array.from({length:count},(_,i)=>warpPreviewAssets.createEnd(Math.floor(i/2),count>2));
-  for(const parts of warpPreviewEnds)for(const object of Object.values(parts))object.warpTile=object.tileInfo;
+  for(const parts of warpPreviewEnds)for(const object of Object.values(parts)){object.warpTile=object.tileInfo;object.warpBaseColor=object.color.copy()}
 }
 function warpPlayerOnPipe(){
   if(!warpPreviewEnds.length)return false;
@@ -1203,11 +1202,6 @@ function updateUI(){
   if(studioTargetObject){studioTargetObject.color=new Color(1,.95,.73,activeLevel.previewMove ? .85 : 0);if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}
   wrap.classList.toggle('uses-piece-drag',controlFeatures.enabled('pieceDragArrows'));
   pieceDrag.sync();
-  if(warpAction){
-    warpAction.hidden=warpPipePreview||!warpPreviewEnds.length||!warpDestination(movementBoard(),player,activeLevel.warpPairs);
-    warpAction.disabled=busy||won||levelLoading||introPlaying||!viewReady;
-    if(!warpAction.hidden){const index=warpEndpoints().findIndex(({cell,group})=>player.x===cell.x&&player.y===cell.y&&player.z===group.depth-1);if(index>=0)warpAction.style.setProperty('--warp-color',WARP_PIPE_COLORS[Math.floor(index/2)%WARP_PIPE_COLORS.length].rim)}
-  }
   syncPieceDock();
   syncInteractionHelp();
   const color=selected?palette[selected.color]:null;wrap.style.setProperty('--block-color',color?`rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`:'#eee8fa');
@@ -1925,14 +1919,55 @@ function previewRoute(e){
   routePreview={pointer:e.pointerId,target,path,plans:path.slice(1).map((to,i)=>routeFor(path[i],to)),board:movementBoard(),start:nodeKey(player),stud:!!stud};drawRoutePreview();
 }
 function sceneryRay(e){const p=boardPoint(e);return render3D.screenToRay(vec2(p.x,p.y),vec2(wrap.clientWidth,wrap.clientHeight))}
+function currentWarpPair(){
+  if(!warpPreviewEnds.length||busy||won||levelLoading||!viewReady)return null;
+  const endpoints=warpEndpoints(),source=endpoints.findIndex(({cell,group})=>player.x===cell.x&&player.y===cell.y&&player.z===group.depth-1);
+  if(source<0)return null;
+  const destination=source%2?source-1:source+1;
+  if(!endpoints[destination])return null;
+  if(warpPipePreview){
+    const board=movementBoard();
+    if(![source,destination].every(i=>{const {cell,group}=endpoints[i];return group.depth>0&&board.validNode({x:cell.x,y:cell.y,z:group.depth-1})}))return null;
+  }else if(!warpDestination(movementBoard(),player,activeLevel.warpPairs))return null;
+  return {source,destination,endpoints};
+}
+function updateWarpPulse(now){
+  const pair=currentWarpPair(),key=pair?`${pair.source}:${pair.destination}`:'';
+  if(warpPulsePair?.key!==key){
+    if(warpPulsePair)for(const i of [warpPulsePair.source,warpPulsePair.destination]){
+      const parts=warpPreviewEnds[i];if(parts)for(const name of ['badge','body','rim'])parts[name].color=parts[name].warpBaseColor.copy();
+    }
+    warpPulsePair=pair?{key,source:pair.source,destination:pair.destination}:null;
+  }
+  if(!pair)return;
+  const phase=reducedSelectionMotion.matches?.6:(1-Math.cos(now*Math.PI*2/1400))/2;
+  for(const i of [pair.source,pair.destination]){
+    const parts=warpPreviewEnds[i],base=parts.body.warpBaseColor,amount=.4*phase;
+    parts.badge.color.set(1-(1-base.r)*amount,1-(1-base.g)*amount,1-(1-base.b)*amount);
+  }
+  const dest=warpPreviewEnds[pair.destination];
+  for(const name of ['body','rim']){const color=dest[name].warpBaseColor,amount=.38*phase;dest[name].color.set(color.r+(1-color.r)*amount,color.g+(1-color.g)*amount,color.b+(1-color.b)*amount)}
+}
 function warpTapTarget(point){
-  if(warpPipePreview||busy||won||levelLoading||!viewReady||!warpPreviewEnds.length||!warpDestination(movementBoard(),player,activeLevel.warpPairs))return false;
+  const pair=currentWarpPair();if(!pair)return false;
   const size=vec2(wrap.clientWidth,wrap.clientHeight),project=point=>render3D.worldToScreen(puzzlePoint(point),size);
-  const y=H-player.y,polygon=[[player.x,player.z],[player.x+1,player.z],[player.x+1,player.z+1],[player.x,player.z+1]].map(([x,z])=>project(worldPoint(x,y,z)));
-  if(nearestMovementTarget(point,[{node:player,polygon}],{margin:0}))return true;
-  // Pom is often easier to tap than the small visible area of his square.
+  // Tapping Pom and either exposed pipe square or front-face icon can start a warp.
   const matrix=playerObject.getMatrix(),body=pomContour.map(([x,y])=>project(matrix.transformPoint(vec3(x,y,0))));
-  return !!nearestMovementTarget(point,[{node:player,polygon:body}],{margin:0});
+  if(nearestMovementTarget(point,[{node:player,polygon:body}],{margin:0}))return true;
+  const ray=render3D.screenToRay(vec2(point.x,point.y),size);
+  const objects=[...blockObjects,...topPickObjects,...extrusionOutlines,...warpPreviewEnds.flatMap(parts=>[parts.badge,parts.body,parts.rim])];
+  const hit=puzzleRaycast(ray,objects)[0];
+  for(const index of [pair.source,pair.destination]){
+    const {cell,group}=pair.endpoints[index],parts=warpPreviewEnds[index],z=group.depth-1,y=H-cell.y;
+    if(hit===parts.badge||hit===parts.body||hit===parts.rim)return true;
+    const top=topObjectInfo.get(hit);
+    if(top&&top.x===cell.x&&top.y===cell.y&&top.z===z)return true;
+    // Badge quads can have transparent edges; only accept the visible face
+    // if the same piece is the nearest obstacle at the tap point.
+    const face=parts.badge.getMatrix(),polygon=[[-.28,.28],[-.28,-.28],[.28,-.28],[.28,.28]].map(([x,y])=>project(face.transformPoint(vec3(x,y,0))));
+    if((group.objects.includes(hit)||sideObjectInfo.get(hit)===group)&&nearestMovementTarget(point,[{node:player,polygon}],{margin:0}))return true;
+  }
+  return false;
 }
 function activateCurrentWarp(){
   const endpoints=warpEndpoints(),source=endpoints.findIndex(({cell,group})=>player.x===cell.x&&player.y===cell.y&&player.z===group.depth-1);
@@ -2130,9 +2165,6 @@ function gameInit(){
     const animateButton=document.createElement('button');animateButton.type='button';animateButton.className='btn';animateButton.textContent='Animate warp';animateButton.onclick=()=>animateWarpPreview();panel.append(animateButton);
     wrap.append(panel);
   }
-  warpAction=document.createElement('button');warpAction.type='button';warpAction.className='warp-action';warpAction.textContent='Use warp pipe';warpAction.hidden=true;
-  for(const type of ['pointerdown','pointermove','pointerup','pointercancel'])warpAction.addEventListener(type,event=>event.stopPropagation());
-  warpAction.onclick=activateCurrentWarp;wrap.append(warpAction);
   render3D.onRenderTransparent=drawMapOutlines;
   render3D.sunDirection=vec3(-.45,.8,.5);render3D.sunColor=new Color(1,.91,.75);render3D.ambientColor=new Color(.52,.51,.4);render3D.ambientGroundColor=new Color(.35,.4,.3);
   baseCameraHeight=fitCamera(bounds.width,bounds.height);render3D.camera.orthographic=baseCameraHeight;positionCameraForView(viewSide);
@@ -2178,6 +2210,7 @@ function gameUpdate(){
   syncCellGeometry();syncPomMatrix();if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
+  if(warpPreviewEnds.length)updateWarpPulse(performance.now());
   if(selected&&!won){const color=selectedSurfaceColor(selected);for(const object of selected.objects)object.color=color}else pulsePiece=null;
   updateSelectionLightbox();
   syncPuzzleProjection();
@@ -2355,6 +2388,7 @@ document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(hi
 window.addEventListener('keydown',e=>{
   if(document.querySelector('.stage').inert||busy||won||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(['z','Z','r','R'].includes(e.key))enterPlayFromIntro();
+  if(e.key.toLowerCase()==='w'&&currentWarpPair()){e.preventDefault();activateCurrentWarp()}
   if(e.key.toLowerCase()==='z'){if(history.length)restore(history.pop())}if(e.key.toLowerCase()==='r')document.querySelector('#reset').click()
 });
 setCanvasPixelRatio(Math.min(window.devicePixelRatio||1,2));
