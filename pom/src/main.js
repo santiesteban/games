@@ -1286,6 +1286,8 @@ function updateStudyFollow(){
   if(!worldPresentation()||!studyStraight()||(!cameraState.followX&&!cameraState.followY)||!viewReady||!gameReady||won||celebration||!document.querySelector('#menuScreen').hidden)return;
   if(!followAnchor){resetStudyFollow();return}
   if(followAnchor.paused)return;
+  // Keep the board still once Pom stops, until the next movement begins.
+  if(trackingMode.value==='soft'&&!busy){followTime=timeReal;return}
   const dt=Math.min(.1,Math.max(0,timeReal-followTime));followTime=timeReal;if(!dt)return;
   const camera=render3D.camera,position=busy?playerObject.pos3D.add(render3D.camera.getForward().scale(.045)):worldPosition(player),offset=position.subtract(cameraFocus),right=camera.getRight(),up=camera.getUp();
   // Follow in the camera plane so depth and downward pitch cannot introduce a
@@ -1306,6 +1308,7 @@ function updateStudyFollow(){
 }
 function updateStudyVisibility(){
   if(pieceDrag.active)return;
+  if(trackingMode.value==='soft'&&!busy)return;
   if(!studyStraight()||!gameReady||!viewReady||won||celebration||!cameraFocus||!playerObject||!document.querySelector('#menuScreen').hidden)return;
   const base=cameraPitch(),enabled=(!tuningEnabled.checked||experimentalPitch===null)&&cameraState.autoTilt&&base>=5*Math.PI/180;
   const dt=Math.min(.1,Math.max(0,timeReal-visibilityStudy.lastTime));visibilityStudy.lastTime=timeReal;
