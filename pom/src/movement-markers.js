@@ -1,6 +1,6 @@
 import { EngineObject3D, Color, Mesh, vec3, engineObjectsRaycast3D } from 'littlejsengine';
 
-const DIAMETER=.20,PRESS_SCALE=.72,PRESS_TIME=95,RETURN_TIME=140,SIDES=32;
+const DIAMETER=.20,CIRCLE_DIAMETER=.15,PRESS_SCALE=.72,PRESS_TIME=95,RETURN_TIME=140,SIDES=32;
 const keyOf=node=>`${node.x},${node.y},${node.z}`;
 function roundedCorners(corners,cut=.06){
   const points=[];
@@ -42,7 +42,7 @@ export function createMovementMarkers(){
         object.lighting=false;object.emissive=1;object.castShadow=false;object.receiveShadow=!!shadowShader;object.shader=shadowShader;
         entry={object,node:{...target},base,color,highlightColor,highlighted:highlighted.has(key)};entries.set(key,entry);objects.set(object,entry);
       }
-      entry.object.mesh=meshes[shape];entry.base=base;entry.color=color;entry.highlightColor=highlightColor;entry.highlighted=highlighted.has(key);
+      entry.object.mesh=meshes[shape];entry.object.transparent=color.a<1||highlightColor.a<1;entry.base=base;entry.color=color;entry.highlightColor=highlightColor;entry.highlighted=highlighted.has(key);
     }
     update(performance.now());
   }
@@ -56,7 +56,8 @@ export function createMovementMarkers(){
         else pressed=null;
       }
       entry.object.pos3D=entry.base.add(vec3(0,stretchY(.001),0));
-      entry.object.scale3D=vec3(DIAMETER*scale,1,DIAMETER*scale);
+      const diameter=shape==='circle'?CIRCLE_DIAMETER:DIAMETER;
+      entry.object.scale3D=vec3(diameter*scale,1,diameter*scale);
       entry.object.color=entry.highlighted?entry.highlightColor:entry.color;
     }
   }
