@@ -23,7 +23,7 @@ Optional build variables (see `.env.example`):
 The creator uses a restrained cream interface with lighter headings and flat controls. New drafts show an editable Puzzle title field with the placeholder “Title of your puzzle.” JSON and QR exports require a title; an inline alert focuses the field when it is missing or still uses the legacy default. Playtest the puzzle appears beside solvability controls in Can Pom reach it?
 
 - Fixed 32 × 32 canvas, plus a separate green floor row for placing Pom.
-- Pencil (B), eraser (E), fill (F), eyedropper (I), piece select (V), pan (H), flag (G), Pom (P).
+- Pencil (B), eraser (E), fill (F), eyedropper (I), piece select (V), pan (H), flag (G), pullout switch, warp pipes (W), Pom (P).
 - Normal wheel/trackpad gestures scroll the page, including over the canvas. Pan tool enables bounded canvas panning; Ctrl/Command + wheel zooms; Fit resets the view.
 - On touch screens, swipes scroll and taps paint by default. Enable Touch drawing for continuous strokes, or select Pan for canvas gestures and pinch zoom. Turn Touch drawing off or leave Pan to resume page scrolling.
 - Arrow keys focus a cell; Space or Enter uses the selected tool. Ctrl/Command Z and Shift Z undo/redo.
@@ -48,7 +48,7 @@ Files are processed locally; sharing links are decoded without navigating to or 
 
 Pushmo conversion preserves the 32 × 32 grid, exact indexed RGB colors and original flag. Every piece starts fully pushed in and Pom starts on the ground. It does not align floating art automatically; the preview warns when the drawing does not reach the floor, and Setup → Align to floor remains available afterward. Solvability is unverified until checked against Little Ledges' rules.
 
-Stages with switches, manholes, invalid source checksums, missing/invalid goals, or duplicate RGB values in used color slots are rejected rather than silently changing their mechanics. Unknown formats, damaged Little Ledges payloads and unrelated QR codes show an inline error and leave the current draft intact.
+Imported Pushmo stages with source switches or manholes, invalid source checksums, missing/invalid goals, or duplicate RGB values in used color slots are rejected rather than silently changing their mechanics. Native Little Ledges pullout switches are authored with the switch tool. Unknown formats, damaged Little Ledges payloads and unrelated QR codes show an inline error and leave the current draft intact.
 
 The imported Pushmo reader/converter is independently written MIT-licensed code from the decoder companion. jsQR 1.4.0 handles QR scanning in the worker; its distribution wrapper is adapted to ES modules. Required notices ship at `import-licenses.txt`; component provenance is in `src/import/vendor/NOTICE.md`. No earlier third-party parser implementation or sample artwork is bundled.
 
@@ -68,7 +68,7 @@ In Little Ledges, My Puzzles appears after all the built-in groups. Import previ
 
 `../shared/puzzle.js` owns validation, canonical palette indexing, revision checks and the QR codec. A standalone JSON contains:
 
-- `format: "little-ledges-puzzle"`, `schemaVersion: 1`, `rulesVersion: 1`
+- `format: "little-ledges-puzzle"`, `schemaVersion: 1`, `rulesVersion: 1` or `2` (switches require 2)
 - `id`: stable 1–64 character ASCII identifier (letters, numbers and hyphens)
 - `name`: nonempty UTF-8 title, at most 128 bytes
 - `grid`: exactly 32 strings of 32 cells; `.` is empty
@@ -76,9 +76,10 @@ In Little Ledges, My Puzzles appears after all the built-in groups. Import previ
 - `goal: { x, y }`: an occupied cell
 - `start: { x, y, z }`: a valid exposed walking position; y=32 is the floor
 - `initialDepths`: one integer 0–3 per row-major connected piece
+- `switches` in rules version 2: up to ten `{x, y, color}` placements, with a used palette slot as the target color
 - `revision`: FNV-1a integrity hash of rules and gameplay content (not an authentication signature)
 
-Imports are restricted to puzzle geometry and colors. They cannot enable studio modes, inject markup, load remote assets, or supply unsupported mechanisms. JSON is limited to 64 KB. Unknown format/rules versions and damaged QR payloads are rejected. QR payloads pack cells at four bits and depths at two bits, with version, bounded metadata and checksum. Source images, history and analysis claims are never shared.
+Imports are restricted to puzzle geometry and colors. They cannot enable studio modes, inject markup, load remote assets, or supply unsupported mechanisms. JSON is limited to 64 KB. Unknown format/rules versions and damaged QR payloads are rejected. QR payloads pack cells at four bits and depths at two bits, with version, bounded metadata and checksum. Source images, history and analysis claims are never shared. Switch-free version-1 JSON and links retain their prior revision and encoding.
 
 ## Solvability
 

@@ -8,11 +8,12 @@ const slots='0123456789';
 const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const assert=(ok,message)=>{if(!ok)throw new Error(message)};
 export function checksum(bytes){let n=2166136261;for(const b of bytes)n=Math.imul(n^b,16777619);return (n>>>0).toString(16).padStart(8,'0')}
-export function geometryRevision(p){const fields=[RULES_VERSION,p.grid,p.palette,p.start,p.goal,p.initialDepths];if(p.warpPairs?.length)fields.push(p.warpPairs);return checksum(encoder.encode(JSON.stringify(fields)))}
+export function geometryRevision(p){const fields=[p.rulesVersion??RULES_VERSION,p.grid,p.palette,p.start,p.goal,p.initialDepths];if(p.warpPairs?.length)fields.push(p.warpPairs);if(p.rulesVersion===2)fields.push(p.switches??[]);return checksum(encoder.encode(JSON.stringify(fields)))}
 export function validatePuzzle(value){
   assert(value&&typeof value==='object'&&!Array.isArray(value),'Choose a Little Ledges puzzle JSON file.');
   assert(value.format===PUZZLE_FORMAT,'This is not a Little Ledges Puzzle Maker file.');
-  assert(value.schemaVersion===SCHEMA_VERSION&&value.rulesVersion===RULES_VERSION,'This puzzle uses an unsupported format or rules version. Update Little Ledges, or export it for a compatible app version.');
+  assert(value.schemaVersion===SCHEMA_VERSION&&[RULES_VERSION,2].includes(value.rulesVersion),'This puzzle uses an unsupported format or rules version. Update Little Ledges, or export it for a compatible app version.');
+  assert(value.rulesVersion===2||value.switches===undefined,'Pullout switches require rules version 2.');
   assert(typeof value.id==='string'&&/^[a-z0-9-]{1,64}$/i.test(value.id),'The puzzle ID is invalid.');
   assert(typeof value.name==='string'&&value.name.trim().length>0&&encoder.encode(value.name.trim()).length<=128,'Give the puzzle a title of up to 128 bytes.');
   assert(Array.isArray(value.grid)&&value.grid.length===32&&value.grid.every(r=>typeof r==='string'&&r.length===32),'The puzzle must have exactly 32 rows of 32 cells.');
@@ -33,21 +34,31 @@ export function validatePuzzle(value){
       assert(cell.x!==level.goal.x||cell.y!==level.goal.y,'Place warp pipes away from the flag.');occupied.add(key);
     }
   }
+  const switches=value.switches??[];assert(Array.isArray(switches)&&switches.length<=10,'Use at most 10 pullout switches.');
+  for(const item of switches){
+    assert(item&&Number.isInteger(item.x)&&Number.isInteger(item.y)&&item.x>=0&&item.x<32&&item.y>=0&&item.y<32&&board.byCell[item.y]?.[item.x],'Place each pullout switch on a painted piece.');
+    const group=board.byCell[item.y][item.x],key=`${item.x},${item.y}`;
+    assert(board.byCell[item.y-1]?.[item.x]!==group,'Place each pullout switch at the top edge of its piece.');
+    assert(!occupied.has(key),'Place pullout switches away from warp pipes and other switches.');
+    assert(item.x!==level.goal.x||item.y!==level.goal.y,'Place pullout switches away from the flag.');
+    assert(typeof item.color==='string'&&Object.hasOwn(level.palette,item.color)&&board.groups.some(piece=>piece.color===item.color),'Choose a color used by a puzzle piece.');occupied.add(key);
+  }
   const keys=Object.keys(level.palette),canonicalPalette=Object.fromEntries(keys.map((key,i)=>[slots[i],level.palette[key]])),canonicalGrid=level.grid.map(row=>[...row].map(c=>c==='.'?'.':slots[keys.indexOf(c)]).join(''));
-  const p={format:PUZZLE_FORMAT,schemaVersion:SCHEMA_VERSION,rulesVersion:RULES_VERSION,id:value.id,name:level.name,grid:canonicalGrid,palette:canonicalPalette,start:{x:level.start.x,y:level.start.y,z:level.start.z},goal:{x:level.goal.x,y:level.goal.y},initialDepths:level.initialDepths??Array(count).fill(0)};
+  const p={format:PUZZLE_FORMAT,schemaVersion:SCHEMA_VERSION,rulesVersion:value.rulesVersion,id:value.id,name:level.name,grid:canonicalGrid,palette:canonicalPalette,start:{x:level.start.x,y:level.start.y,z:level.start.z},goal:{x:level.goal.x,y:level.goal.y},initialDepths:level.initialDepths??Array(count).fill(0)};
   if(pairs.length)p.warpPairs=pairs.map(pair=>pair.map(({x,y})=>({x,y})));
+  if(p.rulesVersion===2)p.switches=switches.map(({x,y,color})=>({x,y,color:slots[keys.indexOf(color)]}));
   p.revision=geometryRevision(p);
   if(value.revision!==undefined)assert(value.revision===p.revision,'The puzzle checksum does not match its contents. Re-export it from Puzzle Maker.');
   return p;
 }
 export function parsePuzzle(text){assert(typeof text==='string'&&text.length<=65536,'The puzzle file is too large (maximum 64 KB).');try{return validatePuzzle(JSON.parse(text))}catch(error){if(error instanceof SyntaxError)throw new Error('This file is not valid JSON.');throw error}}
-export function puzzleLevel(input){const p=validatePuzzle(input);return {id:`user:${p.id}`,number:'★',group:'my-puzzles',kind:'puzzle',name:p.name,description:'A community puzzle',coordinateOrigin:'top-left',emptyCell:'.',width:32,height:32,grid:p.grid,palette:p.palette,goal:p.goal,start:p.start,initialDepths:p.initialDepths,warpPairs:p.warpPairs??[],objects:{switches:[],manholes:[]},compatibility:{playable:true,reasons:[]},userPuzzle:p}}
+export function puzzleLevel(input){const p=validatePuzzle(input);return {id:`user:${p.id}`,number:'★',group:'my-puzzles',kind:'puzzle',name:p.name,description:'A community puzzle',coordinateOrigin:'top-left',emptyCell:'.',width:32,height:32,grid:p.grid,palette:p.palette,goal:p.goal,start:p.start,initialDepths:p.initialDepths,warpPairs:p.warpPairs??[],switches:p.switches??[],objects:{switches:[],manholes:[]},compatibility:{playable:true,reasons:[]},userPuzzle:p}}
 export function newPuzzleId(){return crypto.randomUUID()}
 export function defaultStart(grid,depths){const board=createMovementBoard(grid,depths);for(let x=0;x<32;x++)if(grid[31][x]!=='.'){const nodes=board.nodesAt(x,32);if(nodes.length)return nodes[0]}return {x:0,y:32,z:0}}
 export function encodePuzzle(input){
   const p=validatePuzzle(input),keys=Object.keys(p.palette),count=p.initialDepths.length;
-  const meta=encoder.encode(JSON.stringify([p.id,p.name,keys.map(k=>p.palette[k]),p.start.x,p.start.y,p.start.z,p.goal.x,p.goal.y,count,...(p.warpPairs?.length?[p.warpPairs]:[])]));
-  const bytes=new Uint8Array(3+meta.length+512+Math.ceil(count/4)+4);bytes[0]=1;bytes[1]=meta.length>>8;bytes[2]=meta.length&255;bytes.set(meta,3);
+  const meta=encoder.encode(JSON.stringify([p.id,p.name,keys.map(k=>p.palette[k]),p.start.x,p.start.y,p.start.z,p.goal.x,p.goal.y,count,...(p.rulesVersion===2?[p.warpPairs??[],p.switches]:(p.warpPairs?.length?[p.warpPairs]:[]))]));
+  const bytes=new Uint8Array(3+meta.length+512+Math.ceil(count/4)+4);bytes[0]=p.rulesVersion;bytes[1]=meta.length>>8;bytes[2]=meta.length&255;bytes.set(meta,3);
   const offset=3+meta.length;
   for(let i=0;i<1024;i++){const c=p.grid[i>>5][i%32],n=c==='.'?0:keys.indexOf(c)+1;bytes[offset+(i>>1)]|=n<<(i%2?0:4)}
   for(let i=0;i<count;i++)bytes[offset+512+(i>>2)]|=p.initialDepths[i]<<((3-i%4)*2);
@@ -57,15 +68,15 @@ export function encodePuzzle(input){
 export function decodePuzzle(token){
   assert(typeof token==='string'&&token.length<=2400&&/^[\w-]+$/.test(token),'The puzzle link is invalid or too large.');
   const bytes=Uint8Array.from(atob(token.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));
-  assert(bytes.length>=520&&bytes[0]===1,'Unsupported puzzle link version.');
+  assert(bytes.length>=520&&[1,2].includes(bytes[0]),'Unsupported puzzle link version.');
   assert(parseInt(checksum(bytes.subarray(0,-4)),16)===new DataView(bytes.buffer).getUint32(bytes.length-4),'This puzzle link is damaged or incomplete.');
   const length=bytes[1]*256+bytes[2];assert(length<1024&&3+length+516<=bytes.length,'Invalid puzzle link header.');
-  const [id,name,colors,sx,sy,sz,gx,gy,count,warpPairs]=JSON.parse(decoder.decode(bytes.subarray(3,3+length)));
+  const [id,name,colors,sx,sy,sz,gx,gy,count,warpPairs,switches]=JSON.parse(decoder.decode(bytes.subarray(3,3+length)));
   assert(Array.isArray(colors)&&colors.length>=1&&colors.length<=10&&Number.isInteger(count)&&count>=1&&count<=1024,'Invalid puzzle link data.');
   const offset=3+length;assert(bytes.length===offset+512+Math.ceil(count/4)+4,'Invalid puzzle link size.');
   const grid=Array.from({length:32},(_,y)=>Array.from({length:32},(_,x)=>{const i=y*32+x,n=(bytes[offset+(i>>1)]>>(i%2?0:4))&15;assert(n<=colors.length,'Invalid puzzle color.');return n?slots[n-1]:'.'}).join(''));
   const initialDepths=Array.from({length:count},(_,i)=>(bytes[offset+512+(i>>2)]>>((3-i%4)*2))&3);
-  return validatePuzzle({format:PUZZLE_FORMAT,schemaVersion:1,rulesVersion:1,id,name,grid,palette:Object.fromEntries(colors.map((c,i)=>[slots[i],c])),start:{x:sx,y:sy,z:sz},goal:{x:gx,y:gy},initialDepths,warpPairs});
+  return validatePuzzle({format:PUZZLE_FORMAT,schemaVersion:1,rulesVersion:bytes[0],id,name,grid,palette:Object.fromEntries(colors.map((c,i)=>[slots[i],c])),start:{x:sx,y:sy,z:sz},goal:{x:gx,y:gy},initialDepths,warpPairs,...(bytes[0]===2?{switches}: {})});
 }
 export function gameUrl(base,mode,input){const url=new URL(base);url.hash=`${mode}=${encodePuzzle(input)}`;return url.href}
 export function downloadBlob(blob,name){return saveFile(blob,name)}

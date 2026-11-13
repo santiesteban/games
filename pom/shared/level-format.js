@@ -92,8 +92,18 @@ export function loadLevelCatalog(document){
     }
     const board=createMovementBoard(input.grid);
     if(input.initialDepths!==undefined)check(Array.isArray(input.initialDepths)&&input.initialDepths.length===board.groups.length&&input.initialDepths.every(depth=>integer(depth,0,3)),'initialDepths must give each connected piece a depth from 0 to 3');
+    const switches=input.switches??[],pipeCells=Array.isArray(input.warpPairs)?input.warpPairs.filter(Array.isArray).flatMap(pair=>pair.filter(object).map(cell=>`${cell.x},${cell.y}`)):[],switchCells=new Set(pipeCells);
+    check(Array.isArray(switches)&&switches.length<=10,'switches must contain at most ten pullout switches');
+    for(const item of switches){
+      const key=`${item?.x},${item?.y}`,group=board.byCell[item?.y]?.[item?.x];
+      check(cell(item)&&group,'pullout switches must be on painted cells');
+      check(board.byCell[item.y-1]?.[item.x]!==group,'pullout switches must be on a top edge of a piece');
+      check(!switchCells.has(key),'pullout switches cannot overlap a flag, pipe, or another switch');switchCells.add(key);
+      check(item.x!==input.goal?.x||item.y!==input.goal?.y,'pullout switches cannot overlap the flag');
+      check(typeof item.color==='string'&&own(input.palette,item.color)&&board.groups.some(piece=>piece.color===item.color),'pullout switch color must name a used palette slot');
+    }
     if(input.previewMove!==undefined)check(object(input.previewMove)&&integer(input.previewMove.x,-1,input.width-1)&&integer(input.previewMove.y,0,input.height)&&integer(input.previewMove.z,0,3),'invalid previewMove');
-    const level={...input,kind:input.kind??'puzzle',knownIssues:input.knownIssues??false,description:input.description??'',grid:[...input.grid],palette:Object.fromEntries(entries.map(([slot,rgb])=>[slot,[...rgb]])),objects:{...objects,switches:structuredClone(objects.switches??[]),manholes:structuredClone(objects.manholes??[])}};
+    const level={...input,kind:input.kind??'puzzle',knownIssues:input.knownIssues??false,description:input.description??'',grid:[...input.grid],palette:Object.fromEntries(entries.map(([slot,rgb])=>[slot,[...rgb]])),switches:structuredClone(switches),objects:{...objects,switches:structuredClone(objects.switches??[]),manholes:structuredClone(objects.manholes??[])}};
     level.compatibility=levelCompatibility(level);
     return level;
   });
