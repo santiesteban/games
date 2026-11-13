@@ -75,6 +75,16 @@
         }
       }
     },
+    "pulloutSwitch": {
+      "type": "object",
+      "required": ["x", "y", "color"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0, "maximum": 31 },
+        "y": { "type": "integer", "minimum": 0, "maximum": 31 },
+        "color": { "type": "string", "pattern": "^[A-Za-z0-9]$" }
+      },
+      "additionalProperties": false
+    },
     "start": {
       "type": "object",
       "required": [
@@ -280,6 +290,11 @@
             "minimum": 0,
             "maximum": 3
           }
+        },
+        "switches": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/pulloutSwitch" }
         },
         "previewMove": {
           "$ref": "#/$defs/start"

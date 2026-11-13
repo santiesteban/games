@@ -1,5 +1,5 @@
 import {validatePuzzle} from '../../shared/puzzle.js';
-import {canReachPiece,manipulateState,goalPosition,nodeKey,replaySolution,warpDestination} from '../../shared/rules.js';
+import {canReachPiece,manipulateState,goalPosition,nodeKey,replaySolution,warpDestination,pulloutSwitchState} from '../../shared/rules.js';
 import {createMovementBoard,isSingleMove,isJumpCandidate,movementNeighbors,planMovement} from '../../shared/movement-routes.js';
 
 // Reject only geometric combinations that neither a regular move nor a jump
@@ -23,7 +23,8 @@ export function solvePuzzle(input,{timeLimitMs=180000,maxStates,heuristicWeight=
     const puzzle=validatePuzzle(input),pieceCount=puzzle.initialDepths.length;
     const stateLimit=maxStates??Math.min(400000,Math.max(20000,Math.floor(45000000/(pieceCount+60))));
     const timedOut=()=>now()-started>=timeLimitMs;
-    const root={depths:Uint8Array.from(puzzle.initialDepths),player:puzzle.start,parent:-1,action:null,steps:0},states=[root],queue=new Heap(),seen=new Set(),boards=new Map();
+    const initial=pulloutSwitchState(createMovementBoard(puzzle.grid,puzzle.initialDepths),puzzle.start,puzzle.switches);
+    const root={depths:Uint8Array.from(initial?.depths??puzzle.initialDepths),player:initial?.player??puzzle.start,parent:-1,action:null,steps:0},states=[root],queue=new Heap(),seen=new Set(),boards=new Map();
     const stateKey=s=>`${s.depths.join('')}:${nodeKey(s.player)}`;
     function boardFor(depths){const key=depths.join('');let value=boards.get(key);if(!value){if(boards.size>=(pieceCount>30?16:48))boards.delete(boards.keys().next().value);value={board:createMovementBoard(puzzle.grid,depths),routes:new Map()};boards.set(key,value)}return value}
     const goalPiece=boardFor(root.depths).board.byCell[puzzle.goal.y][puzzle.goal.x].id;
@@ -34,16 +35,16 @@ export function solvePuzzle(input,{timeLimitMs=180000,maxStates,heuristicWeight=
       if(timedOut())return result('undetermined',{reason:'time limit'});
       const head=queue.pop().index,current=states[head],{board,routes}=boardFor(current.depths);visited++;
       bestRow=Math.min(bestRow,current.player.y);bestDistance=Math.min(bestDistance,Math.abs(current.player.x-puzzle.goal.x)+Math.abs(current.player.y-puzzle.goal.y));
+      if(nodeKey(current.player)===nodeKey(goalPosition(board,puzzle.goal))){const actions=[];let i=head;while(states[i].parent!==-1){actions.push(states[i].action);i=states[i].parent}actions.reverse();if(!replaySolution(puzzle,actions))throw new Error('Solution replay failed.');return result('solvable',{actions})}
       const getPlan=(a,b)=>{if(!possibleMovement(a,b))return false;const key=`${nodeKey(a)}>${nodeKey(b)}`;if(!routes.has(key)){if(routes.size>=2000)routes.clear();routes.set(key,!!planMovement(board,a,b))}return routes.get(key)};
       function enqueue(next,action){
+        const activated=pulloutSwitchState(boardFor(next.depths).board,next.player,puzzle.switches);if(activated)next=activated;
         transitions++;const key=stateKey(next);if(seen.has(key))return true;
         if(states.length>=stateLimit)return false;
-        seen.add(key);const index=states.length,entry={...next,depths:action.type==='piece'?Uint8Array.from(next.depths):next.depths,parent:head,action,steps:current.steps+1};states.push(entry);queue.push({index,score:score(entry)});return true;
+        seen.add(key);const index=states.length,entry={...next,depths:Uint8Array.from(next.depths),parent:head,action,steps:current.steps+1};states.push(entry);queue.push({index,score:score(entry)});return true;
       }
-      const goal=nodeKey(goalPosition(board,puzzle.goal));
       for(const to of movementNeighbors(board,current.player,getPlan)){
         if(timedOut())return result('undetermined',{reason:'time limit'});
-        if(nodeKey(to)===goal){const actions=[{type:'move',to}];let i=head;while(states[i].parent!==-1){actions.push(states[i].action);i=states[i].parent}actions.reverse();if(!replaySolution(puzzle,actions))throw new Error('Solution replay failed.');return result('solvable',{actions})}
         if(!enqueue({depths:current.depths,player:to},{type:'move',to}))return result('undetermined',{reason:'state limit'});
       }
       const warp=warpDestination(board,current.player,puzzle.warpPairs);

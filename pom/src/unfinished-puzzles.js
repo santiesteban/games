@@ -2,7 +2,7 @@ const KEY='little-ledges:v1:unfinished-puzzles';
 
 // Geometry changes invalidate a position, including replacements of personal puzzles.
 export function puzzleSignature(level){
-  return JSON.stringify([level.grid,level.start,level.goal,level.initialDepths??[],level.userPuzzle?.revision??null]);
+  return JSON.stringify([level.grid,level.start,level.goal,level.initialDepths??[],level.userPuzzle?.revision??null,...(level.switches?.length?[level.switches]:[])]);
 }
 function hasMoves(level,state){
   if(!Array.isArray(state?.history)||state.history.length)return true;

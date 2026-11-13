@@ -35,6 +35,7 @@ positions, and engine compatibility. A valid document is not proof of solvabilit
       "grid": ["AAB", "ABB", "BBB"],
       "start": { "x": 0, "y": 3, "z": 0 },
       "goal": { "x": 2, "y": 0 },
+      "switches": [{ "x": 0, "y": 2, "color": "B" }],
       "objects": { "switches": [], "manholes": [] }
     }
   ]
@@ -112,9 +113,22 @@ coordinates by default. Cropping trailing empty rows can change gameplay, even
 if all object coordinates are shifted correctly. Source-image display cropping
 and gameplay cropping are separate concerns.
 
-## Special objects and flags
+## Pullout switches, source objects and flags
 
-`objects.switches` and `objects.manholes` default to empty arrays and preserve
+Native levels may include up to ten top-level `switches`. Each is
+`{ "x": number, "y": number, "color": slot }`: its position is an occupied
+top-edge square, and `color` is a used palette slot. A switch cannot share its
+square with the flag, a warp pipe, or another switch. Standing on its exposed
+square pulls every piece of its target slot fully out. It can activate again
+while any target piece is below maximum depth. Pom starting on or arriving at
+the square activates it. If extension reaches Pom, he jumps onto an extending
+piece when its top is safely exposed; otherwise the piece pushes him forward
+and he falls to the first walkable surface below. Activation is part of the
+move's undo step. Standalone puzzles with switches use rules version 2.
+See [Pullout Switch](PULLOUT_SWITCH.md) for the full mechanic contract.
+
+`objects.switches` and `objects.manholes` are source-decoder records. They
+default to empty arrays and preserve
 up to ten records each. Each record requires `slot` (unique 0–9 within its list)
 and grid coordinates `x`, `y`. Optional `icon` and `attributes` are bytes;
 `color` is 0–15; `inverted` is boolean. Sparse original slots remain sparse.
@@ -124,11 +138,14 @@ Optional `flags` retains decoder fields `raw`, `protected`, `large`,
 `uses_switches`, and `uses_manholes`. `raw` is an unsigned 32-bit integer.
 Unknown flag properties and bits are preserved, without assigning them mechanics.
 
-Switches and manholes are **stored but not implemented**. A populated list, a true
-uses flag, or its matching raw flag bit marks a level unsupported. Unknown object
-types also mark it unsupported. They are never silently played as ordinary puzzles.
-The loader's derived `compatibility` result contains `playable` and explanatory
-`reasons`; this is runtime information, not an authored field.
+Source-decoder switches and manholes are still **preserved but unsupported**. A
+populated source-object list, a true uses flag, or its matching raw flag bit marks
+a level unsupported. The native top-level `switches` property is a separate,
+explicit Little Ledges mechanic; source Pushmo switch attributes are not assumed to
+match it. Unknown object types also mark a level unsupported. They are never
+silently played as ordinary puzzles. The loader's derived `compatibility` result
+contains `playable` and explanatory `reasons`; this is runtime information, not an
+authored field.
 
 ## Source preservation
 
