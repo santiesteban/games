@@ -774,29 +774,24 @@ function syncFloorGrid(){
   // Wash the entire scenery below the horizon; the puzzle remains in front
   // because this camera-facing layer sits behind the playfield geometry.
   m.addQuad(vec3(-worldWidth/2,hy,0),vec3(worldWidth/2,hy,0),vec3(worldWidth/2,-ortho/2,0),vec3(-worldWidth/2,-ortho/2,0),foregroundWash);
-  const ground=0,{left,right,back,front}=puzzleFloorBounds(mural,GRID_DEPTH);
+  const s=depthSkew(),ground=0,{left,right,back,front}=puzzleFloorBounds(mural,GRID_DEPTH);
   const reachable=reachableSurfaceKeys(),walkable=[];
   for(const key of reachable){const [x,y,z]=key.split(',').map(Number);if(y!==H)continue;
     walkable.push({x,z,polygon:[[x,z],[x+1,z],[x+1,z+1],[x,z+1]].map(([xx,zz])=>toPlane(worldPoint(xx,ground,zz)))});
   }
-  // The floor is a single platform; keep its surface at the walking height
-  // and draw the thickness below it so movement and shadows stay aligned.
-  const project=(x,y,z)=>toPlane(worldPoint(x,y,z));
-  const quad=(points,color)=>m.addQuad(...points.map(p=>vec3(p.x,p.y,0)),color);
-  const side=designColor('#b88b5e');
-  for(const [a,b] of [[[left,front],[right,front]],[[left,back],[left,front]],[[right,back],[right,front]]]){
-    const topA=project(a[0],0,a[1]),topB=project(b[0],0,b[1]);
-    const bottomA=project(a[0],-.09,a[1]),bottomB=project(b[0],-.09,b[1]);
-    quad([topA,topB,bottomB,bottomA],side);
+  // Diagonals cover non-walkable ground; cut them at exact walking-cell edges.
+  const walkingPolygons=walkable.map(cell=>cell.polygon);
+  const low=-ortho/2,high=Math.min(hy,ortho/2),rise=high-low,spacing=10*ortho/height;
+  if(rise>0)for(let x=-worldWidth/2-rise;x<=worldWidth/2;x+=spacing){
+    for(const [a,b]of outsidePolygonSegments({x,y:low},{x:x+rise,y:high},walkingPolygons))addPlaneLine(a,b);
   }
-  const plank=designColor('#e2c49f'),seam=designColor('#caa77e'),rim=designColor('#caa77e');
-  quad([[left,back],[right,back],[right,front],[left,front]].map(([x,z])=>project(x,0,z)),plank);
-  const rimWidth=.075;
-  for(const [a,b] of [[[left,back],[right,back]],[[left,front],[right,front]],[[left,back],[left,front]],[[right,back],[right,front]]])quad([[a[0],a[1]],[b[0],b[1]],[b[0]+(a[0]===b[0]?(b[0]===left?rimWidth:-rimWidth):0),b[1]+(a[1]===b[1]?(b[1]===back?rimWidth:-rimWidth):0)],[a[0]+(a[0]===b[0]?(a[0]===left?rimWidth:-rimWidth):0),a[1]+(a[1]===b[1]?(a[1]===back?rimWidth:-rimWidth):0)]].map(([x,z])=>project(x,.01,z)),rim);
-  if(!floorMarkersEnabled()){
-    const seamWidth=.075;
-    for(let x=left+1;x<right;x++)quad([[x-seamWidth/2,back],[x+seamWidth/2,back],[x+seamWidth/2,front],[x-seamWidth/2,front]].map(([xx,z])=>project(xx,.009,z)),seam);
-    for(let z=back+1;z<front;z++)quad([[left,z-seamWidth/2],[right,z-seamWidth/2],[right,z+seamWidth/2],[left,z+seamWidth/2]].map(([x,zz])=>project(x,.009,zz)),seam);
+  const seen=new Set();
+  for(const {x,z,polygon}of walkable){
+    m.addQuad(...polygon.map(p=>vec3(p.x,p.y,0)),floorWash);
+    for(const [a,b]of [[[x,z],[x+1,z]],[[x+1,z],[x+1,z+1]],[[x+1,z+1],[x,z+1]],[[x,z+1],[x,z]]]){
+      const ka=a.join(','),kb=b.join(','),key=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;if(seen.has(key))continue;seen.add(key);
+      addLine(worldPoint(a[0],ground,a[1]),worldPoint(b[0],ground,b[1]));
+    }
   }
   wrap.dataset.walkableFloorCells=String(walkable.length);
   wrap.dataset.floorBounds=JSON.stringify({left,right,back,front});
@@ -1436,39 +1431,24 @@ let floorGuideMesh,floorGuideKey;
 function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
-  const visible=cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides),markers=floorMarkersEnabled();
-  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,markers,render3D.shadows,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  const visible=(cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides))&&!floorMarkersEnabled();
+  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
-  // The top remains at the original walking height. The sides extend down,
-  // giving the floor depth without changing character or puzzle positions.
-  const mesh=new Mesh(),point=(x,y,z)=>worldPoint(x,y,z*extrusionScale);
-  if(visible){
-    const {left,right,back,front}=bounds,side=designColor('#b88b5e');
-    // Project the lower edge onto the ground plane so the surrounding scenery
-    // cannot cover the visible face of the raised platform.
-    const lower=(x,z)=>{
-      const screen=render3D.worldToScreen(point(x,-.09,z),size);
-      if(!screen)return point(x,.01,z);
-      const ray=render3D.screenToRay(screen,size),t=(stretchY(.01)-ray.origin.y)/ray.direction.y;
-      return Number.isFinite(t)&&t>0?ray.getPosition(t):point(x,.01,z);
-    };
-    for(const [a,b]of [[[left,front],[right,front]],[[left,back],[left,front]],[[right,back],[right,front]]]){
-      const topA=point(a[0],.01,a[1]),topB=point(b[0],.01,b[1]),bottomA=lower(a[0],a[1]),bottomB=lower(b[0],b[1]);
-      mesh.addQuad(topA,topB,bottomB,bottomA,side);
-    }
-    mesh.addQuad(point(left,.008,back),point(right,.008,back),point(right,.008,front),point(left,.008,front),designColor('#e2c49f'));
-    const rimWidth=.075,rim=designColor('#caa77e');
-    mesh.addQuad(point(left,.01,back),point(right,.01,back),point(right,.01,back+rimWidth),point(left,.01,back+rimWidth),rim);
-    mesh.addQuad(point(left,.01,front-rimWidth),point(right,.01,front-rimWidth),point(right,.01,front),point(left,.01,front),rim);
-    mesh.addQuad(point(left,.01,back),point(left+rimWidth,.01,back),point(left+rimWidth,.01,front),point(left,.01,front),rim);
-    mesh.addQuad(point(right-rimWidth,.01,back),point(right,.01,back),point(right,.01,front),point(right-rimWidth,.01,front),rim);
-    if(!markers){
-      const seamWidth=.075,seam=designColor('#caa77e');
-      for(let x=left+1;x<right;x++)mesh.addQuad(point(x-seamWidth/2,.01,back),point(x+seamWidth/2,.01,back),point(x+seamWidth/2,.01,front),point(x-seamWidth/2,.01,front),seam);
-      for(let z=back+1;z<front;z++)mesh.addQuad(point(left,.01,z-seamWidth/2),point(right,.01,z-seamWidth/2),point(right,.01,z+seamWidth/2),point(left,.01,z+seamWidth/2),seam);
-    }
-  }
-  mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;object.lighting=false;object.shader=render3D.shadows?pieceShadowShader:undefined;object.receiveShadow=render3D.shadows;
+  // Keep an empty transparent guide layer when hidden; removing its mesh can
+  // alter the engine's transparent pass and hide the character overlay.
+  const mesh=new Mesh(),tint=new Color(.28,.32,.25,visible?.5:0);
+  const strip=(x0,z0,x1,z1)=>{
+    const a=render3D.worldToScreen(worldPoint(x0,.008,z0*extrusionScale),size),b=render3D.worldToScreen(worldPoint(x1,.008,z1*extrusionScale),size);
+    if(!a||!b)return;
+    const delta=b.subtract(a);if(delta.length()<.001)return;
+    const normal=vec2(-delta.y,delta.x).normalize(1),screen=[a.add(normal),b.add(normal),b.subtract(normal),a.subtract(normal)];
+    const points=screen.map(point=>{const ray=render3D.screenToRay(point,size),t=(ground-ray.origin.y)/ray.direction.y;return Number.isFinite(t)&&t>0?ray.getPosition(t):null});
+    if(points.some(point=>!point))return;
+    mesh.addQuad(...points,tint);
+  };
+  for(let x=bounds.left;x<=bounds.right;x++)strip(x,bounds.back,x,bounds.front);
+  for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z,bounds.right,z);
+  mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;
   floorGuideMesh?.dispose();floorGuideMesh=mesh;floorGuideKey=key;
 }
 function sceneFrame(width,height,side=viewSide){
