@@ -16,7 +16,6 @@ import { createLevelPreferences } from './level-preferences.js';
 import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds } from './floor-grid.js';
-import { outsidePolygonSegments } from './surface-patterns.js';
 import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro, initialCameraUnit, openingFrameFits } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
@@ -32,6 +31,7 @@ import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
 import { chooseVisibilityPitch, visibilityCameraPose, visibilityAtPitch } from './camera-visibility.js';
 import { createGoalBadge } from './goal-badge.js';
 import { createWarpPipeAssets } from './warp-pipe-assets.js';
+import { vibrantWarpColor, warpPulsePhase } from './warp-pulse.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
@@ -644,6 +644,24 @@ function drawWallGroundJoin(){
   const channels=color.match(/[\d.]+/g)?.map(Number)??[17,17,17];
   render3D.drawMesh(wallJoinMesh,buildMatrix(vec3(),vec3(),vec3(1)),undefined,new Color(channels[0]/255,channels[1]/255,channels[2]/255));
 }
+function drawWarpDestinationOutline(){
+  if(!warpPulsePair)return;
+  const parts=warpPreviewEnds[warpPulsePair.destination],rim=parts?.rim,body=parts?.body;
+  if(!rim?.mesh||!body?.mesh)return;
+  const size=vec2(wrap.clientWidth,wrap.clientHeight),right=render3D.camera.getRight(),forward=render3D.camera.getForward();
+  const center=puzzlePoint(rim.pos3D),a=render3D.worldToScreen(center,size),b=render3D.worldToScreen(center.add(right.scale(.1)),size);
+  if(!a||!b)return;
+  const px=Math.hypot(b.x-a.x,b.y-a.y);if(px<.001)return;
+  const width=.2/px,bias=forward.scale(-.004),black=new Color(0,0,0);
+  const point=(radius,y,angle)=>puzzlePoint(rim.pos3D.add(vec3(Math.cos(angle)*radius*rim.scale3D.x,y*rim.scale3D.y,Math.sin(angle)*radius*rim.scale3D.z))).add(bias);
+  const ring=(radius,y)=>{let prev=point(radius,y,0);for(let i=1;i<=32;i++){const next=point(radius,y,i*Math.PI/16);render3D.drawLine(prev,next,width,black);prev=next}};
+  ring(.245,.37);ring(.245,.22);ring(.19,0);
+  const angle=Math.atan2(right.z,right.x);
+  for(const side of [angle,angle+Math.PI]){
+    render3D.drawLine(point(.245,.22,side),point(.245,.37,side),width,black);
+    render3D.drawLine(point(.19,0,side),point(.19,.22,side),width,black);
+  }
+}
 function drawMapOutlines(){
   const material={shader:render3D.shader,receiveShadow:render3D.receiveShadow,lighting:render3D.lighting,emissive:render3D.emissive};render3D.shader=undefined;render3D.receiveShadow=false;render3D.lighting=false;render3D.emissive=1;
   drawWallGroundJoin();
@@ -669,7 +687,7 @@ function drawMapOutlines(){
   }}
   // Round caps bridge each pair of ribbon ends with the same width and depth bias.
   for(const point of joins.values())render3D.drawSphere(point,stroke,inkColor);
-  drawSelectedOutline();drawReferenceSquares();drawHoverSpot();
+  drawSelectedOutline();drawReferenceSquares();drawHoverSpot();drawWarpDestinationOutline();
   render3D.flush();Object.assign(render3D,material);
 }
 // Boundary edges keep the selected material on their screen-right side, including holes.
@@ -756,24 +774,29 @@ function syncFloorGrid(){
   // Wash the entire scenery below the horizon; the puzzle remains in front
   // because this camera-facing layer sits behind the playfield geometry.
   m.addQuad(vec3(-worldWidth/2,hy,0),vec3(worldWidth/2,hy,0),vec3(worldWidth/2,-ortho/2,0),vec3(-worldWidth/2,-ortho/2,0),foregroundWash);
-  const s=depthSkew(),ground=0,{left,right,back,front}=puzzleFloorBounds(mural,GRID_DEPTH);
+  const ground=0,{left,right,back,front}=puzzleFloorBounds(mural,GRID_DEPTH);
   const reachable=reachableSurfaceKeys(),walkable=[];
   for(const key of reachable){const [x,y,z]=key.split(',').map(Number);if(y!==H)continue;
     walkable.push({x,z,polygon:[[x,z],[x+1,z],[x+1,z+1],[x,z+1]].map(([xx,zz])=>toPlane(worldPoint(xx,ground,zz)))});
   }
-  // Diagonals cover non-walkable ground; cut them at exact walking-cell edges.
-  const walkingPolygons=walkable.map(cell=>cell.polygon);
-  const low=-ortho/2,high=Math.min(hy,ortho/2),rise=high-low,spacing=10*ortho/height;
-  if(rise>0)for(let x=-worldWidth/2-rise;x<=worldWidth/2;x+=spacing){
-    for(const [a,b]of outsidePolygonSegments({x,y:low},{x:x+rise,y:high},walkingPolygons))addPlaneLine(a,b);
+  // The floor is a single platform; keep its surface at the walking height
+  // and draw the thickness below it so movement and shadows stay aligned.
+  const project=(x,y,z)=>toPlane(worldPoint(x,y,z));
+  const quad=(points,color)=>m.addQuad(...points.map(p=>vec3(p.x,p.y,0)),color);
+  const side=designColor('#b88b5e');
+  for(const [a,b] of [[[left,front],[right,front]],[[left,back],[left,front]],[[right,back],[right,front]]]){
+    const topA=project(a[0],0,a[1]),topB=project(b[0],0,b[1]);
+    const bottomA=project(a[0],-.09,a[1]),bottomB=project(b[0],-.09,b[1]);
+    quad([topA,topB,bottomB,bottomA],side);
   }
-  const seen=new Set();
-  for(const {x,z,polygon}of walkable){
-    m.addQuad(...polygon.map(p=>vec3(p.x,p.y,0)),floorWash);
-    for(const [a,b]of [[[x,z],[x+1,z]],[[x+1,z],[x+1,z+1]],[[x+1,z+1],[x,z+1]],[[x,z+1],[x,z]]]){
-      const ka=a.join(','),kb=b.join(','),key=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;if(seen.has(key))continue;seen.add(key);
-      addLine(worldPoint(a[0],ground,a[1]),worldPoint(b[0],ground,b[1]));
-    }
+  const plank=designColor('#e2c49f'),seam=designColor('#caa77e'),rim=designColor('#caa77e');
+  quad([[left,back],[right,back],[right,front],[left,front]].map(([x,z])=>project(x,0,z)),plank);
+  const rimWidth=.075;
+  for(const [a,b] of [[[left,back],[right,back]],[[left,front],[right,front]],[[left,back],[left,front]],[[right,back],[right,front]]])quad([[a[0],a[1]],[b[0],b[1]],[b[0]+(a[0]===b[0]?(b[0]===left?rimWidth:-rimWidth):0),b[1]+(a[1]===b[1]?(b[1]===back?rimWidth:-rimWidth):0)],[a[0]+(a[0]===b[0]?(a[0]===left?rimWidth:-rimWidth):0),a[1]+(a[1]===b[1]?(a[1]===back?rimWidth:-rimWidth):0)]].map(([x,z])=>project(x,.01,z)),rim);
+  if(!floorMarkersEnabled()){
+    const seamWidth=.075;
+    for(let x=left+1;x<right;x++)quad([[x-seamWidth/2,back],[x+seamWidth/2,back],[x+seamWidth/2,front],[x-seamWidth/2,front]].map(([xx,z])=>project(xx,.009,z)),seam);
+    for(let z=back+1;z<front;z++)quad([[left,z-seamWidth/2],[right,z-seamWidth/2],[right,z+seamWidth/2],[left,z+seamWidth/2]].map(([x,zz])=>project(x,.009,zz)),seam);
   }
   wrap.dataset.walkableFloorCells=String(walkable.length);
   wrap.dataset.floorBounds=JSON.stringify({left,right,back,front});
@@ -918,7 +941,7 @@ function setupWarpEnds(){
   if(!count)return;
   warpPreviewAssets??=createWarpPipeAssets();
   warpPreviewEnds=Array.from({length:count},(_,i)=>warpPreviewAssets.createEnd(Math.floor(i/2),count>2));
-  for(const parts of warpPreviewEnds)for(const object of Object.values(parts)){object.warpTile=object.tileInfo;object.warpBaseColor=object.color.copy()}
+  for(const parts of warpPreviewEnds)for(const object of Object.values(parts)){object.warpTile=object.tileInfo;object.warpBaseColor=object.color.copy();object.warpVividColor=vibrantWarpColor(object.warpBaseColor)}
 }
 function warpPlayerOnPipe(){
   if(!warpPreviewEnds.length)return false;
@@ -957,6 +980,8 @@ function syncWarpPipePreview(){
     parts.badge.mesh=warpPreviewAssets.meshes.badge;parts.badge.tileInfo=parts.badge.warpTile;
     parts.badge.pos3D=worldPoint(x,H-cell.y-.5,depth).add(vec3(0,0,.05));
     parts.badge.scale3D=vec3(1,stretchY(1),1);
+    parts.badgePulse.mesh=warpPreviewAssets.meshes.badge;parts.badgePulse.tileInfo=parts.badgePulse.warpTile;
+    parts.badgePulse.pos3D=parts.badge.pos3D.add(vec3(0,0,.004));parts.badgePulse.scale3D=parts.badge.scale3D.copy();
     if(!raised)return;
     const height=.72,offset=-.22*height*(1-motion.value);
     for(const name of [motion.value>.001?'body':null,'rim',active?(opening.value>.001?'opening':null):'cap'].filter(Boolean)){
@@ -1411,24 +1436,39 @@ let floorGuideMesh,floorGuideKey;
 function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
-  const visible=(cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides))&&!floorMarkersEnabled();
-  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  const visible=cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides),markers=floorMarkersEnabled();
+  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,markers,render3D.shadows,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
-  // Keep an empty transparent guide layer when hidden; removing its mesh can
-  // alter the engine's transparent pass and hide the character overlay.
-  const mesh=new Mesh(),tint=new Color(.28,.32,.25,visible?.5:0);
-  const strip=(x0,z0,x1,z1)=>{
-    const a=render3D.worldToScreen(worldPoint(x0,.008,z0*extrusionScale),size),b=render3D.worldToScreen(worldPoint(x1,.008,z1*extrusionScale),size);
-    if(!a||!b)return;
-    const delta=b.subtract(a);if(delta.length()<.001)return;
-    const normal=vec2(-delta.y,delta.x).normalize(1),screen=[a.add(normal),b.add(normal),b.subtract(normal),a.subtract(normal)];
-    const points=screen.map(point=>{const ray=render3D.screenToRay(point,size),t=(ground-ray.origin.y)/ray.direction.y;return Number.isFinite(t)&&t>0?ray.getPosition(t):null});
-    if(points.some(point=>!point))return;
-    mesh.addQuad(...points,tint);
-  };
-  for(let x=bounds.left;x<=bounds.right;x++)strip(x,bounds.back,x,bounds.front);
-  for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z,bounds.right,z);
-  mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;
+  // The top remains at the original walking height. The sides extend down,
+  // giving the floor depth without changing character or puzzle positions.
+  const mesh=new Mesh(),point=(x,y,z)=>worldPoint(x,y,z*extrusionScale);
+  if(visible){
+    const {left,right,back,front}=bounds,side=designColor('#b88b5e');
+    // Project the lower edge onto the ground plane so the surrounding scenery
+    // cannot cover the visible face of the raised platform.
+    const lower=(x,z)=>{
+      const screen=render3D.worldToScreen(point(x,-.09,z),size);
+      if(!screen)return point(x,.01,z);
+      const ray=render3D.screenToRay(screen,size),t=(stretchY(.01)-ray.origin.y)/ray.direction.y;
+      return Number.isFinite(t)&&t>0?ray.getPosition(t):point(x,.01,z);
+    };
+    for(const [a,b]of [[[left,front],[right,front]],[[left,back],[left,front]],[[right,back],[right,front]]]){
+      const topA=point(a[0],.01,a[1]),topB=point(b[0],.01,b[1]),bottomA=lower(a[0],a[1]),bottomB=lower(b[0],b[1]);
+      mesh.addQuad(topA,topB,bottomB,bottomA,side);
+    }
+    mesh.addQuad(point(left,.008,back),point(right,.008,back),point(right,.008,front),point(left,.008,front),designColor('#e2c49f'));
+    const rimWidth=.075,rim=designColor('#caa77e');
+    mesh.addQuad(point(left,.01,back),point(right,.01,back),point(right,.01,back+rimWidth),point(left,.01,back+rimWidth),rim);
+    mesh.addQuad(point(left,.01,front-rimWidth),point(right,.01,front-rimWidth),point(right,.01,front),point(left,.01,front),rim);
+    mesh.addQuad(point(left,.01,back),point(left+rimWidth,.01,back),point(left+rimWidth,.01,front),point(left,.01,front),rim);
+    mesh.addQuad(point(right-rimWidth,.01,back),point(right,.01,back),point(right,.01,front),point(right-rimWidth,.01,front),rim);
+    if(!markers){
+      const seamWidth=.075,seam=designColor('#caa77e');
+      for(let x=left+1;x<right;x++)mesh.addQuad(point(x-seamWidth/2,.01,back),point(x+seamWidth/2,.01,back),point(x+seamWidth/2,.01,front),point(x-seamWidth/2,.01,front),seam);
+      for(let z=back+1;z<front;z++)mesh.addQuad(point(left,.01,z-seamWidth/2),point(right,.01,z-seamWidth/2),point(right,.01,z+seamWidth/2),point(left,.01,z+seamWidth/2),seam);
+    }
+  }
+  mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;object.lighting=false;object.shader=render3D.shadows?pieceShadowShader:undefined;object.receiveShadow=render3D.shadows;
   floorGuideMesh?.dispose();floorGuideMesh=mesh;floorGuideKey=key;
 }
 function sceneFrame(width,height,side=viewSide){
@@ -1935,18 +1975,18 @@ function updateWarpPulse(now){
   const pair=currentWarpPair(),key=pair?`${pair.source}:${pair.destination}`:'';
   if(warpPulsePair?.key!==key){
     if(warpPulsePair)for(const i of [warpPulsePair.source,warpPulsePair.destination]){
-      const parts=warpPreviewEnds[i];if(parts)for(const name of ['badge','body','rim'])parts[name].color=parts[name].warpBaseColor.copy();
+      const parts=warpPreviewEnds[i];if(parts){parts.badgePulse.color.a=0;for(const name of ['body','rim'])parts[name].color.setFrom(parts[name].warpBaseColor)}
     }
     warpPulsePair=pair?{key,source:pair.source,destination:pair.destination}:null;
   }
   if(!pair)return;
-  const phase=reducedSelectionMotion.matches?.6:(1-Math.cos(now*Math.PI*2/1400))/2;
-  for(const i of [pair.source,pair.destination]){
-    const parts=warpPreviewEnds[i],base=parts.body.warpBaseColor,amount=.4*phase;
-    parts.badge.color.set(1-(1-base.r)*amount,1-(1-base.g)*amount,1-(1-base.b)*amount);
-  }
+  const phase=warpPulsePhase(now,reducedSelectionMotion.matches);
+  for(const i of [pair.source,pair.destination])warpPreviewEnds[i].badgePulse.color.a=phase;
   const dest=warpPreviewEnds[pair.destination];
-  for(const name of ['body','rim']){const color=dest[name].warpBaseColor,amount=.38*phase;dest[name].color.set(color.r+(1-color.r)*amount,color.g+(1-color.g)*amount,color.b+(1-color.b)*amount)}
+  for(const name of ['body','rim']){
+    const base=dest[name].warpBaseColor,vivid=dest[name].warpVividColor;
+    dest[name].color.set(base.r+(vivid.r-base.r)*phase,base.g+(vivid.g-base.g)*phase,base.b+(vivid.b-base.b)*phase);
+  }
 }
 function warpTapTarget(point){
   const pair=currentWarpPair();if(!pair)return false;
@@ -2261,7 +2301,7 @@ function moveTo(p,pressMarker=false,preview=null){
       motion.pose=motion.pose.add(vec3(0,stretchY(-.2*squash),0));
       const effort=Math.min(1,windup+Math.sin(Math.PI*flight)*.8);
       for(const {white,black} of pomEyes){white.scale3D=vec3(.22,.28*(1-.65*effort),1);black.scale3D=vec3(.12,.154*(1-.65*effort),1)}
-      for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(t-.18-i*.08)/.55)),alpha=Math.sin(Math.PI*q)*.9;drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.2-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
+      for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(t-.09-i*.08)/.55)),alpha=Math.sin(Math.PI*q)*.9;drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.2-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
     }
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     if(winningArrival&&index===plans.length-1){const offset=victoryArrival(t,reducedSelectionMotion.matches);motion.pose=motion.pose.add(vec3(offset.x,stretchY(offset.y),0))}
