@@ -1,18 +1,14 @@
-import {Color,EngineObject3D,Mesh,TextureInfo,vec3} from 'littlejsengine';
+import {Color,EngineObject3D,TextureInfo,vec3} from 'littlejsengine';
+import {createPuzzleBadgeMesh,drawPuzzleBadgeFrame} from './puzzle-badge.js';
 
-const BADGE_SIZE=.56;
-const badgeMesh=(()=>{
-  const half=BADGE_SIZE/2,mesh=new Mesh().addQuad(vec3(-half,half,0),vec3(-half,-half,0),vec3(half,-half,0),vec3(half,half,0));
-  mesh.doubleSided=true;return mesh;
-})();
+const badgeMesh=createPuzzleBadgeMesh();
 const colorKey=rgb=>rgb.join(',');
 
 function badgeTexture(rgb){
   const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
-  const context=canvas.getContext('2d');context.translate(128,128);context.scale(256/BADGE_SIZE,-256/BADGE_SIZE);
-  context.beginPath();context.roundRect(-.26,-.26,.52,.52,.075);context.fillStyle='#33263b';context.fill();
-  context.beginPath();context.roundRect(-.235,-.235,.47,.47,.055);context.fillStyle='#fff3d0';context.fill();
-  context.beginPath();context.moveTo(-.15,.095);context.lineTo(.15,.095);context.lineTo(0,-.165);context.closePath();
+  const context=canvas.getContext('2d');
+  drawPuzzleBadgeFrame(context);
+  context.beginPath();context.moveTo(128,179.5);context.arcTo(179,88.5,166,88.5,10);context.arcTo(77,88.5,84,101.5,10);context.arcTo(128,179.5,136,166.5,10);context.closePath();
   context.fillStyle=`rgb(${rgb.join(' ')})`;context.fill();
   return new TextureInfo(canvas,true,false,false);
 }
@@ -23,7 +19,7 @@ export function createPulloutSwitchAssets(){
     createBadge(rgb){
       const key=colorKey(rgb);if(!textures.has(key))textures.set(key,badgeTexture(rgb));
       const badge=new EngineObject3D(vec3(),badgeMesh,textures.get(key),new Color(1));
-      badge.lighting=false;badge.emissive=1;badge.castShadow=false;badge.receiveShadow=false;
+      badge.lighting=false;badge.emissive=1;badge.castShadow=false;badge.receiveShadow=false;badge.transparent=true;
       return badge;
     },
   };
