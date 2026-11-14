@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {submit} from './submission-worker.js';
+import {validatePuzzle} from '../shared/puzzle.js';
 const grid=Array(31).fill('.'.repeat(32)).concat('0'+'.'.repeat(31));
 const puzzle={format:'little-ledges-puzzle',schemaVersion:1,rulesVersion:1,id:'test',name:'Example',grid,palette:{0:[1,2,3]},start:{x:0,y:32,z:0},goal:{x:0,y:31},initialDepths:[0]};
 const body={creatorName:'Tester',permission:true,puzzle,turnstileToken:'token'};
@@ -18,5 +19,17 @@ test('accepts and preserves warp pipe pairs in a verified submission',async()=>{
   globalThis.fetch=async()=>new Response(JSON.stringify({success:true,hostname:'creator.example',action:'puzzle_submit'}));
   const response=await submit(request({...body,puzzle:warpPuzzle}),env);
   assert.equal(response.status,201);assert.deepEqual(JSON.parse(stored[4]).warpPairs,warpPuzzle.warpPairs);
+ }finally{globalThis.fetch=old}
+});
+
+test('accepts and stores a verified submission with a pullout switch',async()=>{
+ const grid=[...Array(31).fill('.'.repeat(32)),'0.112.33'+'.'.repeat(24)];
+ const switchPuzzle=validatePuzzle({...puzzle,rulesVersion:2,id:'switch-submission',name:'Switch puzzle',grid,palette:{0:[200,20,20],1:[20,20,200],2:[20,200,20],3:[200,200,20]},start:{x:0,y:31,z:0},goal:{x:7,y:31},initialDepths:[1,1,1,1],warpPairs:[[{x:2,y:31},{x:3,y:31}]],switches:[{x:0,y:31,color:'2'}]});
+ let stored;const env={CREATOR_ORIGIN:'https://creator.example',TURNSTILE_SECRET:'secret',SUBMISSION_LIMITER:{limit:async()=>({success:true})},DB:{prepare:()=>({bind:(...values)=>({run:async()=>{stored=values}})})}},old=globalThis.fetch;
+ try{
+  globalThis.fetch=async()=>new Response(JSON.stringify({success:true,hostname:'creator.example',action:'puzzle_submit'}));
+  const response=await submit(request({...body,puzzle:switchPuzzle}),env);
+  assert.equal(response.status,201);assert.equal((await response.json()).status,'pending');
+  const saved=JSON.parse(stored[4]);assert.deepEqual(saved,switchPuzzle);
  }finally{globalThis.fetch=old}
 });
