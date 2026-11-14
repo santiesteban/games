@@ -10,10 +10,8 @@ export function exportLittleLedges(source) {
   requireValue(Array.isArray(source.switches) && Array.isArray(source.manholes),'Missing source object records.');
   const flags=source.flags;
   requireValue(flags && Number.isInteger(flags.raw) && flags.raw>=0 && flags.raw<=0xffffffff,'Invalid source flags.');
-  const reasons=[];
-  if(source.switches.length || flags.uses_switches===true || (flags.raw&0x200))reasons.push('Switches are not supported by Little Ledges.');
-  if(source.manholes.length || flags.uses_manholes===true || (flags.raw&0x100))reasons.push('Manholes are not supported by Little Ledges.');
-  requireValue(!reasons.length,reasons.join(' '));
+  requireValue(source.switches.length||!(flags.uses_switches===true||(flags.raw&0x200)),'The level indicates switches but contains no switch records.');
+  requireValue(source.manholes.length||!(flags.uses_manholes===true||(flags.raw&0x100)),'The level indicates manholes but contains no manhole records.');
   requireValue(Array.isArray(source.grid) && source.grid.length===32 && source.grid.every(row=>
     Array.isArray(row) && row.length===32 && row.every(n=>Number.isInteger(n)&&n>=0&&n<=10)),'Invalid source grid.');
   const used=[...new Set(source.grid.flat().filter(n=>n!==10))].sort((a,b)=>a-b);
@@ -34,6 +32,22 @@ export function exportLittleLedges(source) {
   const name=(typeof source.name==='string'?source.name.trim():'') || 'Untitled Pushmo';
   requireValue(new TextEncoder().encode(name).length<=128,'The title exceeds Little Ledges’ 128-byte limit.');
   const grid=source.grid.map(row=>row.map(n=>n===10?'.':String(n)).join(''));
+  const switchRecords=source.switches.map(item=>{
+    requireValue(item&&Number.isInteger(item.color)&&item.color>=0&&item.color<10&&typeof item.inverted==='boolean','Invalid source switch record.');
+    requireValue(!item.inverted,'Inverted source switches are not supported by Little Ledges.');
+    return {x:item.x,y:item.y,color:String(item.color)};
+  });
+  const pipes=new Map();
+  for(const item of source.manholes){
+    requireValue(item&&Number.isInteger(item.color)&&item.color>=0&&item.color<5&&typeof item.inverted==='boolean','Invalid source manhole record.');
+    requireValue(!item.inverted,'Inverted manholes are not supported by Little Ledges yet.');
+    if(!pipes.has(item.color))pipes.set(item.color,[]);
+    pipes.get(item.color).push({x:item.x,y:item.y});
+  }
+  const warpPairs=[...pipes.entries()].sort(([a],[b])=>a-b).map(([,pair])=>{
+    requireValue(pair.length===2,'Each source manhole color needs exactly two endpoints.');
+    return pair;
+  });
   // Enumerate same-slot four-neighbor components in row-major discovery order.
   const seen=new Set();let count=0,maxY=-1;
   for(let yy=0;yy<32;yy++)for(let xx=0;xx<32;xx++){
@@ -47,9 +61,11 @@ export function exportLittleLedges(source) {
     }}
   }
   const floorX=grid[31].search(/[^.]/);
-  const puzzle={format:'little-ledges-puzzle',schemaVersion:1,rulesVersion:1,
+  const puzzle={format:'little-ledges-puzzle',schemaVersion:1,rulesVersion:switchRecords.length?2:1,
     id:'pushmo-'+source.payload_sha256.slice(0,56).toLowerCase(),name,grid,palette,
     start:{x:floorX<0?0:floorX,y:32,z:0},goal:{x,y},initialDepths:Array(count).fill(0)};
+  if(warpPairs.length)puzzle.warpPairs=warpPairs;
+  if(switchRecords.length)puzzle.switches=switchRecords;
   const warnings=['Solvability in Little Ledges is unverified.'];
   if(maxY<31)warnings.push(`Artwork ends at row ${maxY}; it does not touch the floor. Coordinates and goal are unchanged.`);
   return {puzzle,warnings};
