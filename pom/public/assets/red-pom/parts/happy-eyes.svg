@@ -8,6 +8,6 @@
 <mask id="stroke2_2037_1052" fill="white">
 <path d="M30.5 42.499C34.5 33.1657 44.5 33.1657 48.5 42.499Z" />
 </mask>
-<path d="M63.5 42.499C67.5 33.1657 77.5 33.1657 81.5 42.499" stroke-width="7" stroke-linecap="round" stroke="#22201F" mask="url(#stroke1_2037_1052)" />
-<path d="M30.5 42.499C34.5 33.1657 44.5 33.1657 48.5 42.499" stroke-width="7" stroke-linecap="round" stroke="#22201F" mask="url(#stroke2_2037_1052)" />
+<path d="M63.5 42.499C67.5 33.1657 77.5 33.1657 81.5 42.499" stroke-width="8" stroke-linecap="round" stroke="#22201F" mask="url(#stroke1_2037_1052)" />
+<path d="M30.5 42.499C34.5 33.1657 44.5 33.1657 48.5 42.499" stroke-width="8" stroke-linecap="round" stroke="#22201F" mask="url(#stroke2_2037_1052)" />
 </svg>

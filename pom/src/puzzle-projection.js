@@ -27,13 +27,11 @@ export function unprojectPuzzlePoint(p,point){
   return {x:p.eyeX+(point.x-p.eyeX)*d/den,y:point.y*b/den,z};
 }
 
-// Move a character with its square while keeping its local shape independent
-// of piece extrusion. Perspective still changes naturally as its anchor moves.
+// Move the whole character with its square without deforming its local shape.
+// Perspective still changes its apparent size as the anchor moves.
 export function projectAnchoredPuzzlePoint(projection,point,anchor){
-  const unscaled={...projection,depthScale:1,enabled:projection.square};
-  const originalAnchor=projectPuzzlePoint(unscaled,anchor),scaledAnchor=projectPuzzlePoint(projection,anchor);
-  const result=projectPuzzlePoint(unscaled,point);
-  return {x:result.x+scaledAnchor.x-originalAnchor.x,y:result.y+scaledAnchor.y-originalAnchor.y,z:result.z+scaledAnchor.z-originalAnchor.z};
+  const projectedAnchor=projectPuzzlePoint(projection,anchor);
+  return {x:point.x+projectedAnchor.x-anchor.x,y:point.y+projectedAnchor.y-anchor.y,z:point.z+projectedAnchor.z-anchor.z};
 }
 
 // Clone shared meshes once per object. Recompute only when the camera, source
