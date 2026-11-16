@@ -27,6 +27,15 @@ export function unprojectPuzzlePoint(p,point){
   return {x:p.eyeX+(point.x-p.eyeX)*d/den,y:point.y*b/den,z};
 }
 
+// Move a character with its square while keeping its local shape independent
+// of piece extrusion. Perspective still changes naturally as its anchor moves.
+export function projectAnchoredPuzzlePoint(projection,point,anchor){
+  const unscaled={...projection,depthScale:1,enabled:projection.square};
+  const originalAnchor=projectPuzzlePoint(unscaled,anchor),scaledAnchor=projectPuzzlePoint(projection,anchor);
+  const result=projectPuzzlePoint(unscaled,point);
+  return {x:result.x+scaledAnchor.x-originalAnchor.x,y:result.y+scaledAnchor.y-originalAnchor.y,z:result.z+scaledAnchor.z-originalAnchor.z};
+}
+
 // Clone shared meshes once per object. Recompute only when the camera, source
 // mesh or object pose changes; release obsolete clones after each scene pass.
 export function createPuzzleMeshProjection(cloneMesh){
@@ -38,7 +47,7 @@ export function createPuzzleMeshProjection(cloneMesh){
       if(nextKey!==key){key=nextKey;version++;projection=next}
       used.clear();
     },
-    apply(object,matrix){
+    apply(object,matrix,anchor){
       if(!object?.mesh||!projection?.enabled)return;
       used.add(object);
       let r=records.get(object);
@@ -47,13 +56,14 @@ export function createPuzzleMeshProjection(cloneMesh){
       object.mesh=r.mesh;
       if(matrix){
         const values=matrix.m;
-        if(r.version===version&&r.matrix&&r.matrix.every((value,i)=>value===values[i]))return;
+        const anchorKey=anchor?`${anchor.x}:${anchor.y}:${anchor.z}`:'';
+        if(r.version===version&&r.anchorKey===anchorKey&&r.matrix&&r.matrix.every((value,i)=>value===values[i]))return;
         const inverse=matrix.copy().invert();
         for(let i=0;i<r.points.length;i++){
-          const world=matrix.transformPoint(r.points[i]),out=projectPuzzlePoint(projection,world),local=inverse.transformPoint(out);
+          const world=matrix.transformPoint(r.points[i]),out=anchor?projectAnchoredPuzzlePoint(projection,world,anchor):projectPuzzlePoint(projection,world),local=inverse.transformPoint(out);
           r.mesh.points[i].set(local.x,local.y,local.z);
         }
-        r.matrix=Array.from(values);r.version=version;
+        r.matrix=Array.from(values);r.anchorKey=anchorKey;r.version=version;
       }else{
         const p=object.pos3D,s=object.scale3D;
         if(r.version===version&&r.x===p.x&&r.y===p.y&&r.z===p.z&&r.sx===s.x&&r.sy===s.y&&r.sz===s.z)return;

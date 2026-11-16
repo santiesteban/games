@@ -282,7 +282,7 @@ function useLevelPalette(level){
 }
 useLevelPalette(activeLevel);
 let redPom;
-function showRedPom(pose){redPom?.setPose(pose)}
+function showRedPom(pose,showExtra=true){redPom?.setPose(pose,showExtra)}
 let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topPickObjects=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,warpSmile,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const inkColor=new Color(.157,.145,.122);
@@ -1137,6 +1137,7 @@ function animateWarpPreview(source=0,destination=1){
   function tick(now){
     if(token!==warpPreviewAnimation)return;
     start??=now;const elapsed=now-start;
+    showRedPom(elapsed<1700?'warp-out':'excited',elapsed>=2650);
     if(elapsed>=1550&&!atDestination){atDestination=true;player={x:cells[1].x,y:cells[1].y,z:byCell[cells[1].y][cells[1].x].depth-1};syncBlocks();syncFlag()}
     // Shrink Pom into a small floating ball, then let it descend into the
     // opening. The arrival plays the same motion in reverse.
@@ -1180,7 +1181,7 @@ function animateWarpPreview(source=0,destination=1){
     warpSmile.mesh=elapsed>=1700&&elapsed<3680?warpSmileFrame(smileStep):undefined;
     syncPomMatrix();
     if(elapsed<3680)requestAnimationFrame(tick);
-    else {busy=false;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
+    else {busy=false;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;showRedPom('calm');resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
   }
   requestAnimationFrame(tick);
 }
@@ -2243,7 +2244,7 @@ function syncPuzzleProjection(){
   for(const object of [...extrusionObjects,...extrusionOutlines,...topPickObjects,...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
   for(const parts of warpPreviewEnds)for(const object of Object.values(parts))apply(object);
   for(const entry of pulloutSwitchObjects)for(const object of entry.objects)apply(object);
-  for(const object of [...pomParts,redPom?.object,redPom?.edge,umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix())}
+  for(const object of [...pomParts,...(redPom?.parts??[]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix(),playerObject.pos3D)}
   if(!gpu)puzzleMeshes.end();
 }
 function puzzlePick(objects,query){return puzzleGPU?.active?puzzleGPU.pick(objects,query):query()}
@@ -2325,7 +2326,7 @@ function gameUpdate(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();syncPomMatrix();if(redPom&&playerObject)redPom.alignToSurface(stretchY(-.205));if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.update(performance.now());redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
