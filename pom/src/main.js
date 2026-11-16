@@ -1,3 +1,4 @@
+import {createRedPom} from './red-pom.js';
 import approvedEnvironment from './data/daisy-meadow-ivan-v2.json';
 import {gameplayEnvironmentConfiguration} from './environment-policy.js';
 import {limitStagePan} from './stage-geometry.js';
@@ -280,6 +281,8 @@ function useLevelPalette(level){
   sidePalette=Object.fromEntries(Object.entries(palette).map(([slot,color])=>[slot,shaded(color,.96)]));
 }
 useLevelPalette(activeLevel);
+let redPom;
+function showRedPom(pose,showExtra=true){redPom?.setPose(pose,showExtra)}
 let groups=[],byCell=Array.from({length:H},()=>Array(W).fill(null)),player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z},selected=null,hovered=null,history=[],won=false,busy=false,falling=false,viewSide=DEFAULT_VIEW.horizontal,blockObjects=[],extrusionObjects=[],extrusionOutlines=[],topPickObjects=[],topObjectInfo=new Map,sideObjectInfo=new Map,playerObject,pomBody,warpSmile,pomReaching=false,pomParts=[],hoverObject,studioTargetObject,flagPole,flagCloth,flagPrint,flagVase,flagCap,flagMeshes,umbrellaCanopy,umbrellaHandle,umbrellaPanels=[],pomEyes=[],sweatDrops=[],effortFrame=0,backgroundObjects=[],celebration=null,baseCameraHeight=0,gameReady=false;
 const box=buildBox(),flagMesh=new Mesh().addStrip([vec3(-.5,.5,0),vec3(-.5,-.5,0),vec3(.5,0,0)],vec3(0,0,1));
 const inkColor=new Color(.157,.145,.122);
@@ -298,12 +301,13 @@ function syncHoverSpot(){if(!hoverObject)return;hoverObject.setMesh(standingSpot
 function setUmbrellaVisible(show){if(umbrellaCanopy)umbrellaCanopy.color=new Color(.15,.2,.27,show?1:0);if(umbrellaHandle)umbrellaHandle.color=new Color(.15,.2,.27,show?1:0);for(let i=0;i<umbrellaPanels.length;i++){const color=i%2?new Color(.64,.83,.97):new Color(.98,.99,.96);color.a=show?1:0;umbrellaPanels[i].color=color}}
 function positionUmbrella(t=0){const sway=Math.sin(t*Math.PI*2)*.06,y=.84+Math.sin(t*Math.PI*4)*.025;if(umbrellaCanopy)umbrellaCanopy.pos3D=vec3(sway,y,3);if(umbrellaHandle)umbrellaHandle.pos3D=vec3(sway,y,2.96);for(const panel of umbrellaPanels)panel.pos3D=vec3(sway,y,3.035)}
 function animateEffort(){
+  showRedPom('push-back');
   const frame=++effortFrame,start=performance.now(),duration=440;
   function tick(now){
     if(frame!==effortFrame)return;const elapsed=now-start,t=Math.min(1,elapsed/duration),effort=Math.sin(Math.PI*t);
     playerObject.scale3D=vec3(.72*(1+.025*effort),.56*(1-.04*effort),.018);
     for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(elapsed-i*65)/340)),alpha=Math.sin(Math.PI*q);drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.20-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
-    if(t<1)requestAnimationFrame(tick);else{playerObject.scale3D=vec3(.72,.56,.018);for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}}
+    if(t<1)requestAnimationFrame(tick);else{showRedPom('calm');playerObject.scale3D=vec3(.72,.56,.018);for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}}
   }
   requestAnimationFrame(tick);
 }
@@ -713,6 +717,7 @@ function drawMapOutlines(){
   // Round caps bridge each pair of ribbon ends with the same width and depth bias.
   for(const point of joins.values())render3D.drawSphere(point,stroke,inkColor);
   drawSelectedOutline();drawReferenceSquares();drawHoverSpot();
+  redPom?.drawOcclusion();
   render3D.flush();Object.assign(render3D,material);
 }
 // Boundary edges keep the selected material on their screen-right side, including holes.
@@ -1132,6 +1137,7 @@ function animateWarpPreview(source=0,destination=1){
   function tick(now){
     if(token!==warpPreviewAnimation)return;
     start??=now;const elapsed=now-start;
+    showRedPom(elapsed<1700?'warp-out':'excited',elapsed>=2650);
     if(elapsed>=1550&&!atDestination){atDestination=true;player={x:cells[1].x,y:cells[1].y,z:byCell[cells[1].y][cells[1].x].depth-1};syncBlocks();syncFlag()}
     // Shrink Pom into a small floating ball, then let it descend into the
     // opening. The arrival plays the same motion in reverse.
@@ -1175,7 +1181,7 @@ function animateWarpPreview(source=0,destination=1){
     warpSmile.mesh=elapsed>=1700&&elapsed<3680?warpSmileFrame(smileStep):undefined;
     syncPomMatrix();
     if(elapsed<3680)requestAnimationFrame(tick);
-    else {busy=false;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
+    else {busy=false;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;showRedPom('calm');resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
   }
   requestAnimationFrame(tick);
 }
@@ -1239,6 +1245,8 @@ function pieceDragState(atGrab=false,piece=selected){
 }
 function previewPieceDrag(piece,offset){
   pieceDragPreview=piece&&groups.includes(piece)?{piece,offset}:null;
+  if(pieceDragPreview&&offset<0)showRedPom('push-back');
+  else if(!pieceDragPreview){showRedPom('calm');}
   wrap.dataset.dragPreviewOffset=String(pieceDragPreview?.offset??0);
   if(!gameReady)return;
   syncBlocks();syncPlayer();syncFlag();syncPuzzleProjection();
@@ -1383,6 +1391,7 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){if(warpPipePreview||cameraLab||interactionLab)return;unfinished.remove(activeLevel.id);if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
+  showRedPom('calm');
   pulloutAnimationToken++;pulloutAnimationDepths=null;
   warpPreviewAnimation++;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;if(pomEyes.length)resetWarpEyes();
   setLoadingPalette(levelLoadingPanel,level);
@@ -2194,6 +2203,7 @@ function syncVictoryShowcase(now,sequence){
   requestAnimationFrame(now=>syncVictoryShowcase(now,sequence));
 }
 function startCelebration(){
+  showRedPom('excited');
   hideHelp();stopIntro();selected=null;clearBoardHover();
   const rect=wrap.getBoundingClientRect(),boardRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height,radius:parseFloat(getComputedStyle(wrap).borderTopLeftRadius)||0};
   const height=viewSpan(),originalHeight=wrap.clientHeight,target=(cameraFocus??viewTarget).copy(),right=render3D.camera.getRight(),up=render3D.camera.getUp();
@@ -2234,7 +2244,7 @@ function syncPuzzleProjection(){
   for(const object of [...extrusionObjects,...extrusionOutlines,...topPickObjects,...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
   for(const parts of warpPreviewEnds)for(const object of Object.values(parts))apply(object);
   for(const entry of pulloutSwitchObjects)for(const object of entry.objects)apply(object);
-  for(const object of [...pomParts,umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix())}
+  for(const object of [...pomParts,...(redPom?.parts??[]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix(),playerObject.pos3D)}
   if(!gpu)puzzleMeshes.end();
 }
 function puzzlePick(objects,query){return puzzleGPU?.active?puzzleGPU.pick(objects,query):query()}
@@ -2296,6 +2306,11 @@ function gameInit(){
   umbrellaCanopy=new EngineObject3D(vec3(0,.84,3),makeFanMesh(umbrellaRim),undefined,new Color(.15,.2,.27,0));umbrellaCanopy.scale3D=vec3(.78,.58,1);umbrellaCanopy.lighting=false;umbrellaCanopy.transparent=true;playerObject.addChild(umbrellaCanopy);
   for(let panel=0;panel<4;panel++){const start=-Math.PI/2+panel*Math.PI/4,end=start+Math.PI/4,arc=Array.from({length:9},(_,i)=>{const a=start+(end-start)*i/8;return[.5*Math.sin(a),.52*Math.cos(a)]}),piece=new EngineObject3D(vec3(0,.84,3.035),makeSectorMesh(umbrellaCenter,arc),undefined,new Color(1));piece.scale3D=vec3(.76,.56,1);piece.lighting=false;piece.transparent=true;playerObject.addChild(piece);umbrellaPanels.push(piece)}
   umbrellaHandle=new EngineObject3D(vec3(0,.84,2.96),makeFanMesh([[-.035,-.02],[.035,-.02],[.035,-.6],[-.035,-.6]]),undefined,new Color(.15,.2,.27,0));umbrellaHandle.lighting=false;umbrellaHandle.transparent=true;playerObject.addChild(umbrellaHandle);setUmbrellaVisible(false);
+  // Keep the original movement anchor and replace only its visible artwork.
+  createRedPom(playerObject).then(sprite=>{
+    redPom=sprite;
+    for(const part of [playerObject,pomBody,warpSmile,...pomEyes.flatMap(eye=>[eye.white,eye.black]),...sweatDrops.flatMap(drop=>[drop.outline,drop.fill]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])part.render3D=()=>{};
+  }).catch(error=>console.error('Unable to load Pom artwork',error));
   const {mesh:print,texture:printTexture}=createGoalBadge();
   const vase=buildLathe([[.075,0],[.09,.015],[.115,.12],[.135,.13],[.135,.17],[.105,.17],[.095,.14],[0,.14]],20,true,true);
   vase.colors=vase.normals.map(n=>{const shade=n.y>.4?1:n.y<-.4?.64:.82+.1*(n.x*.6+n.z*.8);return new Color(shade,shade,shade)});vase.dirty=true;
@@ -2311,7 +2326,7 @@ function gameUpdate(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();syncPomMatrix();if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.update(performance.now());redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
@@ -2331,7 +2346,7 @@ function moveTo(p,pressMarker=false,preview=null){
   movementMarkerRoute=pressDestination?path.slice(1):null;movementMarkerRouteTargets=pressDestination?standableReachable():null;movementMarkerRouteIndex=0;
   hideHelp();save();resumeStudyFollow();busy=true;effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   function finish(){
-    falling=false;setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
+    falling=false;showRedPom('calm');setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
     if(!warpPipePreview&&!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();startCelebration()}
     else {if(!canInteract(selected))selected=null;autoSelectNearbyPiece();saveUnfinished()}
     syncFlag();syncPlayer();updateUI();
@@ -2350,6 +2365,7 @@ function moveTo(p,pressMarker=false,preview=null){
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;
+    showRedPom(plan.isFall&&flight>.08&&flight<.96?'float':plan.isJump?(t<.38||t>=.82?'squash':'stretch'):'calm');
     const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
     const progress=plan.isJump?(t<.14?plan.takeoff*smooth(t/.14):t<.38?plan.takeoff:t<.82?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.82)/.18)):0;
     const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;

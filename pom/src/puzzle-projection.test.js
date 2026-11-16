@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection,projectedPuzzleBounds} from './puzzle-projection.js';
+import {puzzleProjection,projectPuzzlePoint,projectAnchoredPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection,projectedPuzzleBounds} from './puzzle-projection.js';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
 function camera(distance,pitch,focus={x:4,y:3,z:1}){
   const s=Math.sin(pitch),c=Math.cos(pitch);
@@ -77,5 +77,18 @@ test('experimental extrusion scales rendered depth and maps picks back to the lo
     near(recovered.x,original.x);
     near(recovered.y,original.y);
     near(recovered.z,original.z);
+  }
+});
+
+
+test('extrusion moves the character anchor without stretching its local shape',()=>{
+  const anchor={x:3,y:2,z:2},points=[{x:2.6,y:2.1,z:2.15},{x:3.3,y:2.8,z:1.85}];
+  for(const enabled of [false,true]){
+    const base=puzzleProjection({...camera(12,.35),enabled,depthScale:1});
+    const deeper=puzzleProjection({...camera(12,.35),enabled,depthScale:2.5});
+    const a=points.map(p=>projectAnchoredPuzzlePoint(base,p,anchor));
+    const b=points.map(p=>projectAnchoredPuzzlePoint(deeper,p,anchor));
+    const target=projectPuzzlePoint(deeper,anchor),actual=projectAnchoredPuzzlePoint(deeper,anchor,anchor);
+    for(const axis of ['x','y','z']){near(actual[axis],target[axis]);near(a[1][axis]-a[0][axis],b[1][axis]-b[0][axis])}
   }
 });
