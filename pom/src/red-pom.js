@@ -1,3 +1,4 @@
+import {pomIdleMotion,pomMovementEyes} from './pom-idle-motion.js';
 import {Color, EngineObject3D, Mesh, Shader, TextureInfo, TileInfo, glContext, render3D, vec2, vec3} from 'littlejsengine';
 
 const occlusionShader=new Shader(`
@@ -46,17 +47,21 @@ export async function createRedPom(parent){
   };
   // The body writes depth; a blended copy supplies the antialiased edge.
   const object=make(2,textures.calm.body,false,true),edge=make(2.1,textures.calm.body,true);
-  const eyes=make(2.3,textures.calm.eyes,true),mouth=make(2.35,textures['happy-open'].mouth,true),extra=make(2.4,textures['push-back'].extra,true);
-  const parts=[object,edge,eyes,mouth,extra],baseDepths=parts.map(part=>part.pos3D.z);
-  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,targetMouth=0,targetExtra=0,lastTime;
-  mouth.color.a=extra.color.a=0;
+  const eyes=make(2.3,textures.calm.eyes,true),idleEyes=make(2.31,textures['happy-open'].eyes,true),mouth=make(2.35,textures['happy-open'].mouth,true),extra=make(2.4,textures['push-back'].extra,true);
+  const parts=[object,edge,eyes,idleEyes,mouth,extra],baseDepths=parts.map(part=>part.pos3D.z);
+  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyesOpenUntil=0;
+  idleEyes.color.a=mouth.color.a=extra.color.a=0;
   function setPose(name,showExtra=true){
     const key=`${name}:${showExtra}`;
     if(key===active||!textures[name])return;
     active=key;
+    if(name!=='calm'){idleTime=0;idleEyes.color.a=0}
     const bodyName=name==='float'?'float':'calm';
     object.tileInfo=edge.tileInfo=textures[bodyName].body;
-    eyes.tileInfo=textures[name].eyes;eyes.color.a=textures[name].eyes?1:0;
+    // The reference squash and stretch eyes are the calm eyes transformed
+    // with the body. Keep one drawing through these poses to avoid a jump.
+    const eyesName=name==='squash'||name==='stretch'?'calm':name;
+    eyes.tileInfo=textures[eyesName].eyes;eyes.color.a=textures[eyesName].eyes?1:0;
     if(textures[name].mouth)mouth.tileInfo=textures[name].mouth;targetMouth=textures[name].mouth?1:0;
     if(textures[name].extra)extra.tileInfo=textures[name].extra;targetExtra=textures[name].extra&&showExtra?1:0;
     targetX=name==='squash'?122/112:name==='stretch'?104/112:1;
@@ -64,14 +69,24 @@ export async function createRedPom(parent){
   }
   setPose('calm');
   return {object,edge,parts,setPose,
-    update(now){
+    setMoving(value){moving=value;eyesOpenUntil=value?0:performance.now()+800},
+    resetMotion(){moving=false;eyesOpenUntil=0;idleTime=0},
+    update(now,idle=false){
       const dt=lastTime===undefined?0:Math.min(.05,(now-lastTime)/1000);lastTime=now;
-      const ease=1-Math.exp(-18*dt);
+      const ease=1-Math.exp(-14*dt);
       bodyX+=(targetX-bodyX)*ease;bodyY+=(targetY-bodyY)*ease;
       mouth.color.a+=(targetMouth-mouth.color.a)*ease;extra.color.a+=(targetExtra-extra.color.a)*ease;
       if(Math.abs(targetX-bodyX)<.001)bodyX=targetX;
       if(Math.abs(targetY-bodyY)<.001)bodyY=targetY;
-      object.scale3D=vec3(bodyX,bodyY,1);edge.scale3D=vec3(bodyX,bodyY,1);
+      const resting=idle&&active.startsWith('calm:');
+      if(resting)idleTime+=dt*1000;else idleTime=0;
+      const normalEyes=['calm:','squash:','stretch:'].some(pose=>active.startsWith(pose));
+      const motion=resting?pomIdleMotion(idleTime):{breath:0};
+      const opening=normalEyes?pomMovementEyes(now,moving,eyesOpenUntil):0;
+      const displayX=bodyX*(1-motion.breath*.55);displayY=bodyY*(1+motion.breath);
+      if(normalEyes)eyes.color.a=1-opening;
+      idleEyes.color.a=opening;
+      for(const part of [object,edge,eyes,idleEyes])part.scale3D=vec3(displayX,displayY,1);
     },
     setCameraTilt(pitch){
       // Move the tilted artwork a little toward the camera to keep it clear
@@ -89,6 +104,11 @@ export async function createRedPom(parent){
         render3D.depthTest=true;render3D.depthWrite=false;render3D.receiveShadow=false;
         glContext.depthFunc(glContext.GREATER);
         render3D.drawMesh(edge.mesh,edge.getMatrix(),edge.tileInfo,new Color(1));
+        // The floating pose's accessory layer is the umbrella. Draw its hidden
+        // fragments with the same depth test and fade as the visible artwork.
+        if(extra.mesh&&extra.tileInfo===textures.float.extra&&extra.color.a>.001){
+          render3D.drawMesh(extra.mesh,extra.getMatrix(),extra.tileInfo,new Color(1,1,1,extra.color.a));
+        }
         render3D.flush();
       }finally{glContext.depthFunc(previousDepth);Object.assign(render3D,state)}
     },
@@ -101,7 +121,7 @@ export async function createRedPom(parent){
       if(Math.abs(upY)>.0001)for(const part of parts){
         part.pos3D.x=local.x;part.pos3D.z+=local.z;
         const base=(target.y-matrix.m[13]-matrix.m[1]*part.pos3D.x-matrix.m[9]*part.pos3D.z)/upY-contactY;
-        part.pos3D.y=base+(part===object||part===edge?contactY*(1-bodyY):0);
+        part.pos3D.y=base+(part===object||part===edge||part===eyes||part===idleEyes?contactY*(1-displayY):0);
       }
     }};
 }

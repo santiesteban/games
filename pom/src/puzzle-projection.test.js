@@ -92,3 +92,13 @@ test('extrusion moves the character anchor without stretching its local shape',(
     for(const axis of ['x','y','z']){near(actual[axis],target[axis]);near(a[1][axis]-a[0][axis],b[1][axis]-b[0][axis])}
   }
 });
+
+
+test('camera pitch moves the character without changing its proportions',()=>{
+  const anchor={x:4,y:5,z:2},points=[{x:3.7,y:4.8,z:2.1},{x:4.3,y:5.5,z:1.9}];
+  for(const pitch of [.02,.4,.8]){
+    const projection=puzzleProjection({...camera(12,pitch),depthScale:1.75});
+    const a=projectAnchoredPuzzlePoint(projection,points[0],anchor),b=projectAnchoredPuzzlePoint(projection,points[1],anchor);
+    for(const axis of ['x','y','z'])near(b[axis]-a[axis],points[1][axis]-points[0][axis]);
+  }
+});

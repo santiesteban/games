@@ -1,3 +1,4 @@
+import {pomMovementPose} from './pom-movement-pose.js';
 import {createRedPom} from './red-pom.js';
 import approvedEnvironment from './data/daisy-meadow-ivan-v2.json';
 import {gameplayEnvironmentConfiguration} from './environment-policy.js';
@@ -494,13 +495,8 @@ function syncCellGeometry(){
   syncBlocks();syncFlag();syncHoverSpot();syncMovementMarkers();if(!busy)syncPlayer();
 }
 function syncPomMatrix(){
-  if(!playerObject)return;
-  if(yStretch===1){playerObject.localMatrix=undefined;return}
-  // Billboard rotation mixes local Y/Z. Scale world Y of its basis, once;
-  // the anchor has already passed through stretchY. Children inherit this matrix.
-  const matrix=buildMatrix(playerObject.pos3D,playerObject.rotation3D,playerObject.scale3D);
-  for(const i of [1,5,9])matrix.m[i]=stretchY(matrix.m[i]);
-  playerObject.localMatrix=matrix;
+  // Pom's anchor follows the board stretch, but his shape stays undistorted.
+  if(playerObject)playerObject.localMatrix=undefined;
 }
 function cellMeasurement(){
   const size=vec2(wrap.clientWidth,wrap.clientHeight),matrix=blockObjects[0]?.getMatrix();
@@ -1391,7 +1387,7 @@ function updateProgressSettings(){
 }
 function recordCompletedLevel(){if(warpPipePreview||cameraLab||interactionLab)return;unfinished.remove(activeLevel.id);if(activeLevel.userPuzzle){myPuzzles.complete(activeLevel);return}progressSaved=levelProgress.complete(activeLevel.id);const menu=document.querySelector('#menuScreen');if(!menu.hidden&&menu.classList.contains('is-levels'))renderLevelList();updateProgressSettings()}
 function resetLevelState(level){
-  showRedPom('calm');
+  redPom?.resetMotion();showRedPom('calm');
   pulloutAnimationToken++;pulloutAnimationDepths=null;
   warpPreviewAnimation++;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;if(pomEyes.length)resetWarpEyes();
   setLoadingPalette(levelLoadingPanel,level);
@@ -2219,7 +2215,7 @@ function startCelebration(){
 function cloneProjectionMesh(source){
   const mesh=new Mesh().combine(source);mesh.doubleSided=source.doubleSided;mesh.dynamicDraw=true;return mesh;
 }
-const puzzleMeshes=createPuzzleMeshProjection(cloneProjectionMesh);
+const puzzleMeshes=createPuzzleMeshProjection(cloneProjectionMesh),characterMeshes=createPuzzleMeshProjection(cloneProjectionMesh);
 let puzzleGPU;
 const requestGPUProjection=new URLSearchParams(location.search).get('projection')!=='cpu';
 let projectionCamera;
@@ -2244,7 +2240,11 @@ function syncPuzzleProjection(){
   for(const object of [...extrusionObjects,...extrusionOutlines,...topPickObjects,...(movementMarkers?.renderObjects??[]),flagPrint,flagPole,flagCloth,flagVase,flagCap,hoverObject,studioTargetObject])apply(object);
   for(const parts of warpPreviewEnds)for(const object of Object.values(parts))apply(object);
   for(const entry of pulloutSwitchObjects)for(const object of entry.objects)apply(object);
-  for(const object of [...pomParts,...(redPom?.parts??[]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh){if(gpu)puzzleGPU.apply(object);else puzzleMeshes.apply(object,object.getMatrix(),playerObject.pos3D)}
+  // Character meshes share one projected anchor, rather than the board's
+  // per-vertex squaring/extrusion, so camera pitch cannot distort the artwork.
+  characterMeshes.begin(projection);
+  for(const object of [...pomParts,...(redPom?.parts??[]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh)characterMeshes.apply(object,object.getMatrix(),playerObject.pos3D);
+  characterMeshes.end();
   if(!gpu)puzzleMeshes.end();
 }
 function puzzlePick(objects,query){return puzzleGPU?.active?puzzleGPU.pick(objects,query):query()}
@@ -2326,7 +2326,7 @@ function gameUpdate(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.update(performance.now());redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
@@ -2344,9 +2344,9 @@ function moveTo(p,pressMarker=false,preview=null){
   const winningArrival=!warpPipePreview&&!isPreviewLevel(activeLevel)&&nodeKey(path.at(-1))===nodeKey(goalNode());
   const pressDestination=pressMarker||(movementMarkersEnabled()&&p.y<H);
   movementMarkerRoute=pressDestination?path.slice(1):null;movementMarkerRouteTargets=pressDestination?standableReachable():null;movementMarkerRouteIndex=0;
-  hideHelp();save();resumeStudyFollow();busy=true;effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
+  hideHelp();save();resumeStudyFollow();busy=true;redPom?.setMoving(true);effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   function finish(){
-    falling=false;showRedPom('calm');setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
+    falling=false;redPom?.setMoving(false);showRedPom('calm');setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
     if(!warpPipePreview&&!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();startCelebration()}
     else {if(!canInteract(selected))selected=null;autoSelectNearbyPiece();saveUnfinished()}
     syncFlag();syncPlayer();updateUI();
@@ -2365,7 +2365,7 @@ function moveTo(p,pressMarker=false,preview=null){
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
     const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;
-    showRedPom(plan.isFall&&flight>.08&&flight<.96?'float':plan.isJump?(t<.38||t>=.82?'squash':'stretch'):'calm');
+    showRedPom(pomMovementPose(plan,from,to,t,flight));
     const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
     const progress=plan.isJump?(t<.14?plan.takeoff*smooth(t/.14):t<.38?plan.takeoff:t<.82?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.82)/.18)):0;
     const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;
