@@ -1,5 +1,5 @@
 import {collectionCard,updateGridEdges} from './collection-view.js';
-import {puzzleThumbnail} from './puzzle-thumbnail.js';
+import {userPuzzleThumbnail} from './puzzle-thumbnail.js';
 
 const thumbnails={
   'basic-lessons':new URL('./assets/interface/pack_01_thumb.webp',import.meta.url).href,
@@ -56,7 +56,7 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
       const item=document.querySelector('#packCardTemplate').content.firstElementChild.cloneNode(true),link=item.querySelector('a');
       link.href=`#level=${encodeURIComponent(level.id)}`;link.setAttribute('aria-label',`Continue ${level.name}`);link.setAttribute('aria-disabled',String(!ready));
       link.addEventListener('click',event=>{event.preventDefault();if(ready)play(level)});
-      const art=level.userPuzzle?myPuzzles.thumbnail(level):puzzleThumbnail(thumbnailLevel(level));art.classList.add('continue-card__art');art.setAttribute('aria-hidden','true');item.querySelector('.pack-card__art').replaceChildren(art);
+      const art=level.userPuzzle?myPuzzles.thumbnail(level):userPuzzleThumbnail(thumbnailLevel(level));art.classList.add('continue-card__art');art.setAttribute('aria-hidden','true');item.querySelector('.pack-card__art').replaceChildren(art);
       item.querySelector('.pack-card__title').textContent=level.name;
       const pack=item.querySelector('.pack-card__progress');pack.classList.add('continue-card__pack');pack.textContent=level.userPuzzle?'My Puzzles':groups.find(group=>group.id===level.group)?.name??'';
       cards.push(item);
@@ -91,7 +91,7 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
     }else{
       for(const level of groupLevels(collection).filter(level=>level.id===revealLevelId||isAvailable(level))){
         const card=collectionCard(level,{completed:progress.has(level.id),pending:level.id===revealLevelId,play});
-        const art=puzzleThumbnail(thumbnailLevel(level));art.classList.add('level-card__art');
+        const art=userPuzzleThumbnail(thumbnailLevel(level));art.classList.add('level-card__art');
         card.querySelector('.level-card__preview').prepend(art);grid.append(card);
       }
       if(!grid.childElementCount){empty.hidden=false;empty.textContent='No levels to show with your current settings.'}

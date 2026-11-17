@@ -20,6 +20,14 @@
       "name": "Murals"
     },
     {
+      "id": "interesting-challenges",
+      "name": "Interesting Challenges"
+    },
+    {
+      "id": "challenging-challenges",
+      "name": "Challenging Challenges"
+    },
+    {
       "id": "japan-challenges",
       "name": "Japan Challenges",
       "environment": "japan-spring"
@@ -31,14 +39,6 @@
     {
       "id": "food-for-thought",
       "name": "Food for Thought"
-    },
-    {
-      "id": "interesting-challenges",
-      "name": "Interesting Challenges"
-    },
-    {
-      "id": "challenging-challenges",
-      "name": "Challenging Challenges"
     },
     {
       "id": "others",
