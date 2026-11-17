@@ -23,6 +23,9 @@ export function neoButton(element){
   props.size=element.classList.contains('icon-button')||element.classList.contains('tool')?'icon':'default';
   props.dangerouslySetInnerHTML={__html:element.innerHTML};
   const result=nodeFromMarkup(renderToStaticMarkup(React.createElement(Button,props)));
+  // These are static native buttons. The editor updates `disabled` directly,
+  // so Base UI's server-rendered state marker must not remain stale.
+  result.removeAttribute('data-disabled');
   result.style.cssText=element.style.cssText;
   return result;
 }
