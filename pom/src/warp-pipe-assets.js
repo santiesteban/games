@@ -27,7 +27,12 @@ function badgeTexture(index,labeled,overlay=false,inverted=false){
     context.fillStyle=overlay?vivid(colors.rim):colors.rim;context.fill();
     context.beginPath();context.ellipse(128,82,43,13,0,0,Math.PI*2);
     if(overlay){context.fillStyle='#000';context.fill();context.globalCompositeOperation='source-over'}else{context.fillStyle='#3a184a';context.fill()}
-    context.restore();if(labeled&&!overlay){context.fillStyle='#33263b';context.font='bold 50px sans-serif';context.textAlign='center';context.fillText(String(index+1),199,220)}
+    context.restore();if(labeled){
+      // Keep the number legible over the icon and during the yellow pulse.
+      context.font='bold 62px sans-serif';context.textAlign='center';context.textBaseline='alphabetic';
+      context.lineJoin='round';context.lineWidth=7;context.strokeStyle=overlay?'#ffe45c':'#fff3d0';
+      context.strokeText(String(index+1),193,218);context.fillStyle='#21182a';context.fillText(String(index+1),193,218);
+    }
   });
 }
 

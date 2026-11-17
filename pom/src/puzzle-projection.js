@@ -34,6 +34,12 @@ export function projectAnchoredPuzzlePoint(projection,point,anchor){
   return {x:point.x+projectedAnchor.x-anchor.x,y:point.y+projectedAnchor.y-anchor.y,z:point.z+projectedAnchor.z-anchor.z};
 }
 
+// The artwork is kept rigid, but its contact point must follow the same
+// projection as the surface it stands on, especially high above the floor.
+export function characterContactAnchor(position,correction,verticalOffset){
+  return {x:position.x+correction.x,y:position.y+correction.y+verticalOffset,z:position.z+correction.z};
+}
+
 // Clone shared meshes once per object. Recompute only when the camera, source
 // mesh or object pose changes; release obsolete clones after each scene pass.
 export function createPuzzleMeshProjection(cloneMesh){

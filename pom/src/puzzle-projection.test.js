@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {puzzleProjection,projectPuzzlePoint,projectAnchoredPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection,projectedPuzzleBounds} from './puzzle-projection.js';
+import {puzzleProjection,projectPuzzlePoint,projectAnchoredPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection,projectedPuzzleBounds,characterContactAnchor} from './puzzle-projection.js';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
+test('Pom stays anchored to elevated surfaces while his artwork remains rigid',()=>{
+ for(const height of [0,2,8,16,30])for(const pitch of [.14,.35,.8]){
+  const contact={x:3,y:height,z:2},position={...contact,y:height+.205},anchor=characterContactAnchor(position,{x:0,y:0,z:0},-.205);
+  const projection=puzzleProjection(camera(35,pitch)),surface=projectPuzzlePoint(projection,contact),pom=projectAnchoredPuzzlePoint(projection,contact,anchor);
+  for(const axis of ['x','y','z'])near(pom[axis],surface[axis]);
+  const top={x:3,y:height+.7,z:2},projectedTop=projectAnchoredPuzzlePoint(projection,top,anchor);
+  near(projectedTop.y-pom.y,.7);
+ }
+});
 function camera(distance,pitch,focus={x:4,y:3,z:1}){
   const s=Math.sin(pitch),c=Math.cos(pitch);
   return {eye:{x:focus.x,y:focus.y+distance*s,z:focus.z+distance*c},forward:{x:0,y:-s,z:-c},up:{x:0,y:c,z:-s}};

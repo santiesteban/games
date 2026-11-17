@@ -38,7 +38,7 @@ import { vibrantWarpColor, warpPulsePhase } from './warp-pulse.js';
 import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
-import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
+import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection,characterContactAnchor} from './puzzle-projection.js';
 import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryExpandedFov, victoryPomFrameHeight } from './victory-effects.js';
 import {setLoadingPalette} from './loading-palette.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
@@ -55,6 +55,7 @@ import { movementExamples, studioLevel } from './movement-studio.js';
 import { cameraPosition, cameraSlant, CAMERA_PITCHES, DEFAULT_VIEW } from './camera-view.js';
 import { cameraControlCube } from './camera-control-cube.js';
 import { nearestMovementTarget } from './movement-targets.js';
+import { warpCameraProgress } from './warp-camera.js';
 
 const buildLabel=document.querySelector('#buildNumber');
 // The initial screen is Home; only a level may claim browser input defaults.
@@ -1128,6 +1129,18 @@ function resetWarpEyes(){
     white.scale3D=vec3(.22,.28,1);black.scale3D=vec3(.12,.154,1);
   }
 }
+function createWarpCameraPan(cell,group,start,end){
+  const camera=render3D.camera,right=camera.getRight(),up=camera.getUp();
+  const destination=worldPoint(cell.x+.5,H-cell.y-(cell.inverted?1:0),Math.max(0,visualDepth(group)-.5));
+  const offset=destination.subtract(cameraFocus);
+  const from=viewTarget.copy(),delta=right.scale(offset.dot(right)).add(up.scale(offset.dot(up)));
+  let previous=0;
+  return elapsed=>{
+    const progress=warpCameraProgress(elapsed,start,end,reducedSelectionMotion.matches);
+    if(progress===previous)return;
+    previous=progress;viewTarget=from.add(delta.scale(progress));applyBoardView(false);
+  };
+}
 function animateWarpPreview(source=0,destination=1){
   if(warpPreviewEnds.length<2)return;
   if(!warpPipePreview&&(busy||won||levelLoading||introPlaying||!viewReady||!warpDestination(movementBoard(),player,activeLevel.warpPairs)))return;
@@ -1147,11 +1160,13 @@ function animateWarpPreview(source=0,destination=1){
   }
   resetStudyFollow({paused:true});
   busy=true;updateUI();
+  const panCamera=createWarpCameraPan(cells[1],endpoints[destination].group,800,1550);
   let start,atDestination=false;
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
   function tick(now){
     if(token!==warpPreviewAnimation)return;
     start??=now;const elapsed=now-start;
+    panCamera(elapsed);
     showRedPom(elapsed<1700?'warp-out':'excited',elapsed>=2650);
     if(elapsed>=1550&&!atDestination){atDestination=true;player={x:cells[1].x,y:cells[1].y,z:byCell[cells[1].y][cells[1].x].depth-1};syncBlocks();syncFlag()}
     // Shrink Pom into a small floating ball, then let it descend into the
@@ -1210,12 +1225,14 @@ function animateInvertedWarp(source,destination,endpoints){
   const entrance=sourceCell.inverted?outlet(sourceCell,sourceGroup):start.add(vec3(0,stretchY(-.22),0));
   const landing=destinationCell.inverted?pomPositionOnNode(to):pipeStandingPosition(to,destination);
   const exit=destinationCell.inverted?outlet(destinationCell,destinationGroup):landing.add(vec3(0,stretchY(-.22),0));
-  save();stopIntro();hideHelp();clearMovementRoutes();selected=null;busy=true;redPom?.setMoving(true);updateUI();
+  save();stopIntro();hideHelp();clearMovementRoutes();selected=null;resetStudyFollow({paused:true});busy=true;redPom?.setMoving(true);updateUI();
+  const panCamera=createWarpCameraPan(destinationCell,destinationGroup,250,650);
   let began,placed=false;
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
   function tick(now){
     if(token!==warpPreviewAnimation)return;
     began??=now;const elapsed=now-began;
+    panCamera(elapsed);
     if(elapsed>=600&&!placed){player={...to};placed=true;syncBlocks();syncFlag()}
     let position,size;
     if(elapsed<500){const t=smooth(elapsed/500);position=start.lerp(entrance,t);size=1-.95*t}
@@ -1336,9 +1353,11 @@ function updateUI(){
   if(!cameraAvailable&&cameraModeActive)setCameraMode(false);
   cameraControlsPanel.hidden=!cameraAvailable;
   cameraControlsPanel.inert=busy||won||levelLoading;
-  tuningToggle.hidden=!cameraAvailable;
+  const tuningAvailable=cameraAvailable&&controlFeatures.enabled('showCameraTuning');
+  tuningToggle.hidden=!tuningAvailable;
   tuningToggle.disabled=busy||won||levelLoading;
-  cameraTuning.hidden=!cameraAvailable||won||tuningToggle.getAttribute('aria-expanded')!=='true';
+  if(!tuningAvailable)tuningToggle.setAttribute('aria-expanded','false');
+  cameraTuning.hidden=!tuningAvailable||won||tuningToggle.getAttribute('aria-expanded')!=='true';
   cameraTuning.inert=busy||levelLoading;
   if(viewReady)syncCameraSliders();
   wrap.classList.toggle('no-piece-selected',!selected);
@@ -2113,9 +2132,8 @@ function updateWarpPulse(now){
 function warpTapTarget(point){
   const pair=currentWarpPair();if(!pair)return false;
   const size=vec2(wrap.clientWidth,wrap.clientHeight),project=point=>render3D.worldToScreen(puzzlePoint(point),size);
-  // Tapping Pom and either exposed pipe square or front-face icon can start a warp.
-  const matrix=playerObject.getMatrix(),body=pomContour.map(([x,y])=>project(matrix.transformPoint(vec3(x,y,0))));
-  if(nearestMovementTarget(point,[{node:player,polygon:body}],{margin:0}))return true;
+  // Test the actual pipe and square, not Pom's projected silhouette: that
+  // silhouette can cover an otherwise tappable piece behind him.
   const ray=render3D.screenToRay(vec2(point.x,point.y),size);
   const objects=[...blockObjects,...topPickObjects,...extrusionOutlines,...warpPreviewEnds.flatMap(parts=>[parts.badge,parts.body,parts.rim])];
   const hit=puzzleRaycast(ray,objects)[0];
@@ -2282,6 +2300,10 @@ function puzzleProjectionState(){
 }
 function puzzlePoint(point){const p=projectPuzzlePoint(puzzleProjectionState(),point);return vec3(p.x,p.y,p.z)}
 function logicalPuzzlePoint(point){const p=unprojectPuzzlePoint(puzzleProjectionState(),point);return vec3(p.x,p.y,p.z)}
+function pomSurfaceCorrection(){
+  const onPipe=warpPlayerOnPipe();
+  return onPipe&&!busy?render3D.camera.getForward().scale(-.35):onPipe||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045);
+}
 function syncPuzzleProjection(){
   const projection=puzzleProjectionState();puzzleGPU?.begin(projection,requestGPUProjection&&extrusionScale===1);
   const gpu=puzzleGPU?.active;
@@ -2296,7 +2318,8 @@ function syncPuzzleProjection(){
   // Character meshes share one projected anchor, rather than the board's
   // per-vertex squaring/extrusion, so camera pitch cannot distort the artwork.
   characterMeshes.begin(projection);
-  for(const object of [...pomParts,...(redPom?.parts??[]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh)characterMeshes.apply(object,object.getMatrix(),playerObject.pos3D);
+  const anchor=redPom?characterContactAnchor(playerObject.pos3D,pomSurfaceCorrection(),stretchY(-.205)):playerObject.pos3D;
+  for(const object of [...pomParts,...(redPom?.parts??[]),umbrellaCanopy,umbrellaHandle,...umbrellaPanels])if(object?.mesh)characterMeshes.apply(object,object.getMatrix(),anchor);
   characterMeshes.end();
   if(!gpu)puzzleMeshes.end();
 }
@@ -2379,7 +2402,7 @@ function gameUpdate(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setEyeStyle(controlFeatures.pomEyeStyle);redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setEyeStyle(controlFeatures.pomEyeStyle);redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),pomSurfaceCorrection())}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
