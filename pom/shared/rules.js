@@ -58,7 +58,8 @@ export function warpEndpoint(board,cell){
     const node={x:cell.x,y:cell.y,z:group.depth-1};
     return board.validNode(node)?{entry:node,landing:node}:null;
   }
-  if(board.byCell[cell.y+1]?.[cell.x]===group)return null;
+  const below=board.byCell[cell.y+1]?.[cell.x];
+  if(below&&below.depth>=group.depth)return null;
   const entry={x:cell.x,y:cell.y+1,z:group.depth};
   let landing;
   for(let y=entry.y;y<=board.height;y++){

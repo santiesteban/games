@@ -33,14 +33,23 @@ test('an elevated inverted exit drops to the first reachable surface',()=>{
   const board=createMovementBoard(grid,[1,2,3]),pipe={x:0,y:28,inverted:true};
   assert.deepEqual(warpEndpoint(board,pipe),{entry:null,landing:{x:0,y:30,z:1}});
   const supported=createMovementBoard([...Array(28).fill('.'.repeat(32)),'0'+'.'.repeat(31),'1'+'.'.repeat(31),'.'.repeat(32),'2'+'.'.repeat(31)],[1,2,3]);
-  assert.deepEqual(warpEndpoint(supported,pipe),{entry:{x:0,y:29,z:1},landing:{x:0,y:29,z:1}});
+  assert.equal(warpEndpoint(supported,pipe),null);
 });
 test('an inverted pipe can only be entered from its immediately adjacent underside',()=>{
-  const grid=[...Array(28).fill('.'.repeat(32)),'0....11'+'.'.repeat(25),'1'+'.'.repeat(31),...Array(2).fill('.'.repeat(32))];
-  const board=createMovementBoard(grid,[1,1,2]),pairs=[[{x:0,y:28,inverted:true},{x:5,y:28}]];
-  assert.deepEqual(warpDestination(board,{x:0,y:29,z:1},pairs),{x:5,y:28,z:0});
-  assert.equal(warpDestination(board,{x:0,y:30,z:1},pairs),null);
-  assert.equal(warpDestination(board,{x:0,y:29,z:0},pairs),null);
+  const grid=[...Array(31).fill('.'.repeat(32)),'0....11'+'.'.repeat(25)];
+  const board=createMovementBoard(grid,[1,1]),pairs=[[{x:0,y:31,inverted:true},{x:5,y:31}]];
+  assert.deepEqual(warpDestination(board,{x:0,y:32,z:1},pairs),{x:5,y:31,z:0});
+  assert.equal(warpDestination(board,{x:1,y:32,z:1},pairs),null);
+  assert.equal(warpDestination(board,{x:0,y:32,z:0},pairs),null);
+});
+test('a piece directly below an inverted pipe blocks both ends at equal or greater depth',()=>{
+  const grid=[...Array(29).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'1'+'.'.repeat(31),'.'.repeat(32)];
+  const board=createMovementBoard(grid,[1,1,1]),pairs=[[{x:0,y:29,inverted:true},{x:5,y:29}]],from={x:5,y:29,z:0};
+  assert.equal(warpDestination(board,from,pairs),null);
+  board.byCell[30][0].depth=2;
+  assert.equal(warpDestination(board,from,pairs),null);
+  board.byCell[30][0].depth=0;
+  assert.deepEqual(warpDestination(board,from,pairs),{x:0,y:32,z:1});
 });
 test('warp requires both ends exposed, works in both directions and preserves their depths',()=>{
   const p=validatePuzzle(example()),board=createMovementBoard(p.grid,p.initialDepths);

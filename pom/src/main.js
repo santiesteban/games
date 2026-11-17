@@ -1032,8 +1032,7 @@ function warpPipeAt(node){
   if(!warpPreviewEnds.length)return -1;
   return warpEndpoints().findIndex(({group,cell})=>{
     if(cell.inverted||node.x!==cell.x||node.y!==cell.y)return false;
-    const depth=visualDepth(group),above=byCell[cell.y+(cell.inverted?1:-1)]?.[cell.x];
-    if(cell.inverted)return depth>0&&above!==group;
+    const depth=visualDepth(group),above=byCell[cell.y-1]?.[cell.x];
     return depth>0&&node.z===depth-1&&(!above||visualDepth(above)<depth);
   });
 }
@@ -1042,7 +1041,7 @@ function syncWarpPipePreview(){
   if(!warpPreviewEnds.length)return;
   const endpoints=warpEndpoints();
   const exposed=endpoints.map(({group,cell})=>{
-    const depth=visualDepth(group),above=byCell[cell.y-1]?.[cell.x];
+    const depth=visualDepth(group),above=byCell[cell.y+(cell.inverted?1:-1)]?.[cell.x];
     return depth>0&&(!above||visualDepth(above)<depth);
   });
   const now=performance.now();warpPipesMoving=false;
