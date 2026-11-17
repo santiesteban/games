@@ -107,6 +107,60 @@ test('jump across a gap requires an immediate takeoff and a clear flight',()=>{
   for(let i=1;i<jump.points.length;i++)assert(movementSegmentClear(board,jump.points[i-1],jump.points[i]));
 });
 
+function withTakeoffCeilingTolerance(board,from){
+  const a=nodePose(board,from),height=board.height-from.y;
+  return {...board,blocks:board.blocks.map(block=>a.x>block.min.x&&a.x<block.max.x&&a.z>block.min.z&&a.z<block.max.z&&block.min.y+.31>=height+1-.0001?{...block,min:{...block.min,y:block.min.y+.32}}:block)};
+}
+
+test('overhead pieces at takeoff do not prevent jumping across a gap',()=>{
+  const from={x:4,y:5,z:4},to={x:6,y:4,z:4};
+  for(const clearance of [1,2]){
+    const ceiling={min:{x:3.62,y:5+clearance-.31+.0001,z:3.82},max:{x:5.38,y:6+clearance+.205,z:5.18}};
+    const board={height:10,blocks:[ceiling],validNode:p=>[from,to].some(n=>n.x===p.x&&n.y===p.y&&n.z===p.z)};
+    const jump=planMovement(board,from,to);
+    assert(jump?.isJump,`ceiling ${clearance} square(s) above takeoff`);
+    assert(jump.points[1].x<=from.x+1,'balances on the takeoff square');
+    assert(jump.points[1].x>from.x+.5,'starts toward the edge before rising');
+    const tolerant=withTakeoffCeilingTolerance(board,from);
+    for(let i=1;i<jump.points.length;i++)assert(movementSegmentClear(tolerant,jump.points[i-1],jump.points[i]),'limits ceiling overlap');
+  }
+});
+
+test('the gap jump in Unconventional Tricks 2 clears the overhead black piece',()=>{
+  const board=createMovementBoard(['55555555','55222555','05555551','05225521','01225521','02255221','00222221','00000001','00011111'],[1,0,2,1,0,0]);
+  const from={x:1,y:6,z:0},jump=planMovement(board,from,{x:3,y:5,z:0});
+  assert(jump?.isJump);
+  assert(jump.takeoff>0,'approaches the edge before takeoff');
+  assert.equal(jump.landing,1,'flight continues all the way to the landing');
+  assert.equal(jump.points[1].y,jump.points[0].y,'stays on the ledge during the approach');
+  assert(jump.points[2].x>jump.points[1].x&&jump.points[2].y>jump.points[1].y,'moves forward while rising');
+  for(let i=3;i<jump.points.length;i++){
+    const [a,b,c]=jump.points.slice(i-2,i+1);
+    assert((c.y-b.y)/(c.x-b.x)<(b.y-a.y)/(b.x-a.x),'the jump never gets steeper after takeoff');
+  }
+  const tolerant=withTakeoffCeilingTolerance(board,from);
+  for(let i=1;i<jump.points.length;i++)assert(movementSegmentClear(tolerant,jump.points[i-1],jump.points[i]));
+});
+
+test('the lower roof in the saved Unconventional Tricks puzzle does not split the jump',()=>{
+  const board=createMovementBoard(['55555555','55222555','05555551','05225521','05225521','02255221','00222221','00000001','00011111'],[1,0,2,3,0]);
+  const from={x:1,y:6,z:0},jump=planMovement(board,from,{x:3,y:5,z:0});
+  assert(jump?.continuousFlight);
+  assert(jump.takeoff>0);
+  assert(jump.points[1].x>from.x+.7&&jump.points[1].x<from.x+1,'takes off closer to the edge while still supported');
+  assert.equal(jump.points[1].y,jump.points[0].y);
+  assert.equal(jump.landing,1);
+  const tolerant=withTakeoffCeilingTolerance(board,from);
+  for(let i=1;i<jump.points.length;i++){
+    const b=jump.points[i-1],c=jump.points[i];
+    assert(movementSegmentClear(tolerant,b,c));
+    if(i>2){
+      const a=jump.points[i-2];
+      assert((c.y-b.y)/(c.x-b.x)<=(b.y-a.y)/(b.x-a.x)+1e-9,'the arc cannot steepen after launch');
+    }
+  }
+});
+
 test('jump distance and direction depend on landing height',()=>{
   const from={x:4,y:5,z:4};
   for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){

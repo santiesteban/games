@@ -40,11 +40,20 @@ test('a switch pulls every matching disconnected piece to maximum depth',()=>{
   assert.deepEqual(result.depths,[3,3,1]);assert.deepEqual(result.player,{x:1,y:1,z:0});
   assert.equal(pulloutSwitchState(createMovementBoard(['R.R','SSS'],result.depths),result.player,[{x:1,y:1,color:'R'}]),null);
 });
+test('Pom rides the switch piece when it pulls itself out',()=>{
+  const board=createMovementBoard(['S'],[1]);
+  const result=pulloutSwitchState(board,{x:0,y:0,z:0},[{x:0,y:0,color:'S'}]);
+  assert.deepEqual(result.depths,[3]);
+  assert.deepEqual(result.player,{x:0,y:0,z:2});
+  assert.deepEqual(result.steps.map(step=>step.player.z),[1,2]);
+  assert.deepEqual(result.movements.map(move=>move.type),['ride','ride']);
+  assert.equal(createMovementBoard(['S'],result.depths).validNode(result.player),true);
+});
 test('Pom jumps onto an extending piece when its top is exposed',()=>{
   const board=createMovementBoard(['R','S'],[0,1]);
   const result=pulloutSwitchState(board,{x:0,y:1,z:0},[{x:0,y:1,color:'R'}]);
-  assert.deepEqual(result.depths,[3,1]);assert.deepEqual(result.player,{x:0,y:0,z:0});
-  assert.equal(result.movements[0].type,'jump');
+  assert.deepEqual(result.depths,[3,1]);assert.deepEqual(result.player,{x:0,y:0,z:2});
+  assert.deepEqual(result.movements.map(move=>move.type),['jump','ride','ride']);
 });
 test('Pom is pushed and falls to the first surface when he cannot jump',()=>{
   const board=createMovementBoard(['B','R','S'],[3,0,1]);

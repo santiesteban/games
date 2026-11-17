@@ -16,6 +16,13 @@ export function victoryFrameUnit(width,height,visualWidth,visualHeight){
   const starSize=Math.min(width*.56,height*.29);
   return Math.max(1,Math.min((width-32)/(visualWidth+.8),(height-48)/(visualHeight+1.15),starSize*.32/.72));
 }
+// Keep Pom prominent inside the victory shape, including narrow screens.
+export function victoryPomFrameHeight(width,height,visualWidth,visualHeight){
+  const fullHeight=height/victoryFrameUnit(width,height,visualWidth,visualHeight);
+  const starWidth=Math.min(width*.56,height*.29);
+  const minimumHeight=.72*height/(Math.max(1,starWidth)*.48);
+  return Math.min(fullHeight,Math.max(5,minimumHeight));
+}
 export function victoryExpandedFov(fov,ratio){
   return 2*Math.atan(Math.tan(fov*Math.PI/360)*ratio)*180/Math.PI;
 }

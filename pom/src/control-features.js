@@ -1,3 +1,4 @@
+import {isPomEyeStyle,resolvePomEyeStyle} from './pom-eye-style.js';
 import {adoptStackedInteraction,INTERACTION_REVISION} from './interaction-defaults.js';
 import { DEFAULT_DESIGN } from './design-style.js';
 
@@ -19,7 +20,7 @@ export const TOP_FACE_STYLES=[['flat','Flat'],['checkerboard','Checkerboard'],['
 const STORAGE_KEY='little-ledges:v4:control-features';
 
 export function createControlFeatures({persistent=true}={}){
-  const defaults={...Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.id,feature.defaultEnabled===true])),flatTopFaces:true,movementMarkerShape:'diamond'};
+  const defaults={...Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.id,feature.defaultEnabled===true])),flatTopFaces:true,movementMarkerShape:'diamond',pomEyeStyle:'classic',brightPomEyes:false};
   function read(){
     if(!persistent)return {...defaults};
     try{
@@ -30,6 +31,8 @@ export function createControlFeatures({persistent=true}={}){
         const adoptFloor=feature.id==='floorGrid'&&saved?.floorGridRevision===undefined;
         return[feature.id,!adoptDesign&&!adoptFloor&&typeof savedFlags?.[feature.id]==='boolean'?savedFlags[feature.id]:defaults[feature.id]];
       })));
+      flags.brightPomEyes=savedFlags?.brightPomEyes===true;
+      flags.pomEyeStyle=resolvePomEyeStyle(savedFlags?.pomEyeStyle,flags.brightPomEyes);
       flags.flatTopFaces=saved?.version===2&&typeof savedFlags?.flatTopFaces==='boolean'?savedFlags.flatTopFaces:defaults.flatTopFaces;
       flags.movementMarkerShape=saved?.movementMarkerRevision===2&&['diamond','square','circle'].includes(savedFlags?.movementMarkerShape)?savedFlags.movementMarkerShape:defaults.movementMarkerShape;
       return flags;
@@ -40,6 +43,12 @@ export function createControlFeatures({persistent=true}={}){
   try{persist()}catch{}
   return{
     key:STORAGE_KEY,
+    get pomEyeStyle(){return value.pomEyeStyle??'classic'},
+    setPomEyeStyle(style){
+      if(!isPomEyeStyle(style))return false;
+      value={...(persistent?(read()??value):value),pomEyeStyle:style,brightPomEyes:style==='bright'};
+      try{persist();return true}catch{return false}
+    },
     get movementMarkerShape(){return value.movementMarkerShape??'diamond'},
     setMovementMarkerShape(shape){
       if(!['diamond','square','circle'].includes(shape))return false;

@@ -39,7 +39,7 @@ import { createCameraScenery } from './camera-scenery.js';
 import { ENVIRONMENTS, DEFAULT_ENVIRONMENT, environmentById, environmentFrame, environmentCacheKey, selectEnvironmentComposition, createEnvironmentLoader } from './environments.js';
 import {createPuzzleGPUProjection} from './puzzle-projection-gpu.js';
 import {puzzleProjection,projectPuzzlePoint,unprojectPuzzlePoint,createPuzzleMeshProjection} from './puzzle-projection.js';
-import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryExpandedFov, victoryFrameUnit } from './victory-effects.js';
+import { createVictoryEffects, victoryArrival, victoryBoardClip, victoryCenter, victoryExpandedFov, victoryPomFrameHeight } from './victory-effects.js';
 import {setLoadingPalette} from './loading-palette.js';
 import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader, solidPieceGlowShader, groundShadowShader, SHADOW_BLUR_RADIUS } from './shadow-materials.js';
 import { createCatalogScreens } from './catalog-screens.js';
@@ -916,14 +916,21 @@ function syncBackground(){
   wrap.dataset.sceneryOverlays=JSON.stringify(preview?{...preview.overlays,horizonY:(.5-horizon/ortho)*height}:null);
   wrap.dataset.backgroundFrame=JSON.stringify({width:frame.backgroundHeight*activeEnvironment.aspectRatio*height/ortho,height:frame.backgroundHeight*height/ortho,left:width/2-frame.backgroundHeight*activeEnvironment.aspectRatio*height/ortho/2,top:height/2-(frame.backgroundY+frame.backgroundHeight/2)*height/ortho});
 }
+function warpRimHeight(endpoint){
+  return (.15+.22*(warpPipeMotion[endpoint]?.value??0))*.72;
+}
 function warpPomPosition(scaleY=1,lift=0){
   // The pipe and Pom use the same cell center. Place Pom's lowest point on
   // the lowered rim, accounting for the billboard's camera-facing tilt.
   const endpoint=warpEndpoints().findIndex(({cell})=>cell.x===player.x&&cell.y===player.y);
   const up=render3D.camera.getUp();
-  const rimTop=(.15+.22*(warpPipeMotion[endpoint]?.value??0))*.72;
+  const rimTop=warpRimHeight(endpoint);
   const bottom=.379*.56*scaleY*Math.max(0,up.y);
   return worldPoint(player.x+.5,H-player.y+rimTop+bottom+lift,player.z+.5);
+}
+function pipeStandingPosition(node,endpoint){
+  const bottom=redPom ? .205 : .379*.56*Math.max(0,render3D.camera.getUp().y);
+  return worldPoint(node.x+.5,H-node.y+warpRimHeight(endpoint)+bottom,node.z+.5);
 }
 function pulloutSwitchAt(node,depths){
   if(node.y>=H)return undefined;
@@ -937,8 +944,8 @@ function pomNodeOffset(node,depths){
 }
 function pomPositionOnNode(node,depths){return worldPosition(node).add(pomNodeOffset(node,depths))}
 function syncPlayer(){
-  resetPomShape();const onPipe=warpPlayerOnPipe();playerObject.setMesh(pomBlob);pomBody.setMesh(pomBlob);
-  const jump=celebration?.jump??0,node={...player,z:player.z+(pieceDragPreview?.offset??0)},p=onPipe?warpPomPosition():worldPosition(node).add(pomNodeOffset(player));
+  resetPomShape();const pipe=warpPipeAt(player);playerObject.setMesh(pomBlob);pomBody.setMesh(pomBlob);
+  const jump=celebration?.jump??0,node={...player,z:player.z+(pieceDragPreview?.offset??0)},p=pipe>=0?pipeStandingPosition(player,pipe):worldPosition(node).add(pomNodeOffset(player));
   playerObject.pos3D=p.add(vec3(0,stretchY(jump),0));
   playerObject.rotation3D=render3D.camera.rotation.copy();playerObject.scale3D=vec3(.72*(1-jump*.2),.56*(1+jump*.2),.018);syncPomMatrix();
 }
@@ -1020,10 +1027,15 @@ function setupWarpEnds(){
   warpPreviewEnds=Array.from({length:count},(_,i)=>warpPreviewAssets.createEnd(Math.floor(i/2),count>2));
   for(const parts of warpPreviewEnds)for(const object of Object.values(parts)){object.warpTile=object.tileInfo;object.warpBaseColor=object.color.copy();object.warpVividColor=vibrantWarpColor(object.warpBaseColor)}
 }
-function warpPlayerOnPipe(){
-  if(!warpPreviewEnds.length)return false;
-  return warpEndpoints().some(({group,cell})=>{const depth=visualDepth(group),above=byCell[cell.y-1]?.[cell.x];return depth>0&&(!above||visualDepth(above)<depth)&&player.x===cell.x&&player.y===cell.y&&player.z===depth-1});
+function warpPipeAt(node){
+  if(!warpPreviewEnds.length)return -1;
+  return warpEndpoints().findIndex(({group,cell})=>{
+    if(node.x!==cell.x||node.y!==cell.y)return false;
+    const depth=visualDepth(group),above=byCell[cell.y-1]?.[cell.x];
+    return depth>0&&node.z===depth-1&&(!above||visualDepth(above)<depth);
+  });
 }
+function warpPlayerOnPipe(){return warpPipeAt(player)>=0}
 function syncWarpPipePreview(){
   if(!warpPreviewEnds.length)return;
   const endpoints=warpEndpoints();
@@ -1061,10 +1073,13 @@ function syncWarpPipePreview(){
     parts.badgePulse.pos3D=parts.badge.pos3D.add(vec3(0,0,.004));parts.badgePulse.scale3D=parts.badge.scale3D.copy();
     if(!raised)return;
     const height=.72,offset=-.22*height*(1-motion.value);
-    for(const name of [motion.value>.001?'body':null,'rim',active?(opening.value>.001?'opening':null):'cap'].filter(Boolean)){
+    for(const name of [motion.value>.001?'body':null,'rim',active&&opening.value>.001?'opening':null,(!active||(occupied&&!warpPreviewOpeningVisible))?'cap':null].filter(Boolean)){
       const object=parts[name];
       object.mesh=warpPreviewAssets.meshes[name];object.tileInfo=object.warpTile;
-      object.pos3D=base.add(vec3(0,stretchY(offset),0));
+      // Put the occupied pipe's cap just beneath the shrinking opening, so the
+      // opening can close smoothly without exposing the hollow interior.
+      const capOffset=name==='cap'&&active?-.072*height:0;
+      object.pos3D=base.add(vec3(0,stretchY(offset+capOffset),0));
       const mouth=occupied?warpPreviewMouth:1;
       const openingScale=name==='opening'?opening.value:1;
       object.scale3D=vec3(mouth*openingScale,stretchY(height),mouth*openingScale);
@@ -1410,6 +1425,7 @@ function syncControlFeatureInputs(){
   const highlight=document.querySelector('#pieceHighlight');if(highlight)highlight.value=controlFeatures.enabled('selectionLightbox')?'lightbox':'original';
   const appearance=document.querySelector('#topFaceAppearance');if(appearance)appearance.value=controlFeatures.topFaceStyle;
   const markerShape=document.querySelector('#movementMarkerShape');if(markerShape)markerShape.value=controlFeatures.movementMarkerShape;
+  const eyes=document.querySelector('#pomEyeStyle');if(eyes)eyes.value=controlFeatures.pomEyeStyle;
 }
 // Bind the prototype's static Settings markup to the existing preference model.
 const pieceHighlight=document.querySelector('#pieceHighlight');
@@ -1422,6 +1438,12 @@ const topFaceAppearance=document.querySelector('#topFaceAppearance');
 topFaceAppearance.addEventListener('change',()=>{
   const saved=controlFeatures.setTopFaceStyle(topFaceAppearance.value);
   refreshControlFeatures();
+  document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';
+});
+const pomEyeStyle=document.querySelector('#pomEyeStyle');
+pomEyeStyle.addEventListener('change',()=>{
+  const saved=controlFeatures.setPomEyeStyle(pomEyeStyle.value);
+  redPom?.setEyeStyle(controlFeatures.pomEyeStyle);
   document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';
 });
 const movementMarkerShape=document.querySelector('#movementMarkerShape');
@@ -2164,12 +2186,11 @@ function syncVictoryShowcase(now,sequence){
   expandVictoryBoard(sequence.boardRect,sequence.reducedMotion?1:ease(elapsed/700));
   const width=wrap.clientWidth,height=wrap.clientHeight;
   const turn=sequence.reducedMotion?1:ease(elapsed/1200);
-  // Looking along the extrusion shear makes the complete mural read as a flat image.
+  // Face the puzzle while bringing the celebration closer to Pom.
   const yaw=sequence.yaw*(1-turn)+Math.atan(depthSkew())*turn,pitch=sequence.pitch*(1-turn);
-  const top=24,bottom=24;
-  const visual=puzzleVisualBounds(),unit=victoryFrameUnit(width,height,visual.right-visual.left,visual.height);
-  // This is the camera endpoint at zero pitch, where yStretch is exactly 1.
-  const finalHeight=height/unit,target=vec3((visual.left+visual.right)/2+extrusion(1.5).x,(visual.height+.85)/2+(top-bottom)/(2*unit),1.5);
+  const visual=puzzleVisualBounds(),finalHeight=victoryPomFrameHeight(width,height,visual.right-visual.left,visual.height);
+  // The final camera has zero pitch, so board Y is unscaled here.
+  const z=player.z+.5,target=vec3(player.x+.5+depthSkew()*z,H-player.y+.4,z*extrusionScale);
   const fov=sequence.baseFov+(cameraState.fov-sequence.baseFov)*turn;
   configureStudyCamera(sequence.baseHeight+(finalHeight-sequence.baseHeight)*turn,sequence.baseTarget.lerp(target,turn),yaw,pitch,fov);
   // Keep Pom celebrating through the camera move and the rotating star.
@@ -2326,7 +2347,7 @@ function gameUpdate(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setEyeStyle(controlFeatures.pomEyeStyle);redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),warpPlayerOnPipe()||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045))}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
@@ -2364,27 +2385,50 @@ function moveTo(p,pressMarker=false,preview=null){
       finish();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
-    const flight=plan.isJump?Math.max(0,Math.min(1,(t-.38)/.44)):t;
+    const hasApproach=plan.continuousFlight&&plan.takeoff>0;
+    const launchAt=hasApproach ? .88*Math.acos(1-2*plan.takeoff)/Math.PI : plan.continuousFlight ? .10 : .16;
+    const flight=plan.isJump?Math.max(0,Math.min(1,(t-launchAt)/(.88-launchAt))):t;
     showRedPom(pomMovementPose(plan,from,to,t,flight));
     const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
-    const progress=plan.isJump?(t<.14?plan.takeoff*smooth(t/.14):t<.38?plan.takeoff:t<.82?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.82)/.18)):0;
+    let progress=0;
+    if(hasApproach){
+      // Keep moving through the transition from the ledge into the air.
+      progress=(1-Math.cos(Math.PI*Math.min(1,t/.88)))/2;
+    }else if(plan.continuousFlight){
+      progress=smooth(flight);
+    }else if(plan.isJump){
+      progress=t<.10?plan.takeoff*smooth(t/.10):t<launchAt?plan.takeoff:t<.88?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.88)/.12);
+    }
     const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;
     const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
     if(plan.isJump&&!reducedSelectionMotion.matches){
-      const windup=t<.38?smooth((t-.12)/.16):Math.max(0,1-flight/.12);
+      const windupStart=plan.continuousFlight ? 0 : .05;
+      const windup=t<launchAt?smooth((t-windupStart)/(launchAt-windupStart)):Math.max(0,1-flight/.12);
       const launch=flight>0&&flight<.22?Math.sin(Math.PI*flight/.22):0;
-      const landing=t>=.82?Math.sin(Math.PI*(t-.82)/.18):0;
+      const landing=t>=.88?Math.sin(Math.PI*(t-.88)/.12):0;
       const squash=.16*windup+.14*landing-.13*launch;
       playerObject.scale3D=vec3(.72*(1+squash),.56*(1-squash),.018);
-      motion.pose=motion.pose.add(vec3(0,stretchY(-.2*squash),0));
+      if(!plan.continuousFlight)motion.pose=motion.pose.add(vec3(0,stretchY(-.2*squash),0));
       const effort=Math.min(1,windup+Math.sin(Math.PI*flight)*.8);
       for(const {white,black} of pomEyes){white.scale3D=vec3(.22,.28*(1-.65*effort),1);black.scale3D=vec3(.12,.154*(1-.65*effort),1)}
       for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(t-.09-i*.08)/.55)),alpha=Math.sin(Math.PI*q)*.9;drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.2-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
     }
     if(falling!==motion.umbrella){falling=motion.umbrella;setUmbrellaVisible(falling)}
     if(winningArrival&&index===plans.length-1){const offset=victoryArrival(t,reducedSelectionMotion.matches);motion.pose=motion.pose.add(vec3(offset.x,stretchY(offset.y),0))}
-    const switchProgress=plan.isJump?progress:smooth(t),fromOffset=pomNodeOffset(from),toOffset=pomNodeOffset(to);
-    playerObject.pos3D=motion.pose.add(fromOffset.add(toOffset.subtract(fromOffset).scale(switchProgress)));if(falling)positionUmbrella(motion.flight);
+    const fromPipe=warpPipeAt(from),toPipe=warpPipeAt(to);
+    const fromOffset=fromPipe<0?pomNodeOffset(from):pipeStandingPosition(from,fromPipe).subtract(worldPosition(from));
+    const toOffset=toPipe<0?pomNodeOffset(to):pipeStandingPosition(to,toPipe).subtract(worldPosition(to));
+    const offsetProgress=plan.isJump
+      ? (fromPipe>=0||toPipe>=0 ? smooth(flight) : progress)
+      : smooth(t);
+    let offset=fromOffset.lerp(toOffset,offsetProgress);
+    if(redPom&&(fromPipe>=0)!==(toPipe>=0)){
+      // The sprite's usual camera offset is applied until the logical cell
+      // changes. Blend that correction here so it is centered on the rim
+      // at contact, including the last frame before the cell changes.
+      offset=offset.add(render3D.camera.getForward().scale((fromPipe>=0?1:-1)*.045*offsetProgress));
+    }
+    playerObject.pos3D=motion.pose.add(offset);if(falling)positionUmbrella(motion.flight);
     syncPuzzleProjection();
     requestAnimationFrame(tick);
   }

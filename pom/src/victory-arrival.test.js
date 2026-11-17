@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {victoryArrival,victoryBoardBounds,victoryBoardClip,victoryExpandedFov,victoryFrameUnit,victoryMorphShape} from './victory-effects.js';
+import {victoryArrival,victoryBoardBounds,victoryBoardClip,victoryExpandedFov,victoryFrameUnit,victoryPomFrameHeight,victoryMorphShape} from './victory-effects.js';
 import {nodePose} from '../shared/movement-routes.js';
 
 test('victory arrival stays over the goal support, including Peach’s single-square summit',()=>{
@@ -49,4 +49,15 @@ test('expanding the canvas preserves the initial perspective camera distance',()
   const fov=35,ratio=1.8,expandedFov=victoryExpandedFov(fov,ratio);
   const distance=1/Math.tan(fov*Math.PI/360),expandedDistance=ratio/Math.tan(expandedFov*Math.PI/360);
   assert.ok(Math.abs(distance-expandedDistance)<1e-10);
+});
+
+
+test('victory camera frames Pom closer while keeping him inside the star',()=>{
+  for(const [width,height] of [[390,844],[844,390],[320,900]]){
+    const framed=victoryPomFrameHeight(width,height,15,12);
+    const full=height/victoryFrameUnit(width,height,15,12);
+    assert.ok(framed<full);
+    const starWidth=Math.min(width*.56,height*.29);
+    assert.ok(.72*height/framed<=starWidth*.48+1e-9);
+  }
 });

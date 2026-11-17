@@ -1,3 +1,4 @@
+import {isPomEyeStyle} from './pom-eye-style.js';
 import {pomIdleMotion,pomMovementEyes} from './pom-idle-motion.js';
 import {Color, EngineObject3D, Mesh, Shader, TextureInfo, TileInfo, glContext, render3D, vec2, vec3} from 'littlejsengine';
 
@@ -8,6 +9,7 @@ const occlusionShader=new Shader(`
 `);
 // Each illustration's body has the same scale and contact point on the floor.
 // Its features and accessories were extracted from the supplied SVG paths.
+const alternateEyePoses=new Set(['happy-open','excited','worried','float','warp-in','warp-out']);
 const poses={
   calm:{anchor:[56,90],layers:['body','eyes']},
   'happy-open':{anchor:[56,90],layers:['body','eyes','mouth']},
@@ -34,6 +36,10 @@ async function loadLayer(name,layer,[anchorX,anchorY]){
 export async function createRedPom(parent){
   const entries=await Promise.all(Object.entries(poses).map(async([name,pose])=>{
     const parts=await Promise.all(pose.layers.map(async layer=>[layer,await loadLayer(name,layer,pose.anchor)]));
+    if(alternateEyePoses.has(name)){
+      const [bright,crazy,circle]=await Promise.all([loadLayer(name,'bright-eyes',pose.anchor),loadLayer(name,'crazy-eyes',pose.anchor),loadLayer(name,'circle-eyes',pose.anchor)]);
+      parts.push(['brightEyes',bright],['crazyEyes',crazy],['circleEyes',circle]);
+    }
     return [name,Object.fromEntries(parts)];
   }));
   const textures=Object.fromEntries(entries),factor=.72/.56,half=128/112;
@@ -49,19 +55,19 @@ export async function createRedPom(parent){
   const object=make(2,textures.calm.body,false,true),edge=make(2.1,textures.calm.body,true);
   const eyes=make(2.3,textures.calm.eyes,true),idleEyes=make(2.31,textures['happy-open'].eyes,true),mouth=make(2.35,textures['happy-open'].mouth,true),extra=make(2.4,textures['push-back'].extra,true);
   const parts=[object,edge,eyes,idleEyes,mouth,extra],baseDepths=parts.map(part=>part.pos3D.z);
-  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyesOpenUntil=0;
+  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyesOpenUntil=0,eyeStyle='classic',currentPose='calm',currentExtra=true;
   idleEyes.color.a=mouth.color.a=extra.color.a=0;
   function setPose(name,showExtra=true){
     const key=`${name}:${showExtra}`;
     if(key===active||!textures[name])return;
-    active=key;
+    active=key;currentPose=name;currentExtra=showExtra;
     if(name!=='calm'){idleTime=0;idleEyes.color.a=0}
     const bodyName=name==='float'?'float':'calm';
     object.tileInfo=edge.tileInfo=textures[bodyName].body;
     // The reference squash and stretch eyes are the calm eyes transformed
     // with the body. Keep one drawing through these poses to avoid a jump.
     const eyesName=name==='squash'||name==='stretch'?'calm':name;
-    eyes.tileInfo=textures[eyesName].eyes;eyes.color.a=textures[eyesName].eyes?1:0;
+    eyes.tileInfo=(eyeStyle==='bright'?textures[eyesName].brightEyes:eyeStyle==='crazy'?textures[eyesName].crazyEyes:eyeStyle==='circle'?textures[eyesName].circleEyes:undefined)||textures[eyesName].eyes;eyes.color.a=textures[eyesName].eyes?1:0;
     if(textures[name].mouth)mouth.tileInfo=textures[name].mouth;targetMouth=textures[name].mouth?1:0;
     if(textures[name].extra)extra.tileInfo=textures[name].extra;targetExtra=textures[name].extra&&showExtra?1:0;
     targetX=name==='squash'?122/112:name==='stretch'?104/112:1;
@@ -69,6 +75,12 @@ export async function createRedPom(parent){
   }
   setPose('calm');
   return {object,edge,parts,setPose,
+    setEyeStyle(style){
+      if(eyeStyle===style||!isPomEyeStyle(style))return;
+      eyeStyle=style;
+      idleEyes.tileInfo=style==='bright'?textures['happy-open'].brightEyes:style==='crazy'?textures['happy-open'].crazyEyes:style==='circle'?textures['happy-open'].circleEyes:textures['happy-open'].eyes;
+      active='';setPose(currentPose,currentExtra);
+    },
     setMoving(value){moving=value;eyesOpenUntil=value?0:performance.now()+800},
     resetMotion(){moving=false;eyesOpenUntil=0;idleTime=0},
     update(now,idle=false){

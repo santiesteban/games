@@ -67,17 +67,82 @@ function planJump(board,from,to){
       if(board.validNode({x:cellX,y:from.y,z:cellZ}))return null;
     }
   }
-  const a=nodePose(board,from),b=nodePose(board,to),edgeA={...a,x:a.x+dx/span*.2,z:a.z+dz/span*.2},edgeB={...b,x:b.x-dx/span*.2,z:b.z-dz/span*.2},points=[a];
-  // Rise early enough to clear a higher landing; descend late on long drops.
-  const top=Math.max(a.y,b.y)+.55;
-  for(let i=0;i<=32;i++){
-    const t=i/32,p=mix(edgeA,edgeB,t),rise=Math.min(1,t/.25),fall=Math.min(1,(1-t)/.25);
-    p.y=Math.min(a.y+(top-a.y)*rise,b.y+(top-b.y)*fall,top);points.push(p);
+  const a=nodePose(board,from),b=nodePose(board,to),edgeB={...b,x:b.x-dx/span*.2,z:b.z-dz/span*.2};
+  // When a ceiling obstructs the usual arc, walk farther toward the edge
+  // before rising. Check the entire path against every piece in both cases.
+  let points;
+  const approaches=[[.2,0,.25]];
+  for(const duration of [.3,.25,.2,.16])for(const delay of [.1,.15,.2,.25,.32,.4])approaches.push([.45,delay,duration]);
+  // A small overlap with a ceiling above takeoff is preferable to an abrupt,
+  // unnatural contortion. Other obstacles retain their full collision bounds.
+  const relaxedBlocks=board.blocks.map(block=>a.x>block.min.x&&a.x<block.max.x&&a.z>block.min.z&&a.z<block.max.z&&block.min.y+BODY.up>=board.height-from.y+1-EPS?{...block,min:{...block.min,y:block.min.y+.32}}:block);
+  // Walk toward the edge while still supported, then rise in one continuous
+  // arc. The ceiling can cover part of Pom without redirecting his motion.
+  let continuousFlight=false;
+  if(relaxedBlocks.some((block,index)=>block!==board.blocks[index])){
+    const rise=b.y-a.y;
+    const arcs=[.5,.4,.35,.3].map(lift=>t=>rise*t+4*lift*t*(1-t));
+    if(rise>0){
+      // A low roof beside a higher landing leaves a narrow corridor. Rise
+      // steadily through it, then bend down into the landing.
+      for(const slope of [1.75,1.775,1.8,1.85,2,2.1,2.2])for(const bend of [.48,.54]){
+        arcs.push(t=>slope*t-(slope-rise)*(Math.max(0,t-bend)/(1-bend))**2);
+      }
+    }
+    findContinuousArc: for(const approach of [.28,.18,0])for(const heightAt of arcs){
+      const takeoff={...a,x:a.x+dx/span*approach,z:a.z+dz/span*approach};
+      const candidate=approach?[a,takeoff]:[a];
+      for(let i=1;i<32;i++){
+        const t=i/32,p=mix(takeoff,b,t);
+        p.y=a.y+heightAt(t);
+        candidate.push(p);
+      }
+      candidate.push(b);
+      if(candidate.slice(1).every((p,i)=>segmentClear(relaxedBlocks,candidate[i],p))){
+        points=candidate;
+        continuousFlight=true;
+        break findContinuousArc;
+      }
+    }
   }
-  points.push(b);
-  if(!points.slice(1).every((p,i)=>segmentClear(board.blocks,points[i],p)))return null;
+  // Prefer a continuous arc after reaching the edge. The lower arcs reduce
+  // contact with a low ceiling while keeping horizontal and vertical motion
+  // simultaneous throughout the flight.
+  for(const arc of [.5,.35,.7,1]){
+    if(points)break;
+    const edgeA={...a,x:a.x+dx/span*.12,z:a.z+dz/span*.12},candidate=[a,edgeA];
+    for(let i=1;i<=32;i++){
+      const t=i/32,p=mix(edgeA,b,t);
+      p.y=a.y+(b.y-a.y)*t+arc*Math.sin(Math.PI*t);
+      candidate.push(p);
+    }
+    candidate.push(b);
+    if(candidate.slice(1).every((p,i)=>segmentClear(relaxedBlocks,candidate[i],p))){points=candidate;break}
+  }
+  findArc: for(const [lead,delay,riseDuration] of points?[]:approaches)for(const blocks of [board.blocks,relaxedBlocks]){
+    if(!delay&&blocks===relaxedBlocks)continue;
+    const edgeA={...a,x:a.x+dx/span*lead,z:a.z+dz/span*lead},candidate=[a];
+    const top=Math.max(a.y,b.y)+.55;
+    for(let i=0;i<=32;i++){
+      const t=i/32,p=mix(edgeA,edgeB,t),fall=Math.min(1,(1-t)/.25);
+      let rise;
+      if(!delay)rise=Math.min(1,t/.25);
+      else if(t<delay)rise=.18*t/delay;
+      else{
+        // Match the gentle initial upward velocity, then ease into the apex.
+        const u=Math.min(1,(t-delay)/riseDuration),u2=u*u,u3=u2*u;
+        rise=(2*u3-3*u2+1)*.18+(u3-2*u2+u)*(.18/delay)*riseDuration+(-2*u3+3*u2);
+      }
+      p.y=Math.min(a.y+(top-a.y)*rise,b.y+(top-b.y)*fall,top);candidate.push(p);
+    }
+    candidate.push(b);
+    if(candidate.slice(1).every((p,i)=>segmentClear(blocks,candidate[i],p))){points=candidate;break findArc}
+  }
+  if(!points)return null;
   const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
-  return {points,lengths,length:lengths.at(-1),takeoff:lengths[1]/lengths.at(-1),landing:lengths.at(-2)/lengths.at(-1),duration:1050+span*90+Math.max(0,drop)*90,isFall:drop>1,stretch:false,isJump:true};
+  const takeoff=continuousFlight&&points[1].y!==a.y?0:lengths[1]/lengths.at(-1);
+  const duration=drop>1 ? 1050+span*90+drop*90 : 560+span*55+Math.max(0,drop)*70;
+  return {points,lengths,length:lengths.at(-1),takeoff,landing:continuousFlight?1:lengths.at(-2)/lengths.at(-1),continuousFlight,duration,isFall:drop>1,stretch:false,isJump:true};
 }
 
 function permutations(items){return items.length?items.flatMap((v,i)=>permutations(items.filter((_,j)=>i!==j)).map(rest=>[v,...rest])):[[]]}

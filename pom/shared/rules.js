@@ -23,7 +23,16 @@ export function pulloutSwitchState(board,player,switches=[]){
     const item=switches.find(item=>item.x===position.x&&item.y===position.y&&current.byCell[item.y]?.[item.x]?.depth-1===position.z&&current.validNode(position));
     if(!item||!current.groups.some(group=>group.color===item.color&&group.depth<3))break;
     while(current.groups.some(group=>group.color===item.color&&group.depth<3)){
+      const support=current.byCell[position.y]?.[position.x];
       const depths=current.groups.map(group=>group.color===item.color?Math.min(3,group.depth+1):group.depth),next=createMovementBoard(grid,depths);
+      // If the piece under Pom is extending, he rides it by the same depth.
+      // Only choose the new square when it is safe and actually supported.
+      if(support?.color===item.color&&support.depth<3&&position.z<support.depth){
+        const ridden={...position,z:position.z+1};
+        if(next.validNode(ridden)){
+          movements.push({type:'ride',from:position,to:ridden});position=ridden;
+        }
+      }
       if(!next.validNode(position)){
         const obstacle=next.byCell[position.y-1]?.[position.x],jump={...position,y:position.y-1};
         if(obstacle?.color===item.color&&next.validNode(jump)){
