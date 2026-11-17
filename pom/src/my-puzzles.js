@@ -25,7 +25,7 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
   const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_URL||'https://santiesteban.github.io/little-ledges-community-poc/community-gallery.html';
   const galleryOrigin=new URL(galleryUrl).origin;
   const gallerySheet=document.createElement('dialog');gallerySheet.className='community-sheet';gallerySheet.setAttribute('aria-labelledby','communitySheetTitle');
-  gallerySheet.innerHTML='<header class="community-sheet-header"><h2 id="communitySheetTitle">Community Gallery</h2><form method="dialog"><button class="community-sheet-close" aria-label="Close community gallery">✕</button></form></header><p class="community-sheet-note" role="status" hidden>The gallery requires an internet connection.</p><iframe title="Community Gallery" class="community-sheet-frame"></iframe>';
+  gallerySheet.innerHTML='<header class="community-sheet-header"><h2 id="communitySheetTitle">Community Gallery</h2><form method="dialog"><button class="community-sheet-close" aria-label="Close community gallery">✕</button></form></header><p class="community-sheet-note" role="status" hidden>The gallery could not be loaded. Please try again.</p><iframe title="Community Gallery" class="community-sheet-frame"></iframe>';
   const galleryFrame=gallerySheet.querySelector('iframe'),galleryNote=gallerySheet.querySelector('.community-sheet-note');let galleryTimer;document.body.append(gallerySheet);
   galleryFrame.addEventListener('load',()=>{if(gallerySheet.open)galleryFrame.contentWindow?.postMessage({type:'little-ledges:gallery-handshake'},galleryOrigin)});
   gallerySheet.addEventListener('close',()=>{clearTimeout(galleryTimer);galleryFrame.src='about:blank'});

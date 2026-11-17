@@ -23,7 +23,8 @@ try{
   if(preview){entries=(await import('./gallery-preview.js')).previewPuzzles()}
   else{const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_API||new URL('community-gallery.json',location.href);const response=await fetch(galleryUrl);if(!response.ok)throw new Error('Gallery unavailable.');entries=await response.json()}
   if(!Array.isArray(entries))throw new Error('Gallery data is invalid.');
-  for(const entry of entries)list.append(puzzleCard(entry));
-  count.hidden=false;count.textContent=`${entries.length} ${entries.length===1?'puzzle':'puzzles'}`;
-  notice.textContent=entries.length?'':'No community puzzles have been published yet.';loadStatus='ready';reportStatus();
+  let shown=0,unavailable=0;
+  for(const entry of entries){try{list.append(puzzleCard(entry));shown++}catch{unavailable++}}
+  count.hidden=false;count.textContent=`${shown} ${shown===1?'puzzle':'puzzles'}`;
+  notice.textContent=unavailable?`${unavailable} ${unavailable===1?'puzzle is':'puzzles are'} unavailable in this version.`:shown?'':'No community puzzles have been published yet.';loadStatus='ready';reportStatus();
 }catch(error){notice.textContent=error.message||'Gallery unavailable.';loadStatus='error';reportStatus()}
