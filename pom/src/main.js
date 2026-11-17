@@ -649,26 +649,23 @@ function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const 
     extrusionObjects.push(top);g.lightboxSurfaces.push(top);
   }
 }
-let sceneryWallZ=null,wallJoinMesh,wallJoinKey,wallJoinStyle;
-function drawWallGroundJoin(){
+let sceneryWallZ=null,wallJoinMesh,wallJoinKey;
+function drawWallGroundJoin(pixels){
   if(sceneryWallZ===null||cameraLab||(isPreviewLevel(activeLevel)&&!isBackgroundStudio()))return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),z=sceneryWallZ+.02;
-  if(!wallJoinStyle||wallJoinStyle.width!==width||wallJoinStyle.height!==height){const style=getComputedStyle(wrap);wallJoinStyle={width,height,pixels:parseFloat(style.borderTopWidth)||2,color:style.borderTopColor}}
-  const {pixels,color}=wallJoinStyle;
-  const key=[width,height,z,pixels,color,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  const key=[width,height,W,z,pixels,extrusionScale,cameraModeActive,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key!==wallJoinKey){
-    const a=render3D.worldToScreen(vec3(W/2-1,0,z),size),b=render3D.worldToScreen(vec3(W/2+1,0,z),size);
+    // Use the same projected ground edge as a flush puzzle piece, then place
+    // the ribbon on the backdrop plane so foreground objects can occlude it.
+    const a=render3D.worldToScreen(puzzlePoint(worldPoint(W/2-1,0,.028)),size),b=render3D.worldToScreen(puzzlePoint(worldPoint(W/2+1,0,.028)),size);
     if(!a||!b||Math.abs(b.x-a.x)<.001)return;
-    const slope=(b.y-a.y)/(b.x-a.x),line=x=>vec2(x,a.y+(x-a.x)*slope),normal=vec2(slope,-1).normalize(pixels);
-    // Put the stroke on the wall side of the join so the ground cannot hide
-    // half of it. Screen-space construction keeps the CSS-pixel width fixed.
-    const left=line(-pixels),right=line(width+pixels),screen=[left.add(normal),right.add(normal),right,left];
+    const slope=(b.y-a.y)/(b.x-a.x),line=x=>vec2(x,a.y+(x-a.x)*slope),normal=vec2(slope,-1).normalize(pixels/2);
+    const left=line(-pixels),right=line(width+pixels),screen=[left.add(normal),right.add(normal),right.subtract(normal),left.subtract(normal)];
     const points=screen.map(point=>{const ray=render3D.screenToRay(point,size);return ray.getPosition((z-ray.origin.z)/ray.direction.z)});
     if(points.some(point=>!Number.isFinite(point.x)||!Number.isFinite(point.y)))return;
     wallJoinMesh?.dispose();wallJoinMesh=new Mesh().addQuad(...points);wallJoinMesh.doubleSided=true;wallJoinKey=key;
   }
-  const channels=color.match(/[\d.]+/g)?.map(Number)??[17,17,17];
-  render3D.drawMesh(wallJoinMesh,buildMatrix(vec3(),vec3(),vec3(1)),undefined,new Color(channels[0]/255,channels[1]/255,channels[2]/255));
+  render3D.drawMesh(wallJoinMesh,buildMatrix(vec3(),vec3(),vec3(1)),undefined,inkColor);
 }
 function drawWarpDestinationOutline(){
   if(!warpPulsePair)return;
@@ -690,10 +687,10 @@ function drawWarpDestinationOutline(){
 }
 function drawMapOutlines(){
   const material={shader:render3D.shader,receiveShadow:render3D.receiveShadow,lighting:render3D.lighting,emissive:render3D.emissive};render3D.shader=undefined;render3D.receiveShadow=false;render3D.lighting=false;render3D.emissive=1;
-  drawWallGroundJoin();
   const height=wrap.clientHeight,size=vec2(wrap.clientWidth,height),center=worldPoint(W/2,H/2,0),screenCenter=render3D.worldToScreen(center,size),screenX=render3D.worldToScreen(worldPoint(W/2+1,H/2,0),size),screenY=render3D.worldToScreen(worldPoint(W/2,H/2+1,0),size);
   const cellPixels=screenCenter&&screenX&&screenY?Math.sqrt(Math.abs((screenX.x-screenCenter.x)*(screenY.y-screenCenter.y)-(screenX.y-screenCenter.y)*(screenY.x-screenCenter.x))):64;
   const strokePixels=Math.max(2,Math.min(2.4,2.4*cellPixels/64)),stroke=strokePixels*viewSpan()/height,bias=render3D.camera.getForward().scale(-.026),seen=new Set,joins=new Map;
+  drawWallGroundJoin(strokePixels);
   const pointKey=p=>{const q=render3D.worldToScreen(p,size);return q?`${q.x.toFixed(1)},${q.y.toFixed(1)}`:null};
   const edge=(a,b)=>{a=puzzlePoint(a);b=puzzlePoint(b);const ka=pointKey(a),kb=pointKey(b),key=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`,aa=a.add(bias),bb=b.add(bias);if(!ka||!kb||seen.has(key))return;seen.add(key);joins.set(ka,aa);joins.set(kb,bb);render3D.drawLine(aa,bb,stroke,inkColor)};
   const sameBlock=(g,x,y)=>byCell[y]?.[x]===g;
@@ -2116,17 +2113,18 @@ function updateWarpPulse(now){
   const pair=currentWarpPair(),key=pair?`${pair.source}:${pair.destination}`:'';
   if(warpPulsePair?.key!==key){
     if(warpPulsePair)for(const i of [warpPulsePair.source,warpPulsePair.destination]){
-      const parts=warpPreviewEnds[i];if(parts){parts.badgePulse.color.a=0;for(const name of ['body','rim'])parts[name].color.setFrom(parts[name].warpBaseColor)}
+      const parts=warpPreviewEnds[i];if(parts){parts.badgePulse.color.a=0;for(const name of ['body','rim','cap'])parts[name].color.setFrom(parts[name].warpBaseColor)}
     }
     warpPulsePair=pair?{key,source:pair.source,destination:pair.destination}:null;
   }
   if(!pair)return;
   const phase=warpPulsePhase(now,reducedSelectionMotion.matches);
-  for(const i of [pair.source,pair.destination])warpPreviewEnds[i].badgePulse.color.a=phase;
-  const dest=warpPreviewEnds[pair.destination];
-  for(const name of ['body','rim']){
-    const base=dest[name].warpBaseColor,other=dest[name==='body'?'rim':'body'].warpBaseColor;
-    dest[name].color.set(base.r+(other.r-base.r)*phase,base.g+(other.g-base.g)*phase,base.b+(other.b-base.b)*phase);
+  for(const i of [pair.source,pair.destination]){
+    const parts=warpPreviewEnds[i];parts.badgePulse.color.a=phase;
+    for(const name of ['body','rim','cap']){
+      const base=parts[name].warpBaseColor,other=parts[name==='body'?'rim':'body'].warpBaseColor;
+      parts[name].color.set(base.r+(other.r-base.r)*phase,base.g+(other.g-base.g)*phase,base.b+(other.b-base.b)*phase);
+    }
   }
 }
 function warpTapTarget(point){
@@ -2602,7 +2600,7 @@ if(interactionLab){
 // A pointer gesture stops the opening camera motion even on a disabled action.
 document.querySelector('#pieceDock').addEventListener('pointerdown',()=>{if(!levelLoading&&gameReady&&viewReady)enterPlayFromIntro()},{capture:true});
 document.querySelector('#pull').onclick=()=>manipulate(1);document.querySelector('#push').onclick=()=>manipulate(-1);
-document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(history.pop())};document.querySelector('#reset').onclick=()=>{if(busy)return;hideHelp();celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;history=[];won=false;if(canSaveUnfinished())unfinished.remove(activeLevel.id);autoSelectNearbyPiece();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView()};
+document.querySelector('#undo').onclick=()=>{if(!busy&&history.length)restore(history.pop())};document.querySelector('#reset').onclick=()=>{if(busy)return;hideHelp();save();celebration=null;groups.forEach((g,i)=>g.depth=activeLevel.initialDepths?.[i]??0);clearMovementRoutes();player={x:activeLevel.start.x,y:activeLevel.start.y??H,z:activeLevel.start.z};selected=null;won=false;autoSelectNearbyPiece();saveUnfinished();positionCameraForView(viewSide);render3D.camera.orthographic=baseCameraHeight;render3D.updateMatrices(wrap.clientWidth/wrap.clientHeight);syncBackground();updateUI();startBoardView()};
 window.addEventListener('keydown',e=>{
   if(document.querySelector('.stage').inert||busy||won||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(['z','Z','r','R'].includes(e.key))enterPlayFromIntro();
