@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validatePuzzle,encodePuzzle,decodePuzzle,puzzleLevel} from '../shared/puzzle.js';
 import {createMovementBoard} from '../shared/movement-routes.js';
-import {warpDestination,replaySolution} from '../shared/rules.js';
+import {warpDestination,warpEndpoint,replaySolution} from '../shared/rules.js';
 import {solvePuzzle} from '../creator/src/solver.js';
 
 function example(){
@@ -17,6 +17,30 @@ test('warp pairs survive validation, sharing links and game conversion',()=>{
   assert.deepEqual(puzzleLevel(roundtrip).warpPairs,p.warpPairs);
   const changed=validatePuzzle({...example(),warpPairs:[[{x:0,y:31},{x:6,y:31}]],goal:{x:5,y:31}});
   assert.notEqual(p.revision,changed.revision);
+});
+test('inverted pipes survive links and warp to a landing below',()=>{
+  const input={...example(),rulesVersion:3,warpPairs:[[{x:0,y:31,inverted:true},{x:5,y:31}]]};
+  const puzzle=validatePuzzle(input),copy=decodePuzzle(encodePuzzle(puzzle));
+  assert.deepEqual(copy.warpPairs,input.warpPairs);
+  assert.equal(copy.revision,puzzle.revision);
+  const board=createMovementBoard(copy.grid,copy.initialDepths);
+  assert.deepEqual(warpEndpoint(board,copy.warpPairs[0][0]).entry,{x:0,y:32,z:1});
+  assert.deepEqual(warpDestination(board,{x:0,y:32,z:1},copy.warpPairs),{x:5,y:31,z:0});
+  assert.deepEqual(warpDestination(board,{x:5,y:31,z:0},copy.warpPairs),{x:0,y:32,z:1});
+});
+test('an elevated inverted exit drops to the first reachable surface',()=>{
+  const grid=[...Array(28).fill('.'.repeat(32)),'0'+'.'.repeat(31),'.'.repeat(32),'1'+'.'.repeat(31),'2'+'.'.repeat(31)];
+  const board=createMovementBoard(grid,[1,2,3]),pipe={x:0,y:28,inverted:true};
+  assert.deepEqual(warpEndpoint(board,pipe),{entry:null,landing:{x:0,y:30,z:1}});
+  const supported=createMovementBoard([...Array(28).fill('.'.repeat(32)),'0'+'.'.repeat(31),'1'+'.'.repeat(31),'.'.repeat(32),'2'+'.'.repeat(31)],[1,2,3]);
+  assert.deepEqual(warpEndpoint(supported,pipe),{entry:{x:0,y:29,z:1},landing:{x:0,y:29,z:1}});
+});
+test('an inverted pipe can only be entered from its immediately adjacent underside',()=>{
+  const grid=[...Array(28).fill('.'.repeat(32)),'0....11'+'.'.repeat(25),'1'+'.'.repeat(31),...Array(2).fill('.'.repeat(32))];
+  const board=createMovementBoard(grid,[1,1,2]),pairs=[[{x:0,y:28,inverted:true},{x:5,y:28}]];
+  assert.deepEqual(warpDestination(board,{x:0,y:29,z:1},pairs),{x:5,y:28,z:0});
+  assert.equal(warpDestination(board,{x:0,y:30,z:1},pairs),null);
+  assert.equal(warpDestination(board,{x:0,y:29,z:0},pairs),null);
 });
 test('warp requires both ends exposed, works in both directions and preserves their depths',()=>{
   const p=validatePuzzle(example()),board=createMovementBoard(p.grid,p.initialDepths);

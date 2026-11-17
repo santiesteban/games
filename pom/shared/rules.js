@@ -49,13 +49,30 @@ export function pulloutSwitchState(board,player,switches=[]){
   }
   return changed?{depths:current.groups.map(group=>group.depth),player:position,movements,steps}:null;
 }
-// Both endpoints need an exposed top square at their current depth.
+// Inverted endpoints enter from the square below and exit by falling to the
+// first reachable surface at the front of the pipe's piece.
+export function warpEndpoint(board,cell){
+  const group=board.byCell[cell.y]?.[cell.x];
+  if(!group||group.depth<=0)return null;
+  if(!cell.inverted){
+    const node={x:cell.x,y:cell.y,z:group.depth-1};
+    return board.validNode(node)?{entry:node,landing:node}:null;
+  }
+  if(board.byCell[cell.y+1]?.[cell.x]===group)return null;
+  const entry={x:cell.x,y:cell.y+1,z:group.depth};
+  let landing;
+  for(let y=entry.y;y<=board.height;y++){
+    const candidate={...entry,y};
+    if(board.validNode(candidate)){landing=candidate;break}
+  }
+  return landing?{entry:board.validNode(entry)?entry:null,landing}:null;
+}
 export function warpDestination(board,p,pairs=[]){
   for(const pair of pairs){
-    const nodes=pair.map(cell=>{const group=board.byCell[cell.y]?.[cell.x];if(!group||group.depth<=0)return null;const node={x:cell.x,y:cell.y,z:group.depth-1};return board.validNode(node)?node:null});
+    const nodes=pair.map(cell=>warpEndpoint(board,cell));
     if(!nodes[0]||!nodes[1])continue;
-    if(nodeKey(p)===nodeKey(nodes[0]))return nodes[1];
-    if(nodeKey(p)===nodeKey(nodes[1]))return nodes[0];
+    if(nodes[0].entry&&nodeKey(p)===nodeKey(nodes[0].entry))return nodes[1].landing;
+    if(nodes[1].entry&&nodeKey(p)===nodeKey(nodes[1].entry))return nodes[0].landing;
   }
   return null;
 }

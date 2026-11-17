@@ -14,3 +14,8 @@ test('validates and preserves pullout switches alongside warp pipes',()=>{
  input.puzzle.switches=[{x:0,y:31,color:'Z'}];assert.throws(()=>validateSubmission(input),/color/);
  input.puzzle.rulesVersion=1;assert.throws(()=>validateSubmission(input),/rules version 2/);
 });
+test('preserves inverted pipe orientation in gallery submissions',()=>{
+ const input=submission();Object.assign(input.puzzle,{rulesVersion:3,grid:[...Array(31).fill('.'.repeat(32)),'A.BBC.DD'+'.'.repeat(24)],palette:{A:[200,20,20],B:[20,20,200],C:[20,200,20],D:[200,200,20]},start:{x:0,y:31,z:0},goal:{x:7,y:31},initialDepths:[1,1,1,1],warpPairs:[[{x:2,y:31,inverted:true},{x:3,y:31}]],switches:[{x:0,y:31,color:'C'}]});
+ const result=validateSubmission(input).puzzle;
+ assert.equal(result.rulesVersion,3);assert.deepEqual(result.warpPairs,input.puzzle.warpPairs);
+});

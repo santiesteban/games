@@ -45,7 +45,7 @@ import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
 import {createPieceDock,pieceDockState} from './piece-dock.js';
-import { canReachPiece, safePieceChange, warpDestination, pulloutSwitchState } from '../shared/rules.js';
+import { canReachPiece, safePieceChange, warpDestination, warpEndpoint, pulloutSwitchState } from '../shared/rules.js';
 import {SWITCH_HEIGHT,SWITCH_BASE_HEIGHT,switchOccupied,switchBaseOffset,switchPomLift,updateSwitchMotion} from './pullout-switch-visual.js';
 import { decodePuzzle, puzzleLevel } from '../shared/puzzle.js';
 import { deploymentUrls } from '../shared/deployment.js';
@@ -1024,14 +1024,16 @@ function setupWarpEnds(){
   const count=warpPipePreview?2:(activeLevel.warpPairs?.length??0)*2;
   if(!count)return;
   warpPreviewAssets??=createWarpPipeAssets();
-  warpPreviewEnds=Array.from({length:count},(_,i)=>warpPreviewAssets.createEnd(Math.floor(i/2),count>2));
+  const endpoints=warpEndpoints();
+  warpPreviewEnds=Array.from({length:count},(_,i)=>warpPreviewAssets.createEnd(Math.floor(i/2),count>2,!!endpoints[i]?.cell.inverted));
   for(const parts of warpPreviewEnds)for(const object of Object.values(parts)){object.warpTile=object.tileInfo;object.warpBaseColor=object.color.copy();object.warpVividColor=vibrantWarpColor(object.warpBaseColor)}
 }
 function warpPipeAt(node){
   if(!warpPreviewEnds.length)return -1;
   return warpEndpoints().findIndex(({group,cell})=>{
-    if(node.x!==cell.x||node.y!==cell.y)return false;
-    const depth=visualDepth(group),above=byCell[cell.y-1]?.[cell.x];
+    if(cell.inverted||node.x!==cell.x||node.y!==cell.y)return false;
+    const depth=visualDepth(group),above=byCell[cell.y+(cell.inverted?1:-1)]?.[cell.x];
+    if(cell.inverted)return depth>0&&above!==group;
     return depth>0&&node.z===depth-1&&(!above||visualDepth(above)<depth);
   });
 }
@@ -1047,7 +1049,7 @@ function syncWarpPipePreview(){
   warpPreviewPlayerKey=`${player.x},${player.y},${player.z}`;
   endpoints.forEach(({group,cell},index)=>{
     const parts=warpPreviewEnds[index],depth=visualDepth(group),raised=exposed[index],active=!!(exposed[index-index%2]&&exposed[index-index%2+1]);
-    const x=cell.x+.5,y=H-cell.y;
+    const x=cell.x+.5,y=H-cell.y-(cell.inverted?1:0);
     const base=worldPoint(x,y,Math.max(0,depth-.5));
     const occupied=player.x===cell.x&&player.y===cell.y&&player.z===depth-1;
     const lowered=!active||occupied,target=lowered?0:1;
@@ -1079,7 +1081,8 @@ function syncWarpPipePreview(){
       // Put the occupied pipe's cap just beneath the shrinking opening, so the
       // opening can close smoothly without exposing the hollow interior.
       const capOffset=name==='cap'&&active?-.072*height:0;
-      object.pos3D=base.add(vec3(0,stretchY(offset+capOffset),0));
+      object.pos3D=base.add(vec3(0,stretchY((offset+capOffset)*(cell.inverted?-1:1)),0));
+      object.rotation3D.z=cell.inverted?Math.PI:0;
       const mouth=occupied?warpPreviewMouth:1;
       const openingScale=name==='opening'?opening.value:1;
       object.scale3D=vec3(mouth*openingScale,stretchY(height),mouth*openingScale);
@@ -1129,6 +1132,8 @@ function resetWarpEyes(){
 function animateWarpPreview(source=0,destination=1){
   if(warpPreviewEnds.length<2)return;
   if(!warpPipePreview&&(busy||won||levelLoading||introPlaying||!viewReady||!warpDestination(movementBoard(),player,activeLevel.warpPairs)))return;
+  const pair=warpEndpoints();
+  if(pair[source]?.cell.inverted||pair[destination]?.cell.inverted){animateInvertedWarp(source,destination,pair);return}
   const token=++warpPreviewAnimation;
   warpPreviewMouth=1;warpPreviewWarping=true;warpPreviewOpeningVisible=false;if(pomLight)pomLight.intensity=0;resetWarpEyes();stopIntro();hideHelp();busy=false;
   if(warpPipePreview)groups[0].depth=groups[1].depth=1;else save();
@@ -1193,6 +1198,35 @@ function animateWarpPreview(source=0,destination=1){
     syncPomMatrix();
     if(elapsed<3680)requestAnimationFrame(tick);
     else {busy=false;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;showRedPom('calm');resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
+  }
+  requestAnimationFrame(tick);
+}
+function animateInvertedWarp(source,destination,endpoints){
+  const board=movementBoard(),from={...player},to=warpDestination(board,from,activeLevel.warpPairs);
+  if(!to)return;
+  const token=++warpPreviewAnimation,sourceCell=endpoints[source].cell,destinationCell=endpoints[destination].cell;
+  const sourceGroup=endpoints[source].group,destinationGroup=endpoints[destination].group;
+  const outlet=(cell,group)=>worldPoint(cell.x+.5,H-cell.y-1-.1,group.depth-.5);
+  const start=playerObject.pos3D.copy();
+  const entrance=sourceCell.inverted?outlet(sourceCell,sourceGroup):start.add(vec3(0,stretchY(-.22),0));
+  const landing=destinationCell.inverted?pomPositionOnNode(to):pipeStandingPosition(to,destination);
+  const exit=destinationCell.inverted?outlet(destinationCell,destinationGroup):landing.add(vec3(0,stretchY(-.22),0));
+  save();stopIntro();hideHelp();clearMovementRoutes();selected=null;busy=true;redPom?.setMoving(true);updateUI();
+  let began,placed=false;
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+  function tick(now){
+    if(token!==warpPreviewAnimation)return;
+    began??=now;const elapsed=now-began;
+    if(elapsed>=600&&!placed){player={...to};placed=true;syncBlocks();syncFlag()}
+    let position,size;
+    if(elapsed<500){const t=smooth(elapsed/500);position=start.lerp(entrance,t);size=1-.95*t}
+    else if(elapsed<650){position=exit;size=.05}
+    else if(elapsed<1000){const t=smooth((elapsed-650)/350);position=destinationCell.inverted?exit:exit.lerp(landing,t);size=.05+.95*t}
+    else{const t=smooth((elapsed-1000)/400);position=exit.lerp(landing,t);size=1}
+    showRedPom(elapsed<650?'warp-out':'excited',elapsed>=1000);
+    playerObject.pos3D=position;playerObject.scale3D=vec3(.72*size,.56*size,.018);syncPomMatrix();
+    if(elapsed<1400){requestAnimationFrame(tick);return}
+    busy=false;redPom?.setMoving(false);showRedPom('calm');syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI();
   }
   requestAnimationFrame(tick);
 }
@@ -2050,7 +2084,7 @@ function previewRoute(e){
 function sceneryRay(e){const p=boardPoint(e);return render3D.screenToRay(vec2(p.x,p.y),vec2(wrap.clientWidth,wrap.clientHeight))}
 function currentWarpPair(){
   if(!warpPreviewEnds.length||busy||won||levelLoading||!viewReady)return null;
-  const endpoints=warpEndpoints(),source=endpoints.findIndex(({cell,group})=>player.x===cell.x&&player.y===cell.y&&player.z===group.depth-1);
+  const endpoints=warpEndpoints(),board=movementBoard(),source=endpoints.findIndex(({cell})=>{const entry=warpEndpoint(board,cell)?.entry;return entry&&nodeKey(entry)===nodeKey(player)});
   if(source<0)return null;
   const destination=source%2?source-1:source+1;
   if(!endpoints[destination])return null;
@@ -2099,9 +2133,8 @@ function warpTapTarget(point){
   return false;
 }
 function activateCurrentWarp(){
-  const endpoints=warpEndpoints(),source=endpoints.findIndex(({cell,group})=>player.x===cell.x&&player.y===cell.y&&player.z===group.depth-1);
-  if(source<0)return;
-  animateWarpPreview(source,source%2?source-1:source+1);
+  const pair=currentWarpPair();if(!pair)return;
+  animateWarpPreview(pair.source,pair.destination);
 }
 function boardDown(e){
   if(pieceDrag.active)return;

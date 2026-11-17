@@ -40,9 +40,8 @@ export function exportLittleLedges(source) {
   const pipes=new Map();
   for(const item of source.manholes){
     requireValue(item&&Number.isInteger(item.color)&&item.color>=0&&item.color<5&&typeof item.inverted==='boolean','Invalid source manhole record.');
-    requireValue(!item.inverted,'Inverted manholes are not supported by Little Ledges yet.');
     if(!pipes.has(item.color))pipes.set(item.color,[]);
-    pipes.get(item.color).push({x:item.x,y:item.y});
+    pipes.get(item.color).push(item.inverted?{x:item.x,y:item.y,inverted:true}:{x:item.x,y:item.y});
   }
   const warpPairs=[...pipes.entries()].sort(([a],[b])=>a-b).map(([,pair])=>{
     requireValue(pair.length===2,'Each source manhole color needs exactly two endpoints.');
@@ -61,7 +60,7 @@ export function exportLittleLedges(source) {
     }}
   }
   const floorX=grid[31].search(/[^.]/);
-  const puzzle={format:'little-ledges-puzzle',schemaVersion:1,rulesVersion:switchRecords.length?2:1,
+  const puzzle={format:'little-ledges-puzzle',schemaVersion:1,rulesVersion:warpPairs.some(pair=>pair.some(pipe=>pipe.inverted))?3:switchRecords.length?2:1,
     id:'pushmo-'+source.payload_sha256.slice(0,56).toLowerCase(),name,grid,palette,
     start:{x:floorX<0?0:floorX,y:32,z:0},goal:{x,y},initialDepths:Array(count).fill(0)};
   if(warpPairs.length)puzzle.warpPairs=warpPairs;

@@ -8,7 +8,7 @@ test('switch and warp badges share their frame, size and rendering settings',()=
   globalThis.document={createElement(type){
     assert.equal(type,'canvas');
     const calls=[],context={calls,fillStyle:'',globalCompositeOperation:'source-over'};
-    for(const method of ['beginPath','roundRect','moveTo','arcTo','closePath','ellipse','fillText'])
+    for(const method of ['beginPath','roundRect','moveTo','arcTo','closePath','ellipse','fillText','save','restore','translate','rotate'])
       context[method]=(...args)=>calls.push([method,...args]);
     context.fill=()=>calls.push(['fill',context.fillStyle,context.globalCompositeOperation]);
     const canvas={getContext:()=>context};canvases.push(canvas);return canvas;

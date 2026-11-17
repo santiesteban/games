@@ -13,12 +13,13 @@ function texture(paint){
   return new TextureInfo(canvas,true,false,false);
 }
 
-function badgeTexture(index,labeled,overlay=false){
+function badgeTexture(index,labeled,overlay=false,inverted=false){
   const colors=WARP_PIPE_COLORS[index%WARP_PIPE_COLORS.length];
   const vivid=hex=>{const color=vibrantWarpColor(fromHex(hex));return `rgb(${Math.round(color.r*255)} ${Math.round(color.g*255)} ${Math.round(color.b*255)})`};
   return texture(context=>{
     if(overlay){context.beginPath();context.roundRect(28,28,200,200,32);context.fillStyle='#ffe45c';context.fill();context.globalCompositeOperation='destination-out'}
     if(!overlay)drawPuzzleBadgeFrame(context);
+    context.save();if(inverted){context.translate(128,128);context.rotate(Math.PI);context.translate(-128,-128)}
     context.fillStyle=overlay?vivid(colors.body):colors.body;context.beginPath();context.roundRect(77,130,102,62,[0,0,18,18]);context.fill();
     context.beginPath();context.roundRect(57,80,142,60,12);
     context.fillStyle=overlay?vivid(colors.rim):colors.rim;context.fill();
@@ -26,7 +27,7 @@ function badgeTexture(index,labeled,overlay=false){
     context.fillStyle=overlay?vivid(colors.rim):colors.rim;context.fill();
     context.beginPath();context.ellipse(128,82,43,13,0,0,Math.PI*2);
     if(overlay){context.fillStyle='#000';context.fill();context.globalCompositeOperation='source-over'}else{context.fillStyle='#3a184a';context.fill()}
-    if(labeled&&!overlay){context.fillStyle='#33263b';context.font='bold 50px sans-serif';context.textAlign='center';context.fillText(String(index+1),199,220)}
+    context.restore();if(labeled&&!overlay){context.fillStyle='#33263b';context.font='bold 50px sans-serif';context.textAlign='center';context.fillText(String(index+1),199,220)}
   });
 }
 
@@ -38,9 +39,9 @@ export function createWarpPipeAssets(){
   const opening=buildLathe([[0,.30],[.17,.30]],32,false,true);
   const badge=createPuzzleBadgeMesh();
   const textures=new Map();
-  function createEnd(index=0,labeled=false){
-    const palette=WARP_PIPE_COLORS[index%WARP_PIPE_COLORS.length],key=`${index}:${labeled}`;
-    if(!textures.has(key))textures.set(key,{base:badgeTexture(index,labeled),pulse:badgeTexture(index,labeled,true)});
+  function createEnd(index=0,labeled=false,inverted=false){
+    const palette=WARP_PIPE_COLORS[index%WARP_PIPE_COLORS.length],key=`${index}:${labeled}:${inverted}`;
+    if(!textures.has(key))textures.set(key,{base:badgeTexture(index,labeled,false,inverted),pulse:badgeTexture(index,labeled,true,inverted)});
     const make=(mesh,color,textureInfo)=>{
       const object=new EngineObject3D(vec3(),mesh,textureInfo,color);
       object.lighting=false;object.emissive=1;object.castShadow=false;object.receiveShadow=false;

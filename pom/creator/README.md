@@ -48,7 +48,7 @@ Files are processed locally; sharing links are decoded without navigating to or 
 
 Pushmo conversion preserves the 32 × 32 grid, exact indexed RGB colors and original flag. Every piece starts fully pushed in and Pom starts on the ground. It does not align floating art automatically; the preview warns when the drawing does not reach the floor, and Setup → Align to floor remains available afterward. Solvability is unverified until checked against Little Ledges' rules.
 
-Pushmo pullout switches and upward-facing manhole pairs are imported as Little Ledges switches and warp pipes, subject to the normal placement rules. Inverted manholes and source switches marked inverted are not yet supported and are rejected rather than silently changed. Invalid source checksums, missing/invalid goals, or duplicate RGB values in used color slots are also rejected. Unknown formats, damaged Little Ledges payloads and unrelated QR codes show an inline error and leave the current draft intact.
+Pushmo pullout switches and manhole pairs, including inverted manholes, are imported as Little Ledges switches and warp pipes, subject to the normal placement rules. Source switches marked inverted are not yet supported. Invalid source checksums, missing/invalid goals, or duplicate RGB values in used color slots are also rejected. Unknown formats, damaged Little Ledges payloads and unrelated QR codes show an inline error and leave the current draft intact.
 
 The imported Pushmo reader/converter is independently written MIT-licensed code from the decoder companion. jsQR 1.4.0 handles QR scanning in the worker; its distribution wrapper is adapted to ES modules. Required notices ship at `import-licenses.txt`; component provenance is in `src/import/vendor/NOTICE.md`. No earlier third-party parser implementation or sample artwork is bundled.
 
@@ -68,7 +68,7 @@ In Little Ledges, My Puzzles appears after all the built-in groups. Import previ
 
 `../shared/puzzle.js` owns validation, canonical palette indexing, revision checks and the QR codec. A standalone JSON contains:
 
-- `format: "little-ledges-puzzle"`, `schemaVersion: 1`, `rulesVersion: 1` or `2` (switches require 2)
+- `format: "little-ledges-puzzle"`, `schemaVersion: 1`, `rulesVersion: 1`, `2` or `3` (switches require 2 or later; inverted pipes require 3)
 - `id`: stable 1–64 character ASCII identifier (letters, numbers and hyphens)
 - `name`: nonempty UTF-8 title, at most 128 bytes
 - `grid`: exactly 32 strings of 32 cells; `.` is empty

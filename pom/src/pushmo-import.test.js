@@ -30,10 +30,11 @@ test('Pushmo binary and decoded JSON import preserve switches and manhole pairs'
   assert.deepEqual(decodePuzzle(encodePuzzle(binary.puzzle)),binary.puzzle);
 });
 
-test('unsupported and incomplete Pushmo gadgets are rejected rather than changed',async()=>{
+test('inverted manholes import and unsupported or incomplete gadgets are rejected',async()=>{
   const source=await parsePayload(payload());
   source.manholes[0].inverted=true;
-  await assert.rejects(readLevelText(JSON.stringify(source)),/Inverted manholes/);
+  const imported=await readLevelText(JSON.stringify(source));
+  assert.equal(imported.puzzle.warpPairs[0][0].inverted,true);
   source.manholes[0].inverted=false;source.manholes.pop();
   await assert.rejects(readLevelText(JSON.stringify(source)),/exactly two/);
   source.manholes=[];source.flags.uses_manholes=false;source.flags.raw&=~0x100;
