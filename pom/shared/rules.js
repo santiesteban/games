@@ -68,12 +68,22 @@ export function warpEndpoint(board,cell){
   }
   return landing?{entry:board.validNode(entry)?entry:null,landing}:null;
 }
+export function warpEntryMatches(board,cell,player,endpoint=warpEndpoint(board,cell)){
+  if(!endpoint)return false;
+  if(endpoint.entry&&nodeKey(player)===nodeKey(endpoint.entry))return true;
+  if(!cell.inverted)return false;
+  const group=board.byCell[cell.y]?.[cell.x],below=board.byCell[cell.y+1]?.[cell.x];
+  // Pom can jump up from the square immediately beneath the opening when
+  // that vertical space is clear at the depth of the pipe.
+  return player.x===cell.x&&player.y===cell.y+2&&player.z===group.depth-1
+    &&(!below||below.depth<group.depth)&&board.validNode(player);
+}
 export function warpDestination(board,p,pairs=[]){
   for(const pair of pairs){
     const nodes=pair.map(cell=>warpEndpoint(board,cell));
     if(!nodes[0]||!nodes[1])continue;
-    if(nodes[0].entry&&nodeKey(p)===nodeKey(nodes[0].entry))return nodes[1].landing;
-    if(nodes[1].entry&&nodeKey(p)===nodeKey(nodes[1].entry))return nodes[0].landing;
+    if(warpEntryMatches(board,pair[0],p,nodes[0]))return nodes[1].landing;
+    if(warpEntryMatches(board,pair[1],p,nodes[1]))return nodes[0].landing;
   }
   return null;
 }

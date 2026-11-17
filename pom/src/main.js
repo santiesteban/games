@@ -45,7 +45,7 @@ import { pieceShadowShader, solidPieceShadowShader, highlightedPieceShadowShader
 import { createCatalogScreens } from './catalog-screens.js';
 import { createMyPuzzles } from './my-puzzles.js';
 import {createPieceDock,pieceDockState} from './piece-dock.js';
-import { canReachPiece, safePieceChange, warpDestination, warpEndpoint, pulloutSwitchState } from '../shared/rules.js';
+import { canReachPiece, safePieceChange, warpDestination, warpEndpoint, warpEntryMatches, pulloutSwitchState } from '../shared/rules.js';
 import {SWITCH_HEIGHT,SWITCH_BASE_HEIGHT,switchOccupied,switchBaseOffset,switchPomLift,updateSwitchMotion} from './pullout-switch-visual.js';
 import { decodePuzzle, puzzleLevel } from '../shared/puzzle.js';
 import { deploymentUrls } from '../shared/deployment.js';
@@ -2102,7 +2102,7 @@ function previewRoute(e){
 function sceneryRay(e){const p=boardPoint(e);return render3D.screenToRay(vec2(p.x,p.y),vec2(wrap.clientWidth,wrap.clientHeight))}
 function currentWarpPair(){
   if(!warpPreviewEnds.length||busy||won||levelLoading||!viewReady)return null;
-  const endpoints=warpEndpoints(),board=movementBoard(),source=endpoints.findIndex(({cell})=>{const entry=warpEndpoint(board,cell)?.entry;return entry&&nodeKey(entry)===nodeKey(player)});
+  const endpoints=warpEndpoints(),board=movementBoard(),source=endpoints.findIndex(({cell})=>warpEntryMatches(board,cell,player));
   if(source<0)return null;
   const destination=source%2?source-1:source+1;
   if(!endpoints[destination])return null;
@@ -2135,11 +2135,11 @@ function warpTapTarget(point){
   // Test the actual pipe and square, not Pom's projected silhouette: that
   // silhouette can cover an otherwise tappable piece behind him.
   const ray=render3D.screenToRay(vec2(point.x,point.y),size);
-  const objects=[...blockObjects,...topPickObjects,...extrusionOutlines,...warpPreviewEnds.flatMap(parts=>[parts.badge,parts.body,parts.rim])];
+  const objects=[...blockObjects,...topPickObjects,...extrusionOutlines,...warpPreviewEnds.flatMap(parts=>[parts.badge,parts.body,parts.rim,parts.cap,parts.opening])];
   const hit=puzzleRaycast(ray,objects)[0];
   for(const index of [pair.source,pair.destination]){
     const {cell,group}=pair.endpoints[index],parts=warpPreviewEnds[index],z=group.depth-1,y=H-cell.y;
-    if(hit===parts.badge||hit===parts.body||hit===parts.rim)return true;
+    if(hit===parts.badge||hit===parts.body||hit===parts.rim||hit===parts.cap||hit===parts.opening)return true;
     const top=topObjectInfo.get(hit);
     if(top&&top.x===cell.x&&top.y===cell.y&&top.z===z)return true;
     // Badge quads can have transparent edges; only accept the visible face

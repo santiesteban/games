@@ -42,6 +42,14 @@ test('an inverted pipe can only be entered from its immediately adjacent undersi
   assert.equal(warpDestination(board,{x:1,y:32,z:1},pairs),null);
   assert.equal(warpDestination(board,{x:0,y:32,z:0},pairs),null);
 });
+test('Pom can enter from the supported square one level below an unobstructed inverted opening',()=>{
+  const grid=[...Array(29).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'.'.repeat(32),'1'+'.'.repeat(31)];
+  const board=createMovementBoard(grid,[3,1,3]),pairs=[[{x:0,y:29,inverted:true},{x:5,y:29}]],pom={x:0,y:31,z:2};
+  assert(board.validNode(pom));
+  assert.deepEqual(warpDestination(board,pom,pairs),{x:5,y:29,z:0});
+  assert.equal(warpDestination(board,{...pom,z:1},pairs),null);
+  assert.equal(warpDestination(board,{...pom,x:1},pairs),null);
+});
 test('a piece directly below an inverted pipe blocks both ends at equal or greater depth',()=>{
   const grid=[...Array(29).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'1'+'.'.repeat(31),'.'.repeat(32)];
   const board=createMovementBoard(grid,[1,1,1]),pairs=[[{x:0,y:29,inverted:true},{x:5,y:29}]],from={x:5,y:29,z:0};
