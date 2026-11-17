@@ -35,7 +35,10 @@ export function exportLittleLedges(source) {
   const switchRecords=source.switches.map(item=>{
     requireValue(item&&Number.isInteger(item.color)&&item.color>=0&&item.color<10&&typeof item.inverted==='boolean','Invalid source switch record.');
     requireValue(!item.inverted,'Inverted source switches are not supported by Little Ledges.');
-    return {x:item.x,y:item.y,color:String(item.color)};
+    const sourcePalette=source.palette_indices[item.color];
+    const targetSlot=used.find(slot=>source.palette_indices[slot]===sourcePalette);
+    requireValue(targetSlot!==undefined,'A pullout switch must target a color used by a puzzle piece.');
+    return {x:item.x,y:item.y,color:String(targetSlot)};
   });
   const pipes=new Map();
   for(const item of source.manholes){

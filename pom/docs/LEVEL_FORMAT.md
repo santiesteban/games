@@ -44,13 +44,22 @@ positions, and engine compatibility. A valid document is not proof of solvabilit
 
 Group order controls gallery and next-level order. Within a group, levels sort
 by `number`. Empty groups are not rendered. The built-in catalog reserves
-`murals` immediately after `more-challenges`, followed by `japan-challenges`, `candidate-challenges`, `food-for-thought`, and `others`.
+`murals` immediately after `more-challenges`, followed by `japan-challenges`,
+`candidate-challenges`, `food-for-thought`, `interesting-challenges`,
+`challenging-challenges`, and `others`.
 `rangeLabel` optionally replaces the automatically generated number range.
 
 The 18 reconstructed Murals occupy display numbers 55–72. Japan Challenges follows
-with 16 QR conversions (73–88), using Japan Spring scenery. Others follows
-with Movement Studio (89), Pull out a path (90), Design Playground (91), and Background Studio (92). The first two retain the original
-`builtin-055` and `builtin-056` values. Food for Thought begins with Hot Dog with Everything (103). Candidate Challenges has ten entries numbered 93–102; see [Candidate Challenges](CANDIDATE_CHALLENGES.md) for provenance and solver limits. See [Murals provenance](MURALS.md) and [Japan Challenges](JAPAN_CHALLENGES.md).
+with 16 QR conversions (73–88), using Japan Spring scenery. Candidate Challenges
+has ten entries numbered 93–102; Food for Thought contains Hot Dog with
+Everything (103). Interesting Challenges and Challenging Challenges contain 16
+and 15 QR conversions, numbered 104–134 and aligned to the floor. Their archive
+keys use the `zan-archive-<number>` format. The groups appear before
+Others, which retains Movement Studio (89), Pull out a path (90), Design
+Playground (91), and Background Studio (92). The first two retain the original
+`builtin-055` and `builtin-056` values. See [Candidate Challenges](CANDIDATE_CHALLENGES.md),
+[Pushmo Challenge Packs](PUSHMO_CHALLENGE_PACKS.md), [Murals provenance](MURALS.md), and
+[Japan Challenges](JAPAN_CHALLENGES.md) for source notes.
 
 ## Identity and metadata
 
