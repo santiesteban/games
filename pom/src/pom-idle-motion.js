@@ -2,9 +2,11 @@
 export function pomIdleMotion(elapsed){
   return {breath:Math.sin(elapsed*Math.PI*2/3600)*.009};
 }
-// Keep the eyes open briefly after a movement, then gently close them.
-export function pomMovementEyes(now,moving,openUntil){
+// Blink briefly while alert, then settle into the calm expression.
+export function pomMovementEyes(elapsed,moving){
   if(moving)return 1;
-  const t=Math.max(0,Math.min(1,(openUntil-now)/220));
-  return t*t*(3-2*t);
+  if(elapsed>=10000)return 0;
+  const phase=elapsed%3000;
+  if(phase<2800)return 1;
+  return Math.abs(phase-2900)/100;
 }

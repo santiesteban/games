@@ -55,7 +55,7 @@ export async function createRedPom(parent){
   const object=make(2,textures.calm.body,false,true),edge=make(2.1,textures.calm.body,true);
   const eyes=make(2.3,textures.calm.eyes,true),idleEyes=make(2.31,textures['happy-open'].eyes,true),mouth=make(2.35,textures['happy-open'].mouth,true),extra=make(2.4,textures['push-back'].extra,true);
   const parts=[object,edge,eyes,idleEyes,mouth,extra],baseDepths=parts.map(part=>part.pos3D.z);
-  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyesOpenUntil=0,eyeStyle='classic',currentPose='calm',currentExtra=true;
+  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyeStyle='classic',currentPose='calm',currentExtra=true;
   idleEyes.color.a=mouth.color.a=extra.color.a=0;
   function setPose(name,showExtra=true){
     const key=`${name}:${showExtra}`;
@@ -81,8 +81,8 @@ export async function createRedPom(parent){
       idleEyes.tileInfo=style==='bright'?textures['happy-open'].brightEyes:style==='crazy'?textures['happy-open'].crazyEyes:style==='circle'?textures['happy-open'].circleEyes:textures['happy-open'].eyes;
       active='';setPose(currentPose,currentExtra);
     },
-    setMoving(value){moving=value;eyesOpenUntil=value?0:performance.now()+800},
-    resetMotion(){moving=false;eyesOpenUntil=0;idleTime=0},
+    setMoving(value){moving=value;idleTime=0},
+    resetMotion(){moving=false;idleTime=0},
     update(now,idle=false){
       const dt=lastTime===undefined?0:Math.min(.05,(now-lastTime)/1000);lastTime=now;
       const ease=1-Math.exp(-14*dt);
@@ -91,10 +91,10 @@ export async function createRedPom(parent){
       if(Math.abs(targetX-bodyX)<.001)bodyX=targetX;
       if(Math.abs(targetY-bodyY)<.001)bodyY=targetY;
       const resting=idle&&active.startsWith('calm:');
-      if(resting)idleTime+=dt*1000;else idleTime=0;
+      if(!moving&&active.startsWith('calm:'))idleTime+=dt*1000;else idleTime=0;
       const normalEyes=['calm:','squash:','stretch:'].some(pose=>active.startsWith(pose));
       const motion=resting?pomIdleMotion(idleTime):{breath:0};
-      const opening=normalEyes?pomMovementEyes(now,moving,eyesOpenUntil):0;
+      const opening=normalEyes?pomMovementEyes(idleTime,moving):0;
       const displayX=bodyX*(1-motion.breath*.55);displayY=bodyY*(1+motion.breath);
       if(normalEyes)eyes.color.a=1-opening;
       idleEyes.color.a=opening;
