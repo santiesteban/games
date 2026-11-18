@@ -7,8 +7,21 @@ import {planMovement as planLogicalMovement,movementSegmentClear,sampleMovementP
 // a small visual overlap does not make Pom change direction abruptly.
 export function planMovement(board,from,to){
   const plan=planLogicalMovement(board,from,to);
-  if(!plan||plan.isJump||Math.abs(to.y-from.y)!==1)return plan;
-  const ascending=to.y<from.y,diagonal=from.x!==to.x&&from.z!==to.z;
+  if(!plan||plan.isJump)return plan;
+  const diagonal=from.x!==to.x&&from.z!==to.z;
+  const source=board.byCell?.[from.y]?.[from.x],target=board.byCell?.[to.y]?.[to.x];
+  const levelPieceHop=from.y===to.y&&diagonal&&source&&target&&source!==target;
+  if(levelPieceHop){
+    const a=plan.points[0],points=Array.from({length:33},(_,i)=>{
+      const t=i/32,p=sampleMovementProgress(plan,t);
+      return {...p,y:a.y+.25*4*t*(1-t)};
+    });
+    const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y,points[i].z-points[i-1].z));
+    const overlap=points.slice(1).some((point,i)=>!movementSegmentClear(board,points[i],point));
+    return {...plan,points,lengths,length:lengths.at(-1),isStepArc:true,isStepJump:true,stepVisualOverlap:overlap};
+  }
+  if(Math.abs(to.y-from.y)!==1)return plan;
+  const ascending=to.y<from.y;
   if(!ascending&&!diagonal)return plan;
   const safe=ascending?plan:planLogicalMovement(board,to,from);
   if(!safe)return plan;

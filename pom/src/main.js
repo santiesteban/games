@@ -719,7 +719,7 @@ function drawMapOutlines(){
     render3D.receiveShadow=!!render3D.shadows;
     // Dark pieces need a little more contrast for all four corners to remain
     // visible; keep the more subdued treatment on light pieces.
-    const rim=luminance<.24?new Color(pigment.r*.8+.14,pigment.g*.8+.14,pigment.b*.8+.14):new Color(pigment.r*.8425,pigment.g*.8425,pigment.b*.8425);
+    const rim=luminance<.24?new Color(pigment.r*.9+.07,pigment.g*.9+.07,pigment.b*.9+.07):new Color(pigment.r*.92125,pigment.g*.92125,pigment.b*.92125);
     for(const nut of g.nuts){
       const center=puzzlePoint(vec3(nut.x+depthSkew()*d,stretchY(H-nut.y),z));
       const ray=center.subtract(render3D.camera.pos).normalize(),bias=ray.scale(-.035),point=(radius,i)=>puzzlePoint(vec3(nut.x+depthSkew()*d+Math.cos(i*Math.PI/3)*radius,stretchY(H-nut.y+Math.sin(i*Math.PI/3)*radius),z)).add(bias),c=center.add(bias);
