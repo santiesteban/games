@@ -20,7 +20,7 @@ for(const example of movementExamples)test(`reported movement: ${example.label}`
     for(let frame=1;frame<=100;frame++){
       const p=sampleMovement(plan,frame/100);
       if(!plan.stepVisualOverlap)assert(movementSegmentClear(board,before,p),'the complete body stays clear of pieces');
-      assert(p.y<=ceiling+(plan.isStepJump?.7:.161),'the jump stays within its intended arc');
+      assert(p.y<=ceiling+(plan.isStepArc?.7:.161),'the jump stays within its intended arc');
       if(from.y===to.y)assert(Math.abs(p.y-a.y)<1e-8,'level travel never climbs then descends');
       if(plan.isFall)assert(p.y<=before.y+1e-8,'parachute descends without an upward launch');
       before=p;
@@ -35,6 +35,14 @@ test('a clear step up follows a continuous jump arc and lands on the target',()=
   const start=nodePose(board,example.from),end=nodePose(board,example.to),peak=Math.max(...plan.points.map(p=>p.y));
   assert(peak>end.y+.05);assert.deepEqual(plan.points[0],start);assert.deepEqual(plan.points.at(-1),end);
   assert(plan.points.slice(1).every((point,i)=>movementSegmentClear(board,plan.points[i],point)));
+});
+test('diagonal step up and down use the same moderate path in reverse',()=>{
+  const example=movementExamples.find(ex=>ex.id==='corner-climb'),level=studioLevel(levels,example),board=createMovementBoard(level.grid,level.initialDepths);
+  const up=planMovement(board,example.from,example.to),down=planMovement(board,example.to,example.from);
+  assert(up?.isStepArc&&down?.isStepArc);
+  assert.deepEqual(up.points,[...down.points].reverse());
+  const a=up.points[0],b=up.points.at(-1);
+  assert(up.points.some(p=>Math.abs((p.x-a.x)*(b.z-a.z)-(p.z-a.z)*(b.x-a.x))>.03));
 });
 
 test('all eight one-cell directions are allowed on open ground',()=>{

@@ -2524,7 +2524,7 @@ function moveTo(p,pressMarker=false,preview=null){
       progress=t<.10?plan.takeoff*smooth(t/.10):t<launchAt?plan.takeoff:t<.88?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.88)/.12);
     }
     const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;
-    const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.isStepJump?jumpPose(from,to,flight,profile):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
+    const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.isStepArc?jumpPose(from,to,flight,profile):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
     if(plan.isJump&&!reducedSelectionMotion.matches){
       const windupStart=plan.continuousFlight ? 0 : .05;
       const windup=t<launchAt?smooth((t-windupStart)/(launchAt-windupStart)):Math.max(0,1-flight/.12);
