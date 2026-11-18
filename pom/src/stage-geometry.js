@@ -12,6 +12,23 @@ export function limitStagePan(target,right,up,{left,right:edge,height},studio=fa
   }
   return next;
 }
+// Clamp in camera-plane coordinates. Small puzzles stay near the center;
+// larger puzzles retain at least a third of the viewport on each axis.
+export function limitPuzzlePan(target,right,up,bounds,view,subject){
+  const points=[];
+  for(const x of [bounds.left,bounds.right])for(const y of [bounds.bottom,bounds.top])for(const z of [bounds.back,bounds.front])points.push({x,y,z});
+  if(subject)points.push(subject);
+  let next={...target};
+  for(const [axis,span] of [[right,view.width],[up,view.height]]){
+    if(!(span>0))continue;
+    const projected=points.map(p=>dot(p,axis)),min=Math.min(...projected),max=Math.max(...projected),size=max-min,center=(min+max)/2;
+    let low,high;
+    if(size<=span){const freedom=Math.max(0,Math.min(span*.1,(span-size)/2));low=center-freedom;high=center+freedom}
+    else{const overlap=span/3;low=min-span/2+overlap;high=max+span/2-overlap}
+    const current=dot(next,axis);next=add(next,axis,Math.max(low,Math.min(high,current))-current);
+  }
+  return next;
+}
 export function minimumBackdropDistance(width,yaw){
   // Only puzzle clearance belongs here. Decorative props can stand in front of
   // the wall without forcing the entire backdrop ten units farther away.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {limitStagePan,minimumBackdropDistance,projectStageShadow} from './stage-geometry.js';
+import {limitStagePan,limitPuzzlePan,minimumBackdropDistance,projectStageShadow} from './stage-geometry.js';
 test('manual panning stays around the stage without changing target depth',()=>{
  const bounds={left:0,right:4,height:4},r={x:1,y:0,z:0},u={x:0,y:1,z:0};
  assert.deepEqual(limitStagePan({x:100,y:-100,z:2},r,u,bounds),{x:6,y:-2,z:2});
@@ -8,6 +8,15 @@ test('manual panning stays around the stage without changing target depth',()=>{
  assert.equal(limitStagePan({x:100,y:2,z:2},r,u,bounds,true).x,16);
  const rotated={x:Math.SQRT1_2,y:0,z:-Math.SQRT1_2},next=limitStagePan({x:100,y:2,z:-100},rotated,u,bounds);
  assert.ok(Math.abs(next.x+next.z)<1e-10);
+});
+test('manual pan keeps small puzzles near center and large puzzles accessible',()=>{
+ const r={x:1,y:0,z:0},u={x:0,y:1,z:0},view={width:10,height:10};
+ const small={left:0,right:2,bottom:0,top:2,back:0,front:0};
+ assert.deepEqual(limitPuzzlePan({x:100,y:-100,z:0},r,u,small,view),{x:2,y:0,z:0});
+ const large={left:0,right:30,bottom:0,top:30,back:0,front:0};
+ const p=limitPuzzlePan({x:100,y:-100,z:0},r,u,large,view);
+ assert.ok(Math.abs(p.x-(30+5-10/3))<1e-9);assert.ok(Math.abs(p.y-(-5+10/3))<1e-9);
+ const withPom=limitPuzzlePan({x:100,y:0,z:0},r,u,small,view,{x:20,y:0,z:0});assert.ok(withPom.x>2);
 });
 test('backdrop can approach the front view but clears puzzle at side views',()=>{
  assert.ok(minimumBackdropDistance(10,0)<1);

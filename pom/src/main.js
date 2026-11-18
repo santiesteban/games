@@ -2,7 +2,7 @@ import {pomMovementPose} from './pom-movement-pose.js';
 import {createRedPom} from './red-pom.js';
 import approvedEnvironment from './data/daisy-meadow-ivan-v2.json';
 import {gameplayEnvironmentConfiguration} from './environment-policy.js';
-import {limitStagePan} from './stage-geometry.js';
+import {limitStagePan,limitPuzzlePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
   timeReal, buildMatrix, engineInit, Render3DPlugin, EngineObject3D, Light3D, Mesh, buildBox, buildCapsule, buildLathe, buildSphere, vec2, vec3,
@@ -1584,7 +1584,7 @@ function applyCameraStudy({refit=false,orbit=false,centerPom=false,selectionOnly
   if(!orbit){refreshCellSquareness();syncBlocks();syncFlag();syncHoverSpot();syncPlayer();syncMovementMarkers()}
   if(refit){const frame=sceneFrame(wrap.clientWidth,wrap.clientHeight);viewUnit=wrap.clientHeight/frame.height;viewTarget=frame.target;baseCameraHeight=frame.height;viewTouched=false}
   if(centerPom){viewTarget=worldPosition(player);cameraState.truck=0}
-  requestLevelEnvironment();applyBoardView(false);resetStudyFollow({paused:!centerPom});if(!orbit)updateUI();
+  requestLevelEnvironment();applyBoardView(false);if(orbit&&!centerPom){limitManualPan();applyBoardView(false)}resetStudyFollow({paused:!centerPom});if(!orbit)updateUI();
   wrap.dataset.projection=cameraState.projection;wrap.dataset.cameraYaw=String(cameraYaw());
 }
 function studyFrame(width,height){
@@ -1828,7 +1828,19 @@ function startBoardView(animate=true){
   };
 }
 
-function limitManualPan(){const p=limitStagePan(viewTarget,render3D.camera.getRight(),render3D.camera.getUp(),puzzleVisualBounds(),isBackgroundStudio());viewTarget=vec3(p.x,p.y,p.z)}
+let manualPanLevel=null,manualPanBounds=null;
+function limitManualPan(){
+  const right=render3D.camera.getRight(),up=render3D.camera.getUp();
+  if(isBackgroundStudio()){const p=limitStagePan(viewTarget,right,up,puzzleVisualBounds(),true);viewTarget=vec3(p.x,p.y,p.z);return}
+  if(manualPanLevel!==activeLevel){
+    const cells=groups.flatMap(g=>g.cells),xs=cells.map(c=>c.x),ys=cells.map(c=>c.y);
+    manualPanBounds=cells.length?{left:Math.min(...xs),right:Math.max(...xs)+1,bottom:0,top:H-Math.min(...ys)+.7}:{left:0,right:W,bottom:0,top:H};
+    manualPanLevel=activeLevel;
+  }
+  const p=worldPosition(player),bounds={...manualPanBounds,back:0,front:Math.max(0,...groups.map(g=>visualDepth(g)))*extrusionScale};
+  const limited=limitPuzzlePan(viewTarget,right,up,bounds,{width:wrap.clientWidth/viewUnit,height:wrap.clientHeight/viewUnit},p);
+  viewTarget=vec3(limited.x,limited.y,limited.z);
+}
 function panBoard(dx,dy){if(worldPresentation()){viewTarget=viewTarget.add(render3D.camera.getRight().scale(-dx/viewUnit)).add(render3D.camera.getUp().scale(dy/viewUnit));limitManualPan();return}viewTarget=viewTarget.add(vec3(-dx/viewUnit,dy/(viewUnit*Math.cos(viewPitch)),0))}
 function zoomBoard(unit,x,y){
   const old=viewUnit,{min,max}=cameraZoomBounds();viewUnit=Math.max(min,Math.min(max,unit));
@@ -2673,5 +2685,5 @@ new ResizeObserver(()=>{
   if(celebration){render3D.updateMatrices(r.width/r.height);return}
   if(changedMode||introPlaying){startBoardView();return}
   if(!viewTouched&&followAnchor?.paused&&activeLevel.kind==='puzzle'&&!cameraLab){startBoardView(false);return}
-  stopIntro();if(!mobile&&!viewTouched){viewUnit=r.height/baseCameraHeight;viewTarget=sceneFrame(r.width,r.height).target}applyBoardView();
+  stopIntro();if(!mobile&&!viewTouched){viewUnit=r.height/baseCameraHeight;viewTarget=sceneFrame(r.width,r.height).target}else if(viewTouched&&worldPresentation())limitManualPan();applyBoardView();
 }).observe(wrap);
