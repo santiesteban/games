@@ -48,7 +48,8 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     // A turning wall must clear the entire puzzle at both orbit limits; keeping
     // the old wall's shallow offset would sweep it through the puzzle.
     const margin=landscape?6:1,dx=Math.max(Math.abs(-margin-pivot.x),Math.abs(width+margin-pivot.x)),dz=Math.max(Math.abs((landscape?-6:0)-pivot.z),Math.abs(4-pivot.z)),clearance=Math.hypot(dx,dz)+.5;
-    const back=following?-Math.max(landscape?8:4,clearance):-.45,cx=width/2,span=Math.max(48,width*3),wallHeight=environment.backgroundWorldHeight??Math.max(height+8,span/environment.aspectRatio*environment.groundAnchorY),groundFront=40;
+    const verticalCopies=environment.mirrorVertical?2:1;
+    const back=following?-Math.max(landscape?8:4,clearance):-.45,cx=width/2,span=Math.max(48,width*3),wallHeight=environment.backgroundWorldHeight?environment.backgroundWorldHeight*verticalCopies:Math.max(height+8,span/environment.aspectRatio*environment.groundAnchorY),groundFront=environment.groundDepth?back+environment.groundDepth*verticalCopies:40;
     const anchor=Math.min(.97,Math.max(.1,environment.groundAnchorY)),uv=(a,b)=>[vec2(0,a),vec2(1,a),vec2(1,b),vec2(0,b)];
     // A following wall stays perpendicular to the horizontal viewing direction.
     // Centering it on the actual orbit pivot holds projected height at fixed
@@ -69,8 +70,10 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       reference={curved:true,points:[point(-yaw-.4,0),point(-yaw,0),point(-yaw+.4,0)]};
     }else{
       const wall=[wallPoint(-span/2,wallHeight),wallPoint(span/2,wallHeight),wallPoint(span/2,0),wallPoint(-span/2,0)];
+      const repeatWidth=span/(environment.backgroundWorldHeight*environment.aspectRatio);
+      const skyTop=environment.mirrorVertical?-1:0;
       const backgroundUV=environment.backgroundWorldHeight
-        ? [vec2(.5-span/(wallHeight*environment.aspectRatio)/2,0),vec2(.5+span/(wallHeight*environment.aspectRatio)/2,0),vec2(.5+span/(wallHeight*environment.aspectRatio)/2,1),vec2(.5-span/(wallHeight*environment.aspectRatio)/2,1)]
+        ? [vec2(.5-repeatWidth/2,skyTop),vec2(.5+repeatWidth/2,skyTop),vec2(.5+repeatWidth/2,1),vec2(.5-repeatWidth/2,1)]
         : uv(0,environment.fullTextures?1:anchor);
       backdrop=patch(wall,state.background?textures[0]:undefined,backgroundUV,state.background?new Color(1):color('#eee9df'));
       reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
@@ -80,12 +83,15 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       backdrop.shader=pieceShadowShader;
       reference.shadowReceivers=1;
     }
-    const groundBack=landscape||following||curved?-40:back;
+    const groundBack=environment.groundDepth?back:(landscape||following||curved?-40:back);
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];
     patch(ground,undefined,undefined,color(landscape?'#a9b58a':'#c9c9a9'));
     if(state.foreground){
       const tile=environment.groundTileWorldSize;
-      const groundUV=tile?ground.map(point=>vec2(point.x/tile[0],point.z/tile[1])):uv(environment.fullTextures?0:Math.min(.99,anchor+.025),1);
+      const groundUV=tile?ground.map(point=>vec2(
+        point.x/tile[0],
+        environment.horizontalTiles?(point.z-groundBack)/environment.groundDepth:point.z/tile[1],
+      )):uv(environment.fullTextures?0:Math.min(.99,anchor+.025),1);
       patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],groundUV,new Color(1));
     }
     if(!landscape&&!curved){

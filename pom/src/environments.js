@@ -1,3 +1,5 @@
+import grassCloudsBackground from './assets/environments/grass-clouds/background.png';
+import grassCloudsGround from './assets/environments/grass-clouds/ground.png';
 import risoBackground from './assets/environments/riso-print/background.webp';
 import risoGround from './assets/environments/riso-print/ground.webp';
 import daisyBackground from './assets/scenery-kits/daisy-meadow/flat-background.webp';
@@ -59,6 +61,15 @@ function registeredArtwork(id,name,metadata,images){
 
 export const DEFAULT_ENVIRONMENT='meadow';
 export const ENVIRONMENTS=[
+  {
+    id:'grass-clouds',name:'Grass & Clouds',
+    background:grassCloudsBackground,foreground:grassCloudsGround,
+    width:208,height:277,aspectRatio:208/277,groundAnchorY:1,
+    registeredLayers:false,fullTextures:true,spare:true,
+    backgroundWorldHeight:12,repeatBackground:true,horizontalTiles:true,mirrorVertical:true,
+    groundTileWorldSize:[16*208/277,16],groundDepth:16,
+    foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0,
+  },
   {id:'riso-print',name:'Riso Print',background:risoBackground,foreground:risoGround,foregroundSize:[2044,900],width:2044,height:2024,aspectRatio:2044/2024,groundAnchorY:1,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:10,repeatBackground:true,groundTileWorldSize:[24,24*900/2044],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'daisy-meadow',name:'Daisy Meadow',background:daisyBackground,foreground:daisyGround,foregroundSize:[2048,2048],width:4096,height:2048,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'dreamscape',name:'Dreamscape',background:dreamscapeBackground,foreground:dreamscapeGround,foregroundSize:[1670,941],width:1671,height:941,aspectRatio:1671/941,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
@@ -96,5 +107,12 @@ export const ENVIRONMENTS=[
 export function environmentById(id){return ENVIRONMENTS.find(environment=>environment.id===id)??ENVIRONMENTS[0]}
 
 export function createEnvironmentLoader(defaultTextures){
-  return createEnvironmentTextureLoader(DEFAULT_ENVIRONMENT,defaultTextures,{createTexture:(image,index,environment)=>new TextureInfo(image,true,(index===0&&environment.repeatBackground)||(index===1&&!!environment.groundTileWorldSize),false)});
+  return createEnvironmentTextureLoader(DEFAULT_ENVIRONMENT,defaultTextures,{
+    createTexture:(image,index,environment)=>{
+      const repeats=(index===0&&environment.repeatBackground)||(index===1&&!!environment.groundTileWorldSize);
+      // Repeat horizontally. A mirrored vertical copy extends this scenario.
+      const wrap=environment.horizontalTiles?[10497,environment.mirrorVertical?33648:33071]:!!repeats;
+      return new TextureInfo(image,true,wrap,false);
+    },
+  });
 }
