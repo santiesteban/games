@@ -19,7 +19,7 @@ import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds, floorOutlinePoints, snapFloorLine } from './floor-grid.js';
 import { createLevelLoadGate } from './level-loading.js';
-import { sampleCameraIntro, initialCameraUnit, openingFrameFits } from './camera-intro.js';
+import { sampleCameraIntro, initialCameraUnit, openingFrameFits, fitOpeningUnit } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
 import { installViewportSafety } from './viewport-safety.js';
 import { installSafariZoom } from './safari-zoom.js';
@@ -1794,13 +1794,35 @@ function openingCameraTarget(width,height,unit){
   const screenX=Math.abs(toward)<1?.5:toward>0?.38:.62;
   return framing(onFloor?worldPoint(player.x+.5,0,player.z+.5):pom,screenX,onFloor?.73:.65);
 }
+let occupiedOpeningLevel,occupiedOpeningUnit=0;
+function occupiedOpeningFrame(width,height){
+  const cells=groups.flatMap(group=>group.cells);
+  if(!cells.length)return null;
+  const left=Math.min(...cells.map(c=>c.x)),right=Math.max(...cells.map(c=>c.x+1));
+  const bottom=Math.min(...cells.map(c=>H-c.y-1)),top=Math.max(...cells.map(c=>H-c.y));
+  const depth=Math.max(0,...groups.map(g=>g.depth))*extrusionScale;
+  const anchor=worldPoint((left+right)/2,(bottom+top)/2,depth/2),size=vec2(width,height),outline=[];
+  for(const x of [left,right])for(const y of [bottom,top])for(const z of [0,depth])outline.push(worldPoint(x,y,z));
+  outline.push(worldPosition(player),worldPoint(goalCell.x+.5,H-goalCell.y+.7,0));
+  const previous=viewUnit;
+  const unit=fitOpeningUnit(candidate=>{
+    viewUnit=candidate;positionCameraForView(viewSide,anchor);render3D.updateMatrices(width/height);
+    return openingFrameFits(outline.map(point=>render3D.worldToScreen(puzzlePoint(point),size)),width,height);
+  },Math.min(width,height)*2);
+  viewUnit=previous;
+  return {unit,target:anchor};
+}
 function startBoardView(animate=true){
   if(levelLoading)return;
   stopIntro();keepInterruptedView=false;viewWidth=wrap.clientWidth;viewHeight=wrap.clientHeight;viewMobile=mobileBoard();viewTouched=false;viewReady=true;
   const f=sceneFrame(viewWidth,viewHeight);
   if(activeLevel.studioExample){const a=worldPosition(activeLevel.start),b=worldPosition(activeLevel.previewMove);f.height=Math.max(5.8,4.5*viewHeight/viewWidth,Math.abs(a.y-b.y)+3.2);f.target=a.lerp(b,.5).add(vec3(0,.6,0))}
-  const fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
+  let fitUnit=viewHeight/f.height;viewUnit=fitUnit;viewTarget=f.target.copy();baseCameraHeight=f.height;applyBoardView(!activeLevel.studioExample);
   if(isPreviewLevel(activeLevel)||activeLevel.studioExample||!document.querySelector('#menuScreen').hidden){finishIntro();return}
+  if(worldPresentation()&&!cameraLab){
+    const opening=occupiedOpeningFrame(viewWidth,viewHeight);
+    if(opening){occupiedOpeningLevel=activeLevel;occupiedOpeningUnit=opening.unit;fitUnit=opening.unit;viewUnit=fitUnit;viewTarget=opening.target;applyBoardView(false)}
+  }
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
   const token=introFrame,from=viewTarget.copy();
   if(cameraLab){resetStudyFollow();finishIntro();return}
@@ -1849,7 +1871,7 @@ function zoomBoard(unit,x,y){
 }
 function cameraZoomBounds(fitUnit=wrap.clientHeight/sceneFrame(wrap.clientWidth,wrap.clientHeight).height){
   const opening=activeLevel.kind==='puzzle'&&!cameraLab&&!activeLevel.studioExample?initialCameraUnit({width:wrap.clientWidth,height:wrap.clientHeight}):fitUnit;
-  return {min:Math.min(fitUnit,opening),max:Math.max(tappingUnit(),fitUnit,opening)};
+  return {min:Math.min(fitUnit,opening),max:Math.max(tappingUnit(),fitUnit,opening,occupiedOpeningLevel===activeLevel?occupiedOpeningUnit:0)};
 }
 function syncCameraMode(){
   cameraModeSliders.hidden=false;
