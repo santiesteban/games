@@ -18,6 +18,7 @@ import { createLevelPreferences } from './level-preferences.js';
 import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds, floorOutlinePoints, snapFloorLine } from './floor-grid.js';
+import { pieceNutPositions } from './piece-nuts.js';
 import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro, initialCameraUnit, openingFrameFits, fitOpeningUnit } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
@@ -316,7 +317,7 @@ function animateEffort(){
 const pomContour=[quadraticSegment([-1,.28],[-1.02,1.15],[0,1.22]),quadraticSegment([0,1.22],[1.02,1.15],[1,.28]),quadraticSegment([1,.28],[.84,-.12],[0,-.12]),quadraticSegment([0,-.12],[-.84,-.12],[-1,.28])].flatMap((segment,index)=>index?segment.slice(1):segment).map(([x,y])=>[x*.5,y*.709-.294]).reverse();
 const pomBlob=makeFanMesh(pomContour),pomEye=makeFanMesh(Array.from({length:20},(_,i)=>[Math.cos(i*Math.PI/10)*.5,Math.sin(i*Math.PI/10)*.5]));
 
-function makeGroups(){const board=createMovementBoard(mural,activeLevel.initialDepths);groups=board.groups;byCell=board.byCell;for(const g of groups)g.objects=[]}
+function makeGroups(){const board=createMovementBoard(mural,activeLevel.initialDepths);groups=board.groups;byCell=board.byCell;for(const g of groups){g.objects=[];g.nuts=pieceNutPositions(g.cells)}}
 function clearMovementRoutes(){movementRouteCache.clear();movementBoardCache=null;movementBoardKey=null;reachableKey=null;reachableValue=null}
 function movementBoard(){const key=groups.map(g=>g.depth).join(',');if(!movementBoardCache||key!==movementBoardKey){movementBoardKey=key;movementBoardCache=createMovementBoard(mural,groups.map(g=>g.depth))}return movementBoardCache}
 let pulloutAnimationDepths=null,pulloutAnimationToken=0;
@@ -710,6 +711,17 @@ function drawMapOutlines(){
   }}
   // Round caps bridge each pair of ribbon ends with the same width and depth bias.
   for(const point of joins.values())render3D.drawSphere(point,stroke,inkColor);
+  if(controlFeatures.enabled('pieceNuts'))for(const g of groups){
+    const d=visualDepth(g),z=d+.025,pigment=selectedSurfaceColor(g),luminance=.2126*pigment.r+.7152*pigment.g+.0722*pigment.b;
+    // Dark pieces need a little more contrast for all four corners to remain
+    // visible; keep the more subdued treatment on light pieces.
+    const rim=luminance<.24?new Color(pigment.r*.8+.14,pigment.g*.8+.14,pigment.b*.8+.14):new Color(pigment.r*.8425,pigment.g*.8425,pigment.b*.8425);
+    for(const nut of g.nuts){
+      const center=puzzlePoint(vec3(nut.x+depthSkew()*d,stretchY(H-nut.y),z));
+      const ray=center.subtract(render3D.camera.pos).normalize(),bias=ray.scale(-.035),point=(radius,i)=>puzzlePoint(vec3(nut.x+depthSkew()*d+Math.cos(i*Math.PI/3)*radius,stretchY(H-nut.y+Math.sin(i*Math.PI/3)*radius),z)).add(bias),c=center.add(bias);
+      for(let i=0;i<6;i++)render3D.drawTriangle(c,point(.05,i),point(.05,i+1),rim);
+    }
+  }
   drawSelectedOutline();drawReferenceSquares();drawHoverSpot();
   redPom?.drawOcclusion();
   render3D.flush();Object.assign(render3D,material);
