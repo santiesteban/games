@@ -711,17 +711,22 @@ function drawMapOutlines(){
   }}
   // Round caps bridge each pair of ribbon ends with the same width and depth bias.
   for(const point of joins.values())render3D.drawSphere(point,stroke,inkColor);
+  render3D.flush();
   if(controlFeatures.enabled('pieceNuts'))for(const g of groups){
     const d=visualDepth(g),z=d+.025,pigment=selectedSurfaceColor(g),luminance=.2126*pigment.r+.7152*pigment.g+.0722*pigment.b;
+    // Use the same shadow and highlight response as the piece's front face.
+    render3D.shader=render3D.shadows?(g===selected&&!won&&lightboxEnabled()?highlightedPieceShadowShader:solidPieceShadowShader):solidPieceGlowShader;
+    render3D.receiveShadow=!!render3D.shadows;
     // Dark pieces need a little more contrast for all four corners to remain
     // visible; keep the more subdued treatment on light pieces.
     const rim=luminance<.24?new Color(pigment.r*.8+.14,pigment.g*.8+.14,pigment.b*.8+.14):new Color(pigment.r*.8425,pigment.g*.8425,pigment.b*.8425);
     for(const nut of g.nuts){
       const center=puzzlePoint(vec3(nut.x+depthSkew()*d,stretchY(H-nut.y),z));
       const ray=center.subtract(render3D.camera.pos).normalize(),bias=ray.scale(-.035),point=(radius,i)=>puzzlePoint(vec3(nut.x+depthSkew()*d+Math.cos(i*Math.PI/3)*radius,stretchY(H-nut.y+Math.sin(i*Math.PI/3)*radius),z)).add(bias),c=center.add(bias);
-      for(let i=0;i<6;i++)render3D.drawTriangle(c,point(.05,i),point(.05,i+1),rim);
+      for(let i=0;i<6;i++)render3D.drawStrip([c,point(.05,i),point(.05,i+1)],vec3(0,0,1),undefined,[rim,rim,rim]);
     }
   }
+  render3D.flush();render3D.shader=undefined;render3D.receiveShadow=false;
   drawSelectedOutline();drawReferenceSquares();drawHoverSpot();
   redPom?.drawOcclusion();
   render3D.flush();Object.assign(render3D,material);
