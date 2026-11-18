@@ -241,6 +241,18 @@
         <h2 id="gameplay-title">Gameplay</h2>
         <div class="setting setting--select">
           <div class="setting__copy">
+            <label class="setting__label" for="scenario">Scenario</label>
+            <p class="setting__description" id="scenario-description">Choose the scenery for your levels.</p>
+          </div>
+          <select id="scenario" aria-describedby="scenario-description">
+            <option value="daisy-meadow">Daisy Meadow</option>
+            <option value="riso-print">Riso Print</option>
+            <option value="dreamscape">Dreamscape</option>
+          </select>
+        </div>
+        <p class="settings-message" id="scenarioMessage" role="status" aria-live="polite"></p>
+        <div class="setting setting--select">
+          <div class="setting__copy">
             <label class="setting__label" for="pomEyeStyle">Pom's eyes</label>
             <p class="setting__description" id="pomEyeStyle-description">Choose how Pom's eyes look when open.</p>
           </div>

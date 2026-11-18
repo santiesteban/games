@@ -24,7 +24,7 @@ export function createEnvironmentTextureLoader(defaultId,defaultTextures,{create
         }))throw new Error('The scenery layers have unexpected dimensions.');
         // Publish one complete pair only after both layers have decoded and
         // passed validation. The caller guards display changes by request ID.
-        record.textures=images.map(createTexture);return record.textures;
+        record.textures=images.map((image,index)=>createTexture(image,index,environment));return record.textures;
       }).catch(error=>{cache.delete(key);throw error});
       return record.promise;
     },

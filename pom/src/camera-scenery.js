@@ -48,7 +48,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     // A turning wall must clear the entire puzzle at both orbit limits; keeping
     // the old wall's shallow offset would sweep it through the puzzle.
     const margin=landscape?6:1,dx=Math.max(Math.abs(-margin-pivot.x),Math.abs(width+margin-pivot.x)),dz=Math.max(Math.abs((landscape?-6:0)-pivot.z),Math.abs(4-pivot.z)),clearance=Math.hypot(dx,dz)+.5;
-    const back=following?-Math.max(landscape?8:4,clearance):-.45,cx=width/2,span=Math.max(48,width*3),wallHeight=Math.max(height+8,span/environment.aspectRatio*environment.groundAnchorY),groundFront=40;
+    const back=following?-Math.max(landscape?8:4,clearance):-.45,cx=width/2,span=Math.max(48,width*3),wallHeight=environment.backgroundWorldHeight??Math.max(height+8,span/environment.aspectRatio*environment.groundAnchorY),groundFront=40;
     const anchor=Math.min(.97,Math.max(.1,environment.groundAnchorY)),uv=(a,b)=>[vec2(0,a),vec2(1,a),vec2(1,b),vec2(0,b)];
     // A following wall stays perpendicular to the horizontal viewing direction.
     // Centering it on the actual orbit pivot holds projected height at fixed
@@ -69,7 +69,10 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       reference={curved:true,points:[point(-yaw-.4,0),point(-yaw,0),point(-yaw+.4,0)]};
     }else{
       const wall=[wallPoint(-span/2,wallHeight),wallPoint(span/2,wallHeight),wallPoint(span/2,0),wallPoint(-span/2,0)];
-      backdrop=patch(wall,state.background?textures[0]:undefined,uv(0,environment.fullTextures?1:anchor),state.background?new Color(1):color('#eee9df'));
+      const backgroundUV=environment.backgroundWorldHeight
+        ? [vec2(.5-span/(wallHeight*environment.aspectRatio)/2,0),vec2(.5+span/(wallHeight*environment.aspectRatio)/2,0),vec2(.5+span/(wallHeight*environment.aspectRatio)/2,1),vec2(.5-span/(wallHeight*environment.aspectRatio)/2,1)]
+        : uv(0,environment.fullTextures?1:anchor);
+      backdrop=patch(wall,state.background?textures[0]:undefined,backgroundUV,state.background?new Color(1):color('#eee9df'));
       reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
     }
     if(environment.id==='dreamscape'){
@@ -80,7 +83,11 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
     const groundBack=landscape||following||curved?-40:back;
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];
     patch(ground,undefined,undefined,color(landscape?'#a9b58a':'#c9c9a9'));
-    if(state.foreground)patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],uv(environment.fullTextures?0:Math.min(.99,anchor+.025),1),new Color(1));
+    if(state.foreground){
+      const tile=environment.groundTileWorldSize;
+      const groundUV=tile?ground.map(point=>vec2(point.x/tile[0],point.z/tile[1])):uv(environment.fullTextures?0:Math.min(.99,anchor+.025),1);
+      patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],groundUV,new Color(1));
+    }
     if(!landscape&&!curved){
       // A fine join makes the set's right-angle construction easy to inspect.
       patch([wallPoint(-span/2,0),wallPoint(span/2,0),wallPoint(span/2,.025),wallPoint(-span/2,.025)].map(p=>p.add(vec3(Math.sin(yaw)*.003,0,.003))),undefined,undefined,color('#6f7765'));

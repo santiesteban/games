@@ -177,7 +177,7 @@ function isBackgroundStudio(){return activeLevel.kind==='background-studio'}
 function currentBackgroundConfiguration(){
   if(isBackgroundStudio())return backgroundStudio.values;
   if(cameraLab)return backgroundStudio.appliedValues;
-  return gameplayEnvironmentConfiguration(activeLevel,levelGroups,approvedEnvironment.configuration,backgroundStudio.appliedValues,backgroundStudio.appliedRevision);
+  return gameplayEnvironmentConfiguration(activeLevel,levelGroups,approvedEnvironment.configuration,backgroundStudio.appliedValues,backgroundStudio.appliedRevision,levelPreferences.scenario);
 }
 function requestLevelEnvironment(retry=false){
   if(!environmentLoader)return Promise.resolve(false);
@@ -1433,7 +1433,7 @@ function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=fals
     }));
   }
   if(panel==='title'){catalogScreens?.renderHome();menu.scrollTop=0}
-  if(panel==='settings'){document.querySelector('#settingsHome').setAttribute('aria-label',settingsReturnToLevel?'Back to level':'Back to home');updateProgressSettings();menu.scrollTop=0}
+  if(panel==='settings'){syncScenarioInput();document.querySelector('#settingsHome').setAttribute('aria-label',settingsReturnToLevel?'Back to level':'Back to home');updateProgressSettings();menu.scrollTop=0}
   document.querySelector('.stage').classList.remove('is-won');document.querySelector('.stage').inert=true;
   if(panel==='settings')document.querySelector('#settingsHome').focus();
   else if(!completedLevelId)document.querySelector(panel==='levels'?'#backTitle':'#titlePanel .brand').focus({preventScroll:true});
@@ -1476,6 +1476,20 @@ function syncControlFeatureInputs(){
   const markerShape=document.querySelector('#movementMarkerShape');if(markerShape)markerShape.value=controlFeatures.movementMarkerShape;
   const eyes=document.querySelector('#pomEyeStyle');if(eyes)eyes.value=controlFeatures.pomEyeStyle;
 }
+const scenarioInput=document.querySelector('#scenario');
+function syncScenarioInput(){
+  scenarioInput.value=levelPreferences.scenario??(activeLevel?.userPuzzle||activeLevel?.temporaryPlaytest?'dreamscape':'daisy-meadow');
+}
+function refreshScenario(){
+  syncScenarioInput();
+  if(gameReady&&!isBackgroundStudio()&&!cameraLab)loadLevelAssets();
+}
+scenarioInput.addEventListener('change',()=>{
+  const saved=levelPreferences.set('scenario',scenarioInput.value);
+  document.querySelector('#scenarioMessage').textContent=saved?'':'This scenario applies now, but could not be saved on this device.';
+  refreshScenario();
+});
+syncScenarioInput();
 // Bind the prototype's static Settings markup to the existing preference model.
 const pieceHighlight=document.querySelector('#pieceHighlight');
 pieceHighlight.addEventListener('change',()=>{
@@ -1526,7 +1540,7 @@ for(const name of ['hideKnownIssues','hideHelpText']){
   const toggle=document.querySelector(`#${name}`);toggle.checked=levelPreferences[name];
   toggle.addEventListener('change',()=>{const saved=levelPreferences.set(name,toggle.checked);document.querySelector('#preferenceMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';syncHelpVisibility();if(name==='hideKnownIssues')renderLevelList()});
 }
-window.addEventListener('storage',event=>{if(event.key===levelPreferences.key||event.key===null){levelPreferences.reload();for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=levelPreferences[name];syncHelpVisibility();renderLevelList()}});
+window.addEventListener('storage',event=>{if(event.key===levelPreferences.key||event.key===null){levelPreferences.reload();refreshScenario();for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=levelPreferences[name];syncHelpVisibility();renderLevelList()}});
 document.querySelector('#settingsHome').addEventListener('click',event=>{
   event.preventDefault();
   if(!settingsReturnToLevel){showMenu('title');return}

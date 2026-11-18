@@ -1,7 +1,7 @@
 const STORAGE_KEY='little-ledges:v4:level-preferences';
-const DEFAULTS={hideKnownIssues:true,hideHelpText:false};
+const DEFAULTS={hideKnownIssues:true,hideHelpText:false,scenario:null};
 
-const valid=(name,value)=>typeof value==='boolean';
+const valid=(name,value)=>name==='scenario'?value===null||['daisy-meadow','riso-print','dreamscape'].includes(value):typeof value==='boolean';
 
 export function createLevelPreferences(){
   function read(){
@@ -13,6 +13,7 @@ export function createLevelPreferences(){
     key:STORAGE_KEY,
     get hideKnownIssues(){return value.hideKnownIssues},
     get hideHelpText(){return value.hideHelpText},
+    get scenario(){return value.scenario},
     reload(){value=read()||{...DEFAULTS}},
     set(name,checked){
       if(!Object.hasOwn(DEFAULTS,name)||!valid(name,checked))return false;

@@ -6,7 +6,9 @@ export const USER_PUZZLE_ENVIRONMENT=Object.freeze({environment:'dreamscape',com
 export function authoredEnvironment(level,groups,fallback='meadow'){
   return level.environment??groups.find(group=>group.id===level.group)?.environment??fallback;
 }
-export function gameplayEnvironmentConfiguration(level,groups,approved,applied,revision){
+export function gameplayEnvironmentConfiguration(level,groups,approved,applied,revision,scenario=null){
+  if(scenario==='daisy-meadow')return approved;
+  if(['riso-print','dreamscape'].includes(scenario))return {environment:scenario,composition:'auto',layers:'both',showGuides:false,sceneryLayout:[],scenicAtmosphere:false};
   if(level.userPuzzle||level.temporaryPlaytest)return USER_PUZZLE_ENVIRONMENT;
   if(authoredEnvironment(level,groups)==='japan-spring'||level.group==='japan-challenges')return null;
   return revision===ENVIRONMENT_REVISION&&applied?applied:approved;

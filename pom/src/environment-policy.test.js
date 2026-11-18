@@ -30,3 +30,14 @@ test('stacked controls adopt once and preserve subsequent user choices and unrel
  assert.deepEqual(adoptStackedInteraction({interactionRevision:INTERACTION_REVISION},flags),flags);
  assert.equal(flags.pieceDragArrows,true);
 });
+test('explicit scenario preference covers catalog, Japan and user puzzles',()=>{
+ for(const level of [catalog.levels[0],{environment:'japan-spring'},{userPuzzle:{id:'custom'}},{temporaryPlaytest:true}]){
+   assert.equal(gameplayEnvironmentConfiguration(level,[],approved,null,null,'daisy-meadow'),approved);
+   for(const scenario of ['riso-print','dreamscape']){
+     const result=gameplayEnvironmentConfiguration(level,[],approved,null,null,scenario);
+     assert.equal(result.environment,scenario);
+     assert.deepEqual(result.sceneryLayout,[]);
+     assert.equal(result.scenicAtmosphere,false);
+   }
+ }
+});

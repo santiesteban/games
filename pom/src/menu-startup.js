@@ -27,6 +27,7 @@ export function startMenu(){
     if(panel==='levels')runtime.catalog.render();
     if(panel==='title')runtime.catalog.renderHome();
     if(panel==='settings'){
+      document.querySelector('#scenario').value=preferences.scenario??'daisy-meadow';
       document.querySelector('#clearProgressConfirm').hidden=true;
       document.querySelector('#clearProgress').hidden=false;
       document.querySelector('#progressMessage').textContent='';
@@ -69,11 +70,12 @@ export function startMenu(){
   document.querySelector('#topFaceAppearance').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setTopFaceStyle(event.target.value));syncFeatures()},options);
   document.querySelector('#movementMarkerShape').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setMovementMarkerShape(event.target.value));syncFeatures()},options);
   document.querySelector('#pomEyeStyle').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setPomEyeStyle(event.target.value));syncFeatures()},options);
+  document.querySelector('#scenario').addEventListener('change',event=>preferenceMessage('#scenarioMessage',preferences.set('scenario',event.target.value)),options);
   for(const name of ['hideKnownIssues','hideHelpText']){const toggle=document.querySelector(`#${name}`);toggle.checked=preferences[name];toggle.addEventListener('change',()=>{preferenceMessage('#preferenceMessage',preferences.set(name,toggle.checked));runtime.change()},options)}
   document.querySelector('#clearProgress').addEventListener('click',()=>{document.querySelector('#clearProgress').hidden=true;document.querySelector('#clearProgressConfirm').hidden=false;document.querySelector('#cancelClearProgress').focus()},options);
   document.querySelector('#cancelClearProgress').addEventListener('click',()=>{document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#clearProgress').focus()},options);
   document.querySelector('#confirmClearProgress').addEventListener('click',()=>{if(!progress.clear()){document.querySelector('#progressMessage').textContent='Your browser could not clear progress. Check that site storage is allowed.';return}runtime.change();updateProgress();document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='Your progress has been cleared.'},options);
-  window.addEventListener('storage',event=>{if(event.key===unfinished.key)runtime.change();if(event.key===progress.key||event.key===null){progress.reload();runtime.change();updateProgress()}if(event.key===preferences.key||event.key===null){preferences.reload();for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=preferences[name];runtime.change()}if(event.key===features.key||event.key===null){features.reload();syncFeatures()}},options);
+  window.addEventListener('storage',event=>{if(event.key===unfinished.key)runtime.change();if(event.key===progress.key||event.key===null){progress.reload();runtime.change();updateProgress()}if(event.key===preferences.key||event.key===null){preferences.reload();document.querySelector('#scenario').value=preferences.scenario??'daisy-meadow';for(const name of ['hideKnownIssues','hideHelpText'])document.querySelector(`#${name}`).checked=preferences[name];runtime.change()}if(event.key===features.key||event.key===null){features.reload();syncFeatures()}},options);
   syncFeatures();updateProgress();
   document.querySelector('#interactionLabLink').hidden=false;
   return runtime;
