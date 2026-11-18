@@ -17,7 +17,7 @@ import { createUnfinishedPuzzles } from './unfinished-puzzles.js';
 import { createLevelPreferences } from './level-preferences.js';
 import { CONTROL_FEATURES, createControlFeatures } from './control-features.js';
 import { createMovementMarkers } from './movement-markers.js';
-import { puzzleFloorBounds } from './floor-grid.js';
+import { puzzleFloorBounds, floorOutlinePoints, snapFloorLine } from './floor-grid.js';
 import { createLevelLoadGate } from './level-loading.js';
 import { sampleCameraIntro, initialCameraUnit, openingFrameFits } from './camera-intro.js';
 import { boundedCameraAxis } from './camera-follow.js';
@@ -1604,22 +1604,27 @@ function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
   const visible=(cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides))&&!floorMarkersEnabled();
-  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  const border=getComputedStyle(wrap),lineWidth=parseFloat(border.borderTopWidth)||2,radius=parseFloat(border.borderBottomLeftRadius)||0,color=border.borderTopColor;
+  const pixelRatio=Math.min(window.devicePixelRatio||1,2);
+  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,lineWidth,radius,color,pixelRatio,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
   // Keep an empty transparent guide layer when hidden; removing its mesh can
   // alter the engine's transparent pass and hide the character overlay.
-  const mesh=new Mesh(),tint=new Color(.28,.32,.25,visible?.5:0);
-  const strip=(x0,z0,x1,z1)=>{
-    const a=render3D.worldToScreen(worldPoint(x0,.008,z0*extrusionScale),size),b=render3D.worldToScreen(worldPoint(x1,.008,z1*extrusionScale),size);
+  const channels=color.match(/[\d.]+/g)?.map(Number)??[17,17,17],mesh=new Mesh(),tint=new Color(channels[0]/255,channels[1]/255,channels[2]/255,visible?.2:0);
+  const project=(x,z)=>render3D.worldToScreen(worldPoint(x,.008,z*extrusionScale),size);
+  const strip=(a,b)=>{
     if(!a||!b)return;
+    const [start,end]=snapFloorLine(a,b,lineWidth,pixelRatio);a=vec2(start.x,start.y);b=vec2(end.x,end.y);
     const delta=b.subtract(a);if(delta.length()<.001)return;
-    const normal=vec2(-delta.y,delta.x).normalize(1),screen=[a.add(normal),b.add(normal),b.subtract(normal),a.subtract(normal)];
+    const normal=vec2(-delta.y,delta.x).normalize(lineWidth/2),screen=[a.add(normal),b.add(normal),b.subtract(normal),a.subtract(normal)];
     const points=screen.map(point=>{const ray=render3D.screenToRay(point,size),t=(ground-ray.origin.y)/ray.direction.y;return Number.isFinite(t)&&t>0?ray.getPosition(t):null});
     if(points.some(point=>!point))return;
     mesh.addQuad(...points,tint);
   };
-  for(let x=bounds.left;x<=bounds.right;x++)strip(x,bounds.back,x,bounds.front);
-  for(let z=bounds.back;z<=bounds.front;z++)strip(bounds.left,z,bounds.right,z);
+  for(let x=bounds.left+1;x<bounds.right;x++)strip(project(x,bounds.back),project(x,bounds.front));
+  for(let z=bounds.back+1;z<bounds.front;z++)strip(project(bounds.left,z),project(bounds.right,z));
+  const corners=[project(bounds.left,bounds.back),project(bounds.right,bounds.back),project(bounds.right,bounds.front),project(bounds.left,bounds.front)];
+  if(corners.every(Boolean)){const outline=floorOutlinePoints(corners,radius).map(p=>vec2(p.x,p.y));for(let i=1;i<outline.length;i++)strip(outline[i-1],outline[i])}
   mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;
   floorGuideMesh?.dispose();floorGuideMesh=mesh;floorGuideKey=key;
 }
