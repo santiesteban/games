@@ -2490,7 +2490,7 @@ function moveTo(p,pressMarker=false,preview=null){
   movementMarkerRoute=pressDestination?path.slice(1):null;movementMarkerRouteTargets=pressDestination?standableReachable():null;movementMarkerRouteIndex=0;
   hideHelp();save();resumeStudyFollow();busy=true;redPom?.setMoving(true);effortFrame++;setUmbrellaVisible(false);falling=false;updateUI();let index=0,start;
   function finish(){
-    falling=false;redPom?.setMoving(false);showRedPom('calm');setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
+    falling=false;redPom?.setStepJump(null);redPom?.setMoving(false);showRedPom('calm');setUmbrellaVisible(false);busy=false;movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;
     if(!warpPipePreview&&!isPreviewLevel(activeLevel)&&nodeKey(player)===nodeKey(goalNode())){won=true;recordCompletedLevel();startCelebration()}
     else {if(!canInteract(selected))selected=null;autoSelectNearbyPiece();saveUnfinished()}
     syncFlag();syncPlayer();updateUI();
@@ -2508,6 +2508,7 @@ function moveTo(p,pressMarker=false,preview=null){
       finish();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
+    redPom?.setStepJump(plan.isStepJump&&!reducedSelectionMotion.matches?t:null);
     const hasApproach=plan.continuousFlight&&plan.takeoff>0;
     const launchAt=hasApproach ? .88*Math.acos(1-2*plan.takeoff)/Math.PI : plan.continuousFlight ? .10 : .16;
     const flight=plan.isJump?Math.max(0,Math.min(1,(t-launchAt)/(.88-launchAt))):t;
@@ -2523,7 +2524,7 @@ function moveTo(p,pressMarker=false,preview=null){
       progress=t<.10?plan.takeoff*smooth(t/.10):t<launchAt?plan.takeoff:t<.88?plan.takeoff+(plan.landing-plan.takeoff)*smooth(flight):plan.landing+(1-plan.landing)*smooth((t-.88)/.12);
     }
     const jumpPoint=plan.isJump?sampleMovementProgress(plan,progress):null;
-    const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
+    const motion={pose:plan.isJump?worldPoint(jumpPoint.x,jumpPoint.y,jumpPoint.z):plan.isStepJump?jumpPose(from,to,flight,profile):plan.stretch?shapePomReach(from,to,flight,profile):jumpPose(from,to,flight,profile),umbrella:plan.isFall&&flight>.08&&flight<.96,flight};
     if(plan.isJump&&!reducedSelectionMotion.matches){
       const windupStart=plan.continuousFlight ? 0 : .05;
       const windup=t<launchAt?smooth((t-windupStart)/(launchAt-windupStart)):Math.max(0,1-flight/.12);

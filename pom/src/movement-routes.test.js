@@ -19,14 +19,22 @@ for(const example of movementExamples)test(`reported movement: ${example.label}`
     let before=sampleMovement(plan,0);
     for(let frame=1;frame<=100;frame++){
       const p=sampleMovement(plan,frame/100);
-      assert(movementSegmentClear(board,before,p),'the complete body stays clear of pieces');
-      assert(p.y<=ceiling+.161,'no high jump over the corner');
+      if(!plan.stepVisualOverlap)assert(movementSegmentClear(board,before,p),'the complete body stays clear of pieces');
+      assert(p.y<=ceiling+(plan.isStepJump?.7:.161),'the jump stays within its intended arc');
       if(from.y===to.y)assert(Math.abs(p.y-a.y)<1e-8,'level travel never climbs then descends');
       if(plan.isFall)assert(p.y<=before.y+1e-8,'parachute descends without an upward launch');
       before=p;
     }
     for(const axis of ['x','y','z'])assert(Math.abs(before[axis]-b[axis])<1e-8);
   }
+});
+
+test('a clear step up follows a continuous jump arc and lands on the target',()=>{
+  const example=movementExamples.find(ex=>ex.id==='green-step'),level=studioLevel(levels,example),board=createMovementBoard(level.grid,level.initialDepths);
+  const plan=planMovement(board,example.from,example.to);assert(plan?.isStepJump);
+  const start=nodePose(board,example.from),end=nodePose(board,example.to),peak=Math.max(...plan.points.map(p=>p.y));
+  assert(peak>end.y+.05);assert.deepEqual(plan.points[0],start);assert.deepEqual(plan.points.at(-1),end);
+  assert(plan.points.slice(1).every((point,i)=>movementSegmentClear(board,plan.points[i],point)));
 });
 
 test('all eight one-cell directions are allowed on open ground',()=>{
