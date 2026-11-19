@@ -344,13 +344,18 @@ function animatePulloutSwitch(result,depths,from,done){
   requestAnimationFrame(tick);
 }
 function rayHitsTriangle(origin,direction,a,b,c){
-  const e1=b.subtract(a),e2=c.subtract(a),h=direction.cross(e2),det=e1.dot(h);
+  const e1x=b.x-a.x,e1y=b.y-a.y,e1z=b.z-a.z;
+  const e2x=c.x-a.x,e2y=c.y-a.y,e2z=c.z-a.z;
+  const hx=direction.y*e2z-direction.z*e2y,hy=direction.z*e2x-direction.x*e2z,hz=direction.x*e2y-direction.y*e2x;
+  const det=e1x*hx+e1y*hy+e1z*hz;
   if(Math.abs(det)<1e-8)return false;
-  const inv=1/det,s=origin.subtract(a),u=inv*s.dot(h);
+  const inv=1/det,sx=origin.x-a.x,sy=origin.y-a.y,sz=origin.z-a.z;
+  const u=inv*(sx*hx+sy*hy+sz*hz);
   if(u<0||u>1)return false;
-  const q=s.cross(e1),v=inv*direction.dot(q);
+  const qx=sy*e1z-sz*e1y,qy=sz*e1x-sx*e1z,qz=sx*e1y-sy*e1x;
+  const v=inv*(direction.x*qx+direction.y*qy+direction.z*qz);
   if(v<0||u+v>1)return false;
-  return inv*e2.dot(q)>.025;
+  return inv*(e2x*qx+e2y*qy+e2z*qz)>.025;
 }
 function pomShadowCoverage(){
   if(!render3D.shadows||!playerObject)return 0;
@@ -619,35 +624,74 @@ function prismMesh(cx,cy,depth,side,color,top=false,start=0,pulledDepth=depth,wa
   }
   m.doubleSided=true;return m;
 }
-function rebuildBlockMeshes(){for(const o of blockObjects)o.destroy();blockObjects=[];for(const g of groups){g.objects=[];for(const c of g.cells){const p=vec3(c.x+.5,H-c.y-.5,0),o=makeSurface(p,frontTileMesh(),palette[g.color]);g.objects.push(o);blockObjects.push(o)}}syncBlocks()}
-let pieceDragPreview=null,pieceDragAnchor=null;
-function visualDepth(g){return (pulloutAnimationDepths?.[g.id]??g.depth)+(pieceDragPreview?.piece===g?pieceDragPreview.offset:0)}
-function syncExtrusions(){for(const g of groups)g.lightboxSurfaces=[];for(const o of [...extrusionObjects,...extrusionOutlines,...topPickObjects])o.destroy();extrusionObjects=[];extrusionOutlines=[];topPickObjects=[];topObjectInfo.clear();sideObjectInfo.clear();
-  const reachable=walkabilityFacesEnabled()?reachableSurfaceKeys():null;
-  for(const g of groups)if(!visualDepth(g)){
-    const points=[worldPoint(-.5,.5,0),worldPoint(-.5,-.5,0),worldPoint(.5,-.5,0),worldPoint(.5,.5,0)];
-    const mesh=cardboardMesh(points,palette[g.color],vec3(-depthSkew()*CARDBOARD_THICKNESS,0,-CARDBOARD_THICKNESS));
-    for(const c of g.cells){
-      const card=makeSurface(worldPoint(c.x+.5,H-c.y-.5,0),mesh,new Color(1));
-      extrusionOutlines.push(card);sideObjectInfo.set(card,g);g.lightboxSurfaces.push(card);
+let sharedFrontMesh;
+function rebuildBlockMeshes(){
+  for(const object of blockObjects)object.destroy();
+  blockObjects=[];sharedFrontMesh??=frontTileMesh();
+  for(const group of groups){
+    group.objects=[];
+    for(const cell of group.cells){
+      const position=vec3(cell.x+.5,H-cell.y-.5,0);
+      const object=makeSurface(position,sharedFrontMesh,palette[group.color]);
+      group.objects.push(object);blockObjects.push(object);
     }
   }
-  for(const g of groups)if(visualDepth(g)){
-    const combinedTop=new Mesh();
-    for(const c of g.cells){
-      const base=vec3(c.x+.5,stretchY(H-c.y-.5),0),exposed={left:byCell[c.y]?.[c.x-1]!==g,right:byCell[c.y]?.[c.x+1]!==g,bottom:byCell[c.y+1]?.[c.x]!==g},dark=makeSurface(base,prismMesh(c.x,c.y,visualDepth(g),viewSide,g.color,false,0,visualDepth(g),true,exposed),new Color(1));
-      extrusionOutlines.push(dark);sideObjectInfo.set(dark,g);g.lightboxSurfaces.push(dark);
-      for(let z=0;z<visualDepth(g);z++){
-        const walkable=reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true;
-        const tile=prismMesh(c.x,c.y,Math.min(1,visualDepth(g)-z),viewSide,g.color,true,z,Math.ceil(visualDepth(g)),walkable);
-        const color=depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z);
-        combinedTop.combine(tile,base,color);
-        const pick=makeSurface(base,tile,color);pick.render3D=()=>{};topPickObjects.push(pick);topObjectInfo.set(pick,{x:c.x,y:c.y,z});
-      }
+  syncBlocks();
+}
+let pieceDragPreview=null,pieceDragAnchor=null;
+function visualDepth(g){return (pulloutAnimationDepths?.[g.id]??g.depth)+(pieceDragPreview?.piece===g?pieceDragPreview.offset:0)}
+const extrusionCache=new Map();
+function syncExtrusions(){
+  const reachable=walkabilityFacesEnabled()?reachableSurfaceKeys():null;
+  const design=currentDesign();
+  const sharedKey=JSON.stringify([depthSkew(),yStretch,viewSide,topFaceStyle(),design.bands,design.lines,reachable?[...reachable].sort():null]);
+  for(const [group,entry] of extrusionCache){
+    if(!groups.includes(group)){
+      for(const object of entry.objects)object.destroy();
+      extrusionCache.delete(group);
     }
-    combinedTop.doubleSided=true;
-    const top=makeSurface(vec3(),combinedTop,new Color(1));
-    extrusionObjects.push(top);g.lightboxSurfaces.push(top);
+  }
+  extrusionObjects=[];extrusionOutlines=[];topPickObjects=[];topObjectInfo.clear();sideObjectInfo.clear();
+  for(const g of groups){
+    const depth=visualDepth(g),color=palette[g.color];
+    const key=JSON.stringify([sharedKey,depth,g.depth,color.r,color.g,color.b]);
+    let entry=extrusionCache.get(g);
+    if(!entry||entry.key!==key){
+      if(entry)for(const object of entry.objects)object.destroy();
+      entry={key,objects:[],tops:[],outlines:[],picks:[],pickInfo:[],surfaces:[]};
+      if(!depth){
+        const points=[worldPoint(-.5,.5,0),worldPoint(-.5,-.5,0),worldPoint(.5,-.5,0),worldPoint(.5,.5,0)];
+        const mesh=cardboardMesh(points,color,vec3(-depthSkew()*CARDBOARD_THICKNESS,0,-CARDBOARD_THICKNESS));
+        for(const c of g.cells){
+          const card=makeSurface(worldPoint(c.x+.5,H-c.y-.5,0),mesh,new Color(1));
+          entry.objects.push(card);entry.outlines.push(card);entry.surfaces.push(card);
+        }
+      }else{
+        const combinedTop=new Mesh();
+        for(const c of g.cells){
+          const base=vec3(c.x+.5,stretchY(H-c.y-.5),0);
+          const exposed={left:byCell[c.y]?.[c.x-1]!==g,right:byCell[c.y]?.[c.x+1]!==g,bottom:byCell[c.y+1]?.[c.x]!==g};
+          const dark=makeSurface(base,prismMesh(c.x,c.y,depth,viewSide,g.color,false,0,depth,true,exposed),new Color(1));
+          entry.objects.push(dark);entry.outlines.push(dark);entry.surfaces.push(dark);
+          for(let z=0;z<depth;z++){
+            const walkable=reachable?.has(nodeKey({x:c.x,y:c.y,z}))??true;
+            const tile=prismMesh(c.x,c.y,Math.min(1,depth-z),viewSide,g.color,true,z,Math.ceil(depth),walkable);
+            const tint=depthColorsEnabled()?new Color(1):platformTopColor(g,c.x,z);
+            combinedTop.combine(tile,base,tint);
+            const pick=makeSurface(base,tile,tint);pick.render3D=()=>{};
+            entry.objects.push(pick);entry.picks.push(pick);entry.pickInfo.push({x:c.x,y:c.y,z});
+          }
+        }
+        combinedTop.doubleSided=true;
+        const top=makeSurface(vec3(),combinedTop,new Color(1));
+        entry.objects.push(top);entry.tops.push(top);entry.surfaces.push(top);
+      }
+      extrusionCache.set(g,entry);
+    }
+    g.lightboxSurfaces=entry.surfaces;
+    extrusionObjects.push(...entry.tops);extrusionOutlines.push(...entry.outlines);topPickObjects.push(...entry.picks);
+    for(const object of entry.outlines)sideObjectInfo.set(object,g);
+    entry.picks.forEach((object,index)=>topObjectInfo.set(object,entry.pickInfo[index]));
   }
 }
 let sceneryWallZ=null,wallJoinMesh,wallJoinKey;
