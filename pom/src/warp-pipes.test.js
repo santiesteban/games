@@ -31,9 +31,14 @@ test('inverted pipes survive links and warp to a landing below',()=>{
 test('an elevated inverted exit drops to the first reachable surface',()=>{
   const grid=[...Array(28).fill('.'.repeat(32)),'0'+'.'.repeat(31),'.'.repeat(32),'1'+'.'.repeat(31),'2'+'.'.repeat(31)];
   const board=createMovementBoard(grid,[1,2,3]),pipe={x:0,y:28,inverted:true};
-  assert.deepEqual(warpEndpoint(board,pipe),{entry:null,landing:{x:0,y:30,z:1}});
+  assert.deepEqual(warpEndpoint(board,pipe),{entry:null,landing:{x:0,y:30,z:0}});
   const supported=createMovementBoard([...Array(28).fill('.'.repeat(32)),'0'+'.'.repeat(31),'1'+'.'.repeat(31),'.'.repeat(32),'2'+'.'.repeat(31)],[1,2,3]);
   assert.equal(warpEndpoint(supported,pipe),null);
+});
+test('an inverted exit lands directly below the pipe when that floor cell is clear',()=>{
+  const grid=[...Array(29).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'.'.repeat(32),'.'.repeat(32)];
+  const board=createMovementBoard(grid,[2,1]),pairs=[[{x:0,y:29,inverted:true},{x:5,y:29}]];
+  assert.deepEqual(warpDestination(board,{x:5,y:29,z:0},pairs),{x:0,y:32,z:1});
 });
 test('an inverted pipe can only be entered from its immediately adjacent underside',()=>{
   const grid=[...Array(31).fill('.'.repeat(32)),'0....11'+'.'.repeat(25)];
@@ -50,6 +55,15 @@ test('Pom can enter from the supported square one level below an unobstructed in
   assert.equal(warpDestination(board,{...pom,z:1},pairs),null);
   assert.equal(warpDestination(board,{...pom,x:1},pairs),null);
 });
+test('Pom can jump into an inverted pipe two cells above a clear standing space',()=>{
+  const grid=[...Array(28).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'.'.repeat(32),'.'.repeat(32),'1'+'.'.repeat(31)];
+  const pairs=[[{x:0,y:28,inverted:true},{x:5,y:28}]],pom={x:0,y:31,z:1};
+  const board=createMovementBoard(grid,[2,1,2]);
+  assert.deepEqual(warpDestination(board,pom,pairs),{x:5,y:28,z:0});
+  assert.equal(warpDestination(board,{...pom,x:1},pairs),null);
+  const blocked=[...grid];blocked[30]='3'+'.'.repeat(31);
+  assert.equal(warpDestination(createMovementBoard(blocked,[2,1,2,2]),pom,pairs),null);
+});
 test('a piece directly below an inverted pipe blocks both ends at equal or greater depth',()=>{
   const grid=[...Array(29).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'1'+'.'.repeat(31),'.'.repeat(32)];
   const board=createMovementBoard(grid,[1,1,1]),pairs=[[{x:0,y:29,inverted:true},{x:5,y:29}]],from={x:5,y:29,z:0};
@@ -57,7 +71,7 @@ test('a piece directly below an inverted pipe blocks both ends at equal or great
   board.byCell[30][0].depth=2;
   assert.equal(warpDestination(board,from,pairs),null);
   board.byCell[30][0].depth=0;
-  assert.deepEqual(warpDestination(board,from,pairs),{x:0,y:32,z:1});
+  assert.deepEqual(warpDestination(board,from,pairs),{x:0,y:32,z:0});
 });
 test('warp requires both ends exposed, works in both directions and preserves their depths',()=>{
   const p=validatePuzzle(example()),board=createMovementBoard(p.grid,p.initialDepths);

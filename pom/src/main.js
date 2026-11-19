@@ -940,7 +940,7 @@ function warpPomPosition(scaleY=1,lift=0){
   const endpoint=warpEndpoints().findIndex(({cell})=>cell.x===player.x&&cell.y===player.y);
   const up=render3D.camera.getUp();
   const rimTop=warpRimHeight(endpoint);
-  const bottom=.379*.56*scaleY*Math.max(0,up.y);
+  const bottom=redPom ? .205 : .379*.56*scaleY*Math.max(0,up.y);
   return worldPoint(player.x+.5,H-player.y+rimTop+bottom+lift,player.z+.5);
 }
 function pipeStandingPosition(node,endpoint){
@@ -1088,18 +1088,20 @@ function syncWarpPipePreview(){
     parts.badgePulse.mesh=warpPreviewAssets.meshes.badge;parts.badgePulse.tileInfo=parts.badgePulse.warpTile;
     parts.badgePulse.pos3D=parts.badge.pos3D.add(vec3(0,0,.004));parts.badgePulse.scale3D=parts.badge.scale3D.copy();
     if(!raised)return;
-    const height=.72,offset=-.22*height*(1-motion.value);
+    const height=.72,extension=cell.inverted?.5-.37*height:0,offset=-(.22*height+extension)*(1-motion.value);
     for(const name of [motion.value>.001?'body':null,'rim',active&&opening.value>.001?'opening':null,(!active||(occupied&&!warpPreviewOpeningVisible))?'cap':null].filter(Boolean)){
       const object=parts[name];
       object.mesh=warpPreviewAssets.meshes[name];object.tileInfo=object.warpTile;
       // Put the occupied pipe's cap just beneath the shrinking opening, so the
       // opening can close smoothly without exposing the hollow interior.
       const capOffset=name==='cap'&&active?-.072*height:0;
-      object.pos3D=base.add(vec3(0,stretchY((offset+capOffset)*(cell.inverted?-1:1)),0));
+      const extensionOffset=name==='body'?0:extension;
+      object.pos3D=base.add(vec3(0,stretchY((offset+capOffset+extensionOffset)*(cell.inverted?-1:1)),0));
       object.rotation3D.z=cell.inverted?Math.PI:0;
       const mouth=occupied?warpPreviewMouth:1;
       const openingScale=name==='opening'?opening.value:1;
-      object.scale3D=vec3(mouth*openingScale,stretchY(height),mouth*openingScale);
+      const bodyHeight=name==='body'?height+extension/.23:height;
+      object.scale3D=vec3(mouth*openingScale,stretchY(bodyHeight),mouth*openingScale);
       object.castShadow=!!render3D.shadows&&(name==='body'||name==='rim');
     }
   });
@@ -1181,7 +1183,7 @@ function animateWarpPreview(source=0,destination=1){
     if(token!==warpPreviewAnimation)return;
     start??=now;const elapsed=now-start;
     panCamera(elapsed);
-    showRedPom(elapsed<1700?'warp-out':'excited',elapsed>=2650);
+    showRedPom(elapsed<1700?'warp-out':'pipe-exit');
     if(elapsed>=1550&&!atDestination){atDestination=true;player={x:cells[1].x,y:cells[1].y,z:byCell[cells[1].y][cells[1].x].depth-1};syncBlocks();syncFlag()}
     // Shrink Pom into a small floating ball, then let it descend into the
     // opening. The arrival plays the same motion in reverse.
@@ -1191,9 +1193,13 @@ function animateWarpPreview(source=0,destination=1){
     else if(elapsed<1000){const t=smooth((elapsed-450)/550);size=1-.52*t;visibility=1;mouth=1+.12*t;lift=.20*t;squint=1}
     else if(elapsed<1400){const t=smooth((elapsed-1000)/400);size=.48;visibility=t<.96?1:0;mouth=1.12;lift=.20-.52*t;squint=1}
     else if(elapsed<1700){size=.48;visibility=0;mouth=1.12;lift=-.32;squint=1}
-    else if(elapsed<2100){const t=smooth((elapsed-1700)/400);size=.48;visibility=t>.04?1:0;mouth=1.12;lift=-.32+.52*t;squint=1}
-    else if(elapsed<2650){const t=smooth((elapsed-2100)/550);size=.48+.52*t;visibility=1;mouth=1.12-.12*t;lift=.20*(1-t);squint=1}
-    else {size=1;visibility=1;mouth=1;lift=0;squint=1-smooth((elapsed-2650)/250)}
+    else if(elapsed<2350){
+      const progress=(elapsed-1700)/650,growth=Math.min(1,progress/.3);
+      size=.48+.52*growth;visibility=1;mouth=1.12-.12*growth;squint=1-growth;
+      if(reducedSelectionMotion.matches)lift=-.32*(1-smooth(progress));
+      else if(progress<.45){const t=progress/.45;lift=-.32+.77*(1-(1-t)**2)}
+      else {const t=(progress-.45)/.55;lift=.45*(1-t*t)}
+    }else {size=1;visibility=1;mouth=1;lift=0;squint=0}
     const showOpening=lift>.02||size<.98;
     if(showOpening!==warpPreviewOpeningVisible||Math.abs(mouth-warpPreviewMouth)>.01){warpPreviewOpeningVisible=showOpening;warpPreviewMouth=mouth;syncWarpPipePreview()}
     const morph=smooth((1-size)/.52);
@@ -1216,6 +1222,8 @@ function animateWarpPreview(source=0,destination=1){
         white.scale3D=vec3(.22,.28,1);black.scale3D=vec3(.12,.154,1);
       }
     }
+    if(elapsed>=2350&&elapsed<2600&&!reducedSelectionMotion.matches)redPom?.setStepJump(.82+.18*(elapsed-2350)/250);
+    else redPom?.setStepJump(null);
     const visibleSize=Math.max(.001,size*visibility);
     // A little extra height makes the small pose nearly circular.
     const sy=visibleSize*(1+.25*(1-size));
@@ -1224,8 +1232,8 @@ function animateWarpPreview(source=0,destination=1){
     const smileStep=Math.min(24,Math.floor(24*smooth((elapsed-3500)/140)));
     warpSmile.mesh=elapsed>=1700&&elapsed<3680?warpSmileFrame(smileStep):undefined;
     syncPomMatrix();
-    if(elapsed<3680)requestAnimationFrame(tick);
-    else {busy=false;warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;showRedPom('calm');resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
+    if(elapsed<2600)requestAnimationFrame(tick);
+    else {busy=false;redPom?.setStepJump(null);warpPreviewWarping=false;warpPreviewOpeningVisible=false;warpPreviewMouth=1;showRedPom('calm');resetWarpEyes();syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI()}
   }
   requestAnimationFrame(tick);
 }
@@ -1234,29 +1242,61 @@ function animateInvertedWarp(source,destination,endpoints){
   if(!to)return;
   const token=++warpPreviewAnimation,sourceCell=endpoints[source].cell,destinationCell=endpoints[destination].cell;
   const sourceGroup=endpoints[source].group,destinationGroup=endpoints[destination].group;
-  const outlet=(cell,group)=>worldPoint(cell.x+.5,H-cell.y-1-.1,group.depth-.5);
+  const outlet=(cell,group)=>worldPoint(cell.x+.5,H-cell.y-1-.5,group.depth-.5);
   const start=playerObject.pos3D.copy();
   const entrance=sourceCell.inverted?outlet(sourceCell,sourceGroup):start.add(vec3(0,stretchY(-.22),0));
-  const landing=destinationCell.inverted?pomPositionOnNode(to):pipeStandingPosition(to,destination);
+  let landing=destinationCell.inverted?pomPositionOnNode(to):pipeStandingPosition(to,destination);
   const exit=destinationCell.inverted?outlet(destinationCell,destinationGroup):landing.add(vec3(0,stretchY(-.22),0));
+  const outside=exit.add(vec3(0,Math.max(stretchY(-.38),landing.y-exit.y),0));
   save();stopIntro();hideHelp();clearMovementRoutes();selected=null;resetStudyFollow({paused:true});busy=true;redPom?.setMoving(true);updateUI();
+  const jumpDuration=sourceCell.inverted&&from.y>=sourceCell.y+2&&!reducedSelectionMotion.matches?450:0;
+  const jumpTarget=entrance.add(vec3(0,stretchY(-.22),0));
+  const entryEnd=sourceCell.inverted?entrance.add(vec3(0,stretchY(.18),0)):entrance;
   const panCamera=createWarpCameraPan(destinationCell,destinationGroup,250,650);
   let began,placed=false;
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
   function tick(now){
     if(token!==warpPreviewAnimation)return;
-    began??=now;const elapsed=now-began;
+    began??=now;const elapsed=now-began-jumpDuration;
+    if(elapsed<0){
+      const progress=(now-began)/jumpDuration;
+      showRedPom('calm');redPom?.setStepJump(progress);
+      playerObject.pos3D=start.lerp(jumpTarget,1-(1-progress)*(1-progress));syncPomMatrix();
+      requestAnimationFrame(tick);return;
+    }
+    redPom?.setStepJump(null);
     panCamera(elapsed);
     if(elapsed>=600&&!placed){player={...to};placed=true;syncBlocks();syncFlag()}
+    if(placed&&!destinationCell.inverted)landing=pipeStandingPosition(to,destination);
     let position,size;
-    if(elapsed<500){const t=smooth(elapsed/500);position=start.lerp(entrance,t);size=1-.95*t}
+    if(elapsed<500){const t=smooth(elapsed/500);position=(jumpDuration?jumpTarget:start).lerp(entryEnd,t);size=1-.95*t}
     else if(elapsed<650){position=exit;size=.05}
-    else if(elapsed<1000){const t=smooth((elapsed-650)/350);position=destinationCell.inverted?exit:exit.lerp(landing,t);size=.05+.95*t}
-    else{const t=smooth((elapsed-1000)/400);position=exit.lerp(landing,t);size=1}
-    showRedPom(elapsed<650?'warp-out':'excited',elapsed>=1000);
-    playerObject.pos3D=position;playerObject.scale3D=vec3(.72*size,.56*size,.018);syncPomMatrix();
-    if(elapsed<1400){requestAnimationFrame(tick);return}
-    busy=false;redPom?.setMoving(false);showRedPom('calm');syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI();
+    else if(!reducedSelectionMotion.matches){
+      const progress=Math.max(0,Math.min(1,(elapsed-650)/(destinationCell.inverted?500:650)));
+      const burst=progress<.18?0:Math.min(1,((progress-.18)/.62)**2);
+      const emergence=destinationCell.inverted?exit.add(vec3(0,stretchY(.18),0)):exit;
+      if(destinationCell.inverted)position=emergence.lerp(landing,burst);
+      else if(progress<.45){const t=progress/.45;position=emergence.lerp(landing.add(vec3(0,stretchY(.45),0)),1-(1-t)**2)}
+      else {const t=(progress-.45)/.55;position=landing.add(vec3(0,stretchY(.45*(1-t*t)),0))}
+      size=Math.min(1,.05+progress/(destinationCell.inverted?.18:.3)*.95);
+    }else if(elapsed<1000){
+      const t=smooth((elapsed-650)/350),emergence=exit.add(vec3(0,stretchY(.18),0));
+      position=destinationCell.inverted?emergence.lerp(outside,t):exit.lerp(landing,t);size=.05+.95*t;
+    }else{
+      const t=smooth((elapsed-1000)/400),from=destinationCell.inverted?outside:exit;
+      position=destinationCell.inverted?from.lerp(landing,t):landing;size=1;
+    }
+    showRedPom(elapsed<650?'calm':'pipe-exit');
+    let squash=0;
+    if(elapsed>=650&&!reducedSelectionMotion.matches){
+      const progress=(elapsed-650)/(destinationCell.inverted?500:650);
+      if(destinationCell.inverted)squash=progress<.18?.22*(progress/.18):progress<.8?-.22*Math.sin(Math.PI*(progress-.18)/.62):0;
+      const impact=destinationCell.inverted?.8:1;
+      if(progress>=impact)redPom?.setStepJump(Math.min(1,.82+(progress-impact)*(destinationCell.inverted?.45:.18*650/250)));
+    }
+    playerObject.pos3D=position;playerObject.scale3D=vec3(.72*size*(1+squash),.56*size*(1-squash),.018);syncPomMatrix();
+    if(elapsed<(destinationCell.inverted?1400:1550)){requestAnimationFrame(tick);return}
+    busy=false;redPom?.setStepJump(null);redPom?.setMoving(false);showRedPom('calm');syncPlayer();syncFlag();autoSelectNearbyPiece();saveUnfinished();updateUI();
   }
   requestAnimationFrame(tick);
 }
@@ -2370,7 +2410,11 @@ function puzzlePoint(point){const p=projectPuzzlePoint(puzzleProjectionState(),p
 function logicalPuzzlePoint(point){const p=unprojectPuzzlePoint(puzzleProjectionState(),point);return vec3(p.x,p.y,p.z)}
 function pomSurfaceCorrection(){
   const onPipe=warpPlayerOnPipe();
-  return onPipe&&!busy?render3D.camera.getForward().scale(-.35):onPipe||pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045);
+  if(onPipe){
+    const towardCamera=render3D.camera.pos.subtract(playerObject.pos3D).normalize().scale(.08);
+    return vec3(towardCamera.x,0,towardCamera.z);
+  }
+  return pulloutSwitchAt(player)?vec3():render3D.camera.getForward().scale(.045);
 }
 function syncPuzzleProjection(){
   const projection=puzzleProjectionState();puzzleGPU?.begin(projection,requestGPUProjection&&extrusionScale===1);
@@ -2470,7 +2514,7 @@ function gameUpdate(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setEyeStyle(controlFeatures.pomEyeStyle);redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),pomSurfaceCorrection())}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setEyeStyle(controlFeatures.pomEyeStyle);const camera=render3D.camera,forward=camera.getForward(),position=playerObject.pos3D,depth=position.subtract(camera.pos).dot(forward),groundDepth=vec3(position.x,0,position.z).subtract(camera.pos).dot(forward),size=camera.orthographic?1:Math.max(.6,Math.min(1,depth/Math.max(.001,groundDepth)));redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches,size);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),pomSurfaceCorrection())}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
