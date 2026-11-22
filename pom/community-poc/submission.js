@@ -12,6 +12,5 @@ export function validateSubmission(value) {
   if (Object.keys(value.puzzle).some(k => !keys.has(k))) throw new Error('Puzzle contains unsupported fields.');
   const creatorName=text(value.creatorName,80,'Creator name');
   const description=value.description === undefined || value.description === '' ? '' : text(value.description,500,'Description');
-  if (value.permission !== true) throw new Error('Confirm that you have permission to share this puzzle.');
   return {creatorName,description,puzzle:validatePuzzle(value.puzzle)};
 }
