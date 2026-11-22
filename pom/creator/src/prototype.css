@@ -55,3 +55,11 @@ button,button:hover,button:active,a,a:hover,a:active{translate:none!important}
 .studio .reference-done,.studio .reference-done:hover,.studio .reference-done:active{position:absolute;z-index:5;grid-area:auto;min-width:64px;height:30px;min-height:30px;margin:0;padding:4px 12px;transform:translate(-50%,-50%)!important}
 
 .palette-edit-link,.palette-editor__delete{display:block;border:0;background:none;padding:0;color:#10100d;font:700 13px Figtree,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.palette-edit-link{margin-top:12px}.palette-editor__delete{margin-top:12px}.palette-editor__delete:disabled{opacity:.45;cursor:not-allowed}.palette-editor__help{font:500 12px/1.4 Figtree,sans-serif;margin:8px 0 0}.palette-editor__help:empty{display:none}
+
+.canvas-sizes>button[data-visible-cells]:not(:disabled){opacity:1;transition:none}
+
+.canvas-bottom{display:flex;grid-area:bottom;justify-content:center;align-items:center;margin:0}.canvas-zoom{display:inline-flex;align-items:center;gap:8px;font:700 12px Figtree,sans-serif}.canvas-zoom button{display:grid;place-items:center;width:28px;height:28px;min-height:28px;padding:0;border:1.5px solid #10100d;border-radius:50%;background:transparent;color:#10100d;font:700 17px/1 Figtree,sans-serif;box-shadow:none}.canvas-zoom button:hover:not(:disabled){background:#10100d;color:#fff}.canvas-zoom output{min-width:36px;text-align:center;font-variant-numeric:tabular-nums}
+.canvas-bottom{margin-top:-10px}.canvas-zoom{gap:3px;font-size:11px}.canvas-zoom button{width:21px;height:21px;min-height:21px;border-width:1px;font-size:14px}.canvas-zoom output{min-width:30px}
+.canvas-bottom{justify-content:flex-end;margin-top:-10px}.canvas-zoom button{border:0}
+
+.canvas-column{grid-area:canvas;align-self:start;min-width:0}.canvas-bottom{margin:5px 0 0;justify-content:flex-end}.canvas-column .canvas-viewport{width:100%}
