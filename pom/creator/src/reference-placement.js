@@ -12,3 +12,17 @@ export function legacyReferencePlacement(image,crop={zoom:1,x:.5,y:.5}){
   const sx=(image.width-size)*crop.x,sy=(image.height-size)*crop.y;
   return{scale:Math.max(image.width,image.height)/size,x:(image.width/2-sx)/size*32-16,y:(image.height/2-sy)/size*32-16};
 }
+
+// Resize proportionally around the image center using a corner drag in screen pixels.
+export function resizeReferenceFromDrag(scale,dx,dy,width,height){
+  const span=Math.max(1,width+height);
+  return Math.max(.1,Math.min(8,scale*(1+(dx+dy)/span)));
+}
+
+// Fit a new reference within the visible puzzle grid with a small margin.
+export function fitReferenceToVisible(canvas,frame){
+  const clamp=value=>Math.max(0,Math.min(32,value));
+  const left=clamp((frame.left-canvas.left)*32/canvas.width),right=clamp((frame.right-canvas.left)*32/canvas.width);
+  const top=clamp((frame.top-canvas.top)*33/canvas.height),bottom=clamp((frame.bottom-canvas.top)*33/canvas.height);
+  return {scale:Math.max(.1,Math.min(1,(right-left)/32,(bottom-top)/32)*.9),x:(left+right)/2-16,y:(top+bottom)/2-16};
+}

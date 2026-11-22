@@ -32,3 +32,26 @@ button,button:hover,button:active,a,a:hover,a:active{translate:none!important}
 .board-wrap::after{box-sizing:border-box;width:100%;height:100%}
 .board-wrap{background:#fff}.board-wrap #board{transform-origin:left bottom;will-change:transform}
 @media(min-width:1001px){.studio{grid-template-columns:minmax(0,1fr) 210px}}
+.reference-editor{margin-top:10px}.reference-editor[hidden]{display:none}.reference-editor .range-field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;margin:12px 0;font-size:12px;font-weight:700}.reference-editor .range-field output{font-weight:500}.reference-editor .range-field input[type=range]{grid-column:1/-1;width:100%;margin:2px 0;accent-color:#10100d}.reference-editor .button[data-slot=button]{width:100%;min-height:32px;margin:5px 0;padding:5px 10px;border:2px solid #10100d;border-radius:999px;justify-content:center}.reference-editor #moveReference[aria-pressed=true]{background:#10100d;color:#fff}.reference-editor #moveReference[aria-pressed=true]:hover{background:#10100d;color:#fff}
+.reference-resize{position:absolute;z-index:4;transform:translate(-50%,-50%);width:20px;height:20px;border:2px solid #10100d;border-radius:50%;background:#fff;cursor:nwse-resize;touch-action:none}.reference-resize[hidden],.reference-done[hidden]{display:none!important}.reference-resize:hover,.reference-resize:active{transform:translate(-50%,-50%)!important}.reference-done{grid-area:bottom;justify-self:end;min-width:90px;background:#10100d!important;color:#fff!important}
+.studio .reference-resize,.studio .reference-resize:hover,.studio .reference-resize:active{transform:translate(-50%,-50%)!important}
+/* Keep tools and palette together as one sticky sidebar. */
+.workspace{grid-template-areas:'tools sizes' 'tools canvas' 'tools canvas' 'tools bottom'}
+.creator-tools{grid-area:tools;position:sticky;top:20px;align-self:start;min-width:0;margin-top:79px;max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain}
+.creator-tools .canvas-bar{padding-top:0}.creator-tools .canvas-colors{margin-top:22px}
+.inspector{border:0;padding-left:0}
+@media(max-width:1000px) and (min-width:701px){.inspector{border:0;padding-left:0}}
+@media(max-width:700px){.workspace{grid-template-areas:'tools' 'sizes' 'canvas' 'bottom';grid-template-rows:auto auto auto auto}.creator-tools{position:static;margin-top:0;max-height:none;overflow:visible}.creator-tools .canvas-colors{margin-top:20px}.inspector{border:0}}
+@media(min-width:1001px){.workspace{align-self:stretch}}
+@media(min-width:701px){.creator-tools{overflow:visible;max-height:none;top:min(20px,calc(100dvh - 520px))}}
+.reference-resize{width:24px;height:24px;padding:0;border:0;border-radius:0;background:transparent;display:grid;place-items:center}.reference-resize svg{width:22px;height:22px;fill:none;stroke-linecap:round;stroke-linejoin:round}.reference-resize__outline{stroke:#fff;stroke-width:4.5}.reference-resize__arrow{stroke:#10100d;stroke-width:2}
+.grid-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.reference-resize{width:28px;height:28px;border:2px solid #10100d;border-radius:50%;background:#fff}.reference-resize svg{width:18px;height:18px}
+.canvas-sizes .reference-done{grid-area:auto;align-self:center;margin:0;min-height:30px;height:30px;min-width:64px;padding:4px 12px}
+.canvas-sizes:has(.reference-done:not([hidden])){flex-wrap:wrap;row-gap:8px}
+.reference-editor .button[data-slot=button],.reference-editor #moveReference[aria-pressed=true],.reference-editor #moveReference[aria-pressed=true]:hover{width:auto;min-height:30px;margin:0;padding:5px 4px;border:0;border-radius:0;background:transparent;color:#10100d;justify-content:flex-start;gap:10px;text-align:left;font-size:13px;font-weight:650}.reference-editor #moveReference[aria-pressed=true]{font-weight:800}
+
+/* Keep the confirmation on the image edge within the editing canvas. */
+.studio .reference-done,.studio .reference-done:hover,.studio .reference-done:active{position:absolute;z-index:5;grid-area:auto;min-width:64px;height:30px;min-height:30px;margin:0;padding:4px 12px;transform:translate(-50%,-50%)!important}
+
+.palette-edit-link,.palette-editor__delete{display:block;border:0;background:none;padding:0;color:#10100d;font:700 13px Figtree,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.palette-edit-link{margin-top:12px}.palette-editor__delete{margin-top:12px}.palette-editor__delete:disabled{opacity:.45;cursor:not-allowed}.palette-editor__help{font:500 12px/1.4 Figtree,sans-serif;margin:8px 0 0}.palette-editor__help:empty{display:none}
