@@ -90,3 +90,9 @@ Limits: 15 seconds, at most 18,000 states, reduced for highly fragmented puzzles
 Browser storage is device/origin specific and may be cleared by the browser. JSON exports are the backup and transfer format. No server, accounts, public gallery, or cross-device sync is included.
 
 Creator drafts now use a separate `little-ledges-creator` IndexedDB database. Legacy drafts are copied once without deleting the originals. Game saves remain in their existing database. Fonts are bundled locally with their OFL licenses.
+
+## Editor views and community gallery
+
+The 16 × 16 and 32 × 32 controls change the visible editing area. The smaller view shows the bottom-left 16 × 16 cells; saved and shared puzzles retain the existing 32 × 32 format, including cells outside the smaller view.
+
+The Gallery reads published levels from the configured community gallery service. In the game it uses the existing import confirmation flow and shows the saved status; on the web it displays a share QR code. Submission requires the configured Turnstile and submission service. Deploy the updated submission Worker together with this creator.

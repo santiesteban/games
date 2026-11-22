@@ -5,7 +5,7 @@ export default {async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname.startsWith('/auth/'))return oauth(request,env);
   if(url.pathname==='/gallery'&&request.method==='GET'){
-    try{const data=await env.DB.prepare("SELECT creator_name,description,puzzle_json FROM submissions WHERE status='approved' AND published=1 ORDER BY reviewed_at DESC, id").all();return new Response(JSON.stringify(data.results.map(row=>({creatorName:row.creator_name,description:row.description,puzzle:JSON.parse(row.puzzle_json)}))),{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'}})}catch{return reply({error:'Gallery unavailable.'},500,'')}
+    try{const data=await env.DB.prepare("SELECT creator_name,description,puzzle_json,created_at FROM submissions WHERE status='approved' AND published=1 ORDER BY reviewed_at DESC, id").all();return new Response(JSON.stringify(data.results.map(row=>({creatorName:row.creator_name,description:row.description,createdAt:row.created_at,puzzle:JSON.parse(row.puzzle_json)}))),{headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'}})}catch{return reply({error:'Gallery unavailable.'},500,'')}
   }
   if(origin!==env.ADMIN_ORIGIN||!origin)return reply({error:'Origin not allowed.'},403);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Credentials':'true','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Vary':'Origin'}});

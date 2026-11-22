@@ -22,12 +22,12 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
   const dialog=document.createElement('dialog');dialog.className='puzzle-import user-puzzle-dialog';dialog.setAttribute('aria-labelledby','userPuzzleImportTitle');dialog.setAttribute('aria-describedby','userPuzzleImportDetails');
   dialog.innerHTML='<header class="import-header"><h2 id="userPuzzleImportTitle" tabindex="-1">Add user-created puzzle</h2><form method="dialog"><button class="btn import-close" aria-label="Close puzzle import">✕</button></form></header><h3 class="import-puzzle-name"></h3><div class="import-art"></div><p class="import-details" id="userPuzzleImportDetails"></p><p class="import-copy"></p><p class="import-existing" hidden></p><p class="import-error" role="status"></p><div class="import-actions"><button class="btn" data-action="copy">Save as a copy</button><button class="btn menu-primary" data-action="add">Add to My Puzzles</button></div>';
   document.body.append(dialog);
-  const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_URL||'https://santiesteban.github.io/little-ledges-community-poc/community-gallery.html';
+  const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_URL||new URL('community-gallery.html',creatorUrl).href;
   const galleryOrigin=new URL(galleryUrl).origin;
   const gallerySheet=document.createElement('dialog');gallerySheet.className='community-sheet';gallerySheet.setAttribute('aria-labelledby','communitySheetTitle');
   gallerySheet.innerHTML='<header class="community-sheet-header"><h2 id="communitySheetTitle">Community Gallery</h2><form method="dialog"><button class="community-sheet-close" aria-label="Close community gallery">✕</button></form></header><p class="community-sheet-note" role="status" hidden>The gallery could not be loaded. Please try again.</p><iframe title="Community Gallery" class="community-sheet-frame"></iframe>';
   const galleryFrame=gallerySheet.querySelector('iframe'),galleryNote=gallerySheet.querySelector('.community-sheet-note');let galleryTimer;document.body.append(gallerySheet);
-  galleryFrame.addEventListener('load',()=>{if(gallerySheet.open)galleryFrame.contentWindow?.postMessage({type:'little-ledges:gallery-handshake'},galleryOrigin)});
+  galleryFrame.addEventListener('load',async()=>{if(!gallerySheet.open)return;await loaded;if(gallerySheet.open)galleryFrame.contentWindow?.postMessage({type:'little-ledges:gallery-handshake',savedPuzzles:records.map(record=>({id:record.id,revision:record.puzzle.revision}))},galleryOrigin)});
   gallerySheet.addEventListener('close',()=>{clearTimeout(galleryTimer);galleryFrame.src='about:blank'});
   window.addEventListener('message',async event=>{
     if(gallerySheet.open&&event.source===galleryFrame.contentWindow&&event.origin===galleryOrigin&&event.data?.type==='little-ledges:gallery-status'&&['ready','error'].includes(event.data.status)){clearTimeout(galleryTimer);galleryNote.hidden=event.data.status==='ready';return}

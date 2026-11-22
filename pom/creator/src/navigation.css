@@ -1,0 +1,4 @@
+/* Shared navigation for the Creator and Gallery. */
+.creator-nav,.gallery-nav{display:flex;align-items:flex-start;gap:32px;font:500 14px/1.35 Figtree,system-ui,sans-serif}
+.creator-nav a,.gallery-nav a{display:block;color:inherit;text-decoration:none;font:inherit;padding:0 0 7px;border-bottom:3px solid transparent}
+.creator-nav a[aria-current=page],.gallery-nav a[aria-current=page]{font-weight:800;border-bottom-color:currentColor}
