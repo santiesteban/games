@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sampleCameraIntro,initialCameraUnit,openingFrameFits,fitOpeningUnit,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
+import {sampleCameraIntro,initialCameraUnit,openingFrameFits,fitOpeningUnit,cameraZoomRange,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
 
 test('overview holds, then pans and zooms together to the exact endpoint',()=>{
   assert.deepEqual(sampleCameraIntro(hold-1,20,80),{phase:'overview',pan:0,unit:20,done:false});
@@ -38,4 +38,10 @@ test('occupied geometry must fit with room around the edges',()=>{
 test('opening fit finds the largest scale that fits occupied geometry',()=>{
   assert.ok(Math.abs(fitOpeningUnit(unit=>unit<=43,200)-43)<.001);
   assert.ok(Math.abs(fitOpeningUnit(unit=>unit<=12,200)-12)<.001);
+});
+
+test('zoom-out limit uses occupied overview while retaining the playable opening',()=>{
+  assert.deepEqual(cameraZoomRange({fitUnit:12,openingUnit:60,occupiedUnit:40,tappingUnit:80}),{min:40,max:80});
+  assert.deepEqual(cameraZoomRange({fitUnit:12,openingUnit:40,occupiedUnit:70,tappingUnit:60}),{min:40,max:70});
+  assert.deepEqual(cameraZoomRange({fitUnit:12,openingUnit:60,occupiedUnit:0,tappingUnit:80}),{min:12,max:80});
 });

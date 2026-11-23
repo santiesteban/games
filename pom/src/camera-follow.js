@@ -28,3 +28,10 @@ export function boundedCameraAxis({points,min,max,subject,padding=0}){
   }
   return shift;
 }
+
+// Preserve a manually chosen view while Pom remains inside the playable area.
+export function pomWithinFrame(point,width,height){
+  if(!point||!(width>0)||!(height>0))return false;
+  const insetX=Math.min(48,width*.12),top=Math.min(64,height*.12),bottom=Math.min(96,height*.18);
+  return point.x>=insetX&&point.x<=width-insetX&&point.y>=top&&point.y<=height-bottom;
+}
