@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {boundedCameraAxis} from './camera-follow.js';
+import {boundedCameraAxis,pomWithinFrame} from './camera-follow.js';
 const points=(a,b,scale=1)=>[{position:a,scale},{position:b,scale}];
 const close=(a,b)=>assert(Math.abs(a-b)<1e-5,`${a} != ${b}`);
 test('a puzzle that fits stays centered when Pom reaches either edge',()=>{
@@ -38,4 +38,11 @@ test('moving the reference focus does not change final framing for a fitting puz
 test('empty or invalid bounds leave the requested focus alone',()=>{
   assert.equal(boundedCameraAxis({points:[],min:-5,max:5}),0);
   assert.equal(boundedCameraAxis({points:points(0,1),min:1,max:1}),0);
+});
+
+test('soft follow resumes when Pom is pushed beyond the playable frame',()=>{
+  assert.equal(pomWithinFrame({x:240,y:300},480,600),true);
+  assert.equal(pomWithinFrame({x:240,y:650},480,600),false);
+  assert.equal(pomWithinFrame({x:-5,y:300},480,600),false);
+  assert.equal(pomWithinFrame(null,480,600),false);
 });

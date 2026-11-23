@@ -1,5 +1,9 @@
 import { Color, Mesh, TextureInfo, vec2, vec3 } from 'littlejsengine';
 
+export function goalBadgeVisible(goalDepth,aboveDepth,won=false){
+  return !won&&(goalDepth<=0||(aboveDepth!==null&&aboveDepth>=goalDepth));
+}
+
 // Paint the frame and flag together: almost-coplanar glyph meshes fight for
 // depth precision in perspective. Only the shallow outside edge is geometry.
 export function createGoalBadge(){

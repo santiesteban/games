@@ -82,11 +82,9 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       backdrop=patch(wall,state.background?textures[0]:undefined,backgroundUV,state.background?new Color(1):color('#eee9df'));
       reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
     }
-    if(environment.id==='dreamscape'){
-      backdrop.receiveShadow=true;
-      backdrop.shader=pieceShadowShader;
-      reference.shadowReceivers=1;
-    }
+    backdrop.receiveShadow=true;
+    backdrop.shader=pieceShadowShader;
+    reference.shadowReceivers=1;
     const groundBack=environment.backgroundTileWorldHeight?-groundFront:environment.groundDepth?back:(landscape||following||curved?-40:back);
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];
     if(!(environment.mirrorTiles||environment.opaqueGround)||!state.foreground)patch(ground,undefined,undefined,color(landscape?'#a9b58a':'#c9c9a9'));

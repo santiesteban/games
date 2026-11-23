@@ -1,7 +1,7 @@
 import {pomMovementPose} from './pom-movement-pose.js';
 import {createRedPom} from './red-pom.js';
 import approvedEnvironment from './data/daisy-meadow-ivan-v2.json';
-import {gameplayEnvironmentConfiguration} from './environment-policy.js';
+import {DEFAULT_SCENARIO,gameplayEnvironmentConfiguration} from './environment-policy.js';
 import {limitStagePan,limitPuzzlePan} from './stage-geometry.js';
 import {pickScenery,scenePlanePoint} from './scenery-picking.js';
 import {
@@ -20,8 +20,8 @@ import { createMovementMarkers } from './movement-markers.js';
 import { puzzleFloorBounds, floorOutlinePoints, snapFloorLine } from './floor-grid.js';
 import { pieceNutPositions } from './piece-nuts.js';
 import { createLevelLoadGate } from './level-loading.js';
-import { sampleCameraIntro, initialCameraUnit, openingFrameFits, fitOpeningUnit } from './camera-intro.js';
-import { boundedCameraAxis } from './camera-follow.js';
+import { sampleCameraIntro, initialCameraUnit, openingFrameFits, fitOpeningUnit, cameraZoomRange } from './camera-intro.js';
+import { boundedCameraAxis, pomWithinFrame } from './camera-follow.js';
 import { installViewportSafety } from './viewport-safety.js';
 import { installSafariZoom } from './safari-zoom.js';
 import { cellYStretch, stretchBoardY, unStretchBoardY } from './cell-squareness.js';
@@ -32,7 +32,7 @@ import { puzzleBackgroundDistance, puzzleArtworkWidth } from './scenery-distance
 import { selectionColor } from './selection-color.js';
 import { CARDBOARD_THICKNESS, cardboardMesh } from './cardboard.js';
 import { chooseVisibilityPitch, visibilityCameraPose, visibilityAtPitch } from './camera-visibility.js';
-import { createGoalBadge } from './goal-badge.js';
+import { createGoalBadge, goalBadgeVisible } from './goal-badge.js';
 import { createWarpPipeAssets } from './warp-pipe-assets.js';
 import { createPulloutSwitchAssets } from './pullout-switch-assets.js';
 import { vibrantWarpColor, warpPulsePhase } from './warp-pulse.js';
@@ -1013,9 +1013,11 @@ function syncFlag(switchPlayer=player,switchDepths){
   syncPulloutSwitches(switchPlayer,switchDepths);
   const g=byCell[goalCell.y]?.[goalCell.x];if(!flagPole||!g)return;
   if(warpPipePreview){for(const part of [flagPrint,flagPole,flagCloth,flagVase,flagCap])part.mesh=undefined;syncWarpPipePreview();return}
-  const raised=visualDepth(g)>0,visible=raised&&!won,cx=goalCell.x+.5,cy=H-goalCell.y-.5;
-  // The front-face badge disappears together with its flag when the piece rises.
-  flagPrint.mesh=raised||won?undefined:flagMeshes.print;flagPrint.tileInfo=raised||won?undefined:flagMeshes.printTile;flagPrint.pos3D=vec3(cx,stretchY(cy),.045);flagPrint.scale3D=vec3(1,stretchY(1),1);
+  const depth=visualDepth(g),above=byCell[goalCell.y-1]?.[goalCell.x];
+  const raised=depth>0,visible=raised&&!won,cx=goalCell.x+.5,cy=H-goalCell.y-.5;
+  const showBadge=goalBadgeVisible(depth,above?visualDepth(above):null,won);
+  flagPrint.mesh=showBadge?flagMeshes.print:undefined;flagPrint.tileInfo=showBadge?flagMeshes.printTile:undefined;
+  flagPrint.pos3D=worldPoint(cx,cy,depth).add(vec3(0,0,.045));flagPrint.scale3D=vec3(1,stretchY(1),1);
   for(const [part,mesh]of [[flagPole,flagMeshes.pole],[flagCloth,flagMesh],[flagVase,flagMeshes.vase],[flagCap,flagMeshes.cap]]){
     part.mesh=visible?mesh:undefined;part.rotation3D=vec3();part.scale3D=vec3(1,stretchY(1),1);part.castShadow=visible&&render3D.shadows;
   }
@@ -1580,7 +1582,7 @@ function syncControlFeatureInputs(){
 }
 const scenarioInput=document.querySelector('#scenario');
 function syncScenarioInput(){
-  scenarioInput.value=levelPreferences.scenario??(activeLevel?.userPuzzle||activeLevel?.temporaryPlaytest?'dreamscape':'daisy-meadow');
+  scenarioInput.value=levelPreferences.scenario??DEFAULT_SCENARIO;
 }
 function refreshScenario(){
   syncScenarioInput();
@@ -1818,8 +1820,13 @@ function updateStudyFollow(){
   if(!worldPresentation()||!studyStraight()||(!cameraState.followX&&!cameraState.followY)||!viewReady||!gameReady||won||celebration||!document.querySelector('#menuScreen').hidden)return;
   if(!followAnchor){resetStudyFollow();return}
   if(followAnchor.paused)return;
-  // Keep the board still once Pom stops, until the next movement begins.
-  if(trackingMode.value==='soft'&&!busy){followTime=timeReal;return}
+  // Keep a manually framed view still after movement, unless Pom has moved
+  // outside the playable area as a result of pushing or pulling a piece.
+  if(trackingMode.value==='soft'&&!busy){
+    const width=wrap.clientWidth,height=wrap.clientHeight;
+    const screen=render3D.worldToScreen(worldPosition(player),vec2(width,height));
+    if(pomWithinFrame(screen,width,height)){followTime=timeReal;return}
+  }
   const dt=Math.min(.1,Math.max(0,timeReal-followTime));followTime=timeReal;if(!dt)return;
   const camera=render3D.camera,position=busy?playerObject.pos3D.add(render3D.camera.getForward().scale(.045)):worldPosition(player),offset=position.subtract(cameraFocus),right=camera.getRight(),up=camera.getUp();
   // Follow in the camera plane so depth and downward pitch cannot introduce a
@@ -1929,6 +1936,8 @@ function occupiedOpeningFrame(width,height){
   const depth=Math.max(0,...groups.map(g=>g.depth))*extrusionScale;
   const anchor=worldPoint((left+right)/2,(bottom+top)/2,depth/2),size=vec2(width,height),outline=[];
   for(const x of [left,right])for(const y of [bottom,top])for(const z of [0,depth])outline.push(worldPoint(x,y,z));
+  const floor=puzzleFloorBounds(mural,GRID_DEPTH);
+  for(const x of [floor.left,floor.right])for(const z of [floor.back,floor.front])outline.push(worldPoint(x,0,z*extrusionScale));
   outline.push(worldPosition(player),worldPoint(goalCell.x+.5,H-goalCell.y+.7,0));
   const previous=viewUnit;
   const unit=fitOpeningUnit(candidate=>{
@@ -1981,11 +1990,12 @@ function limitManualPan(){
   const right=render3D.camera.getRight(),up=render3D.camera.getUp();
   if(isBackgroundStudio()){const p=limitStagePan(viewTarget,right,up,puzzleVisualBounds(),true);viewTarget=vec3(p.x,p.y,p.z);return}
   if(manualPanLevel!==activeLevel){
-    const cells=groups.flatMap(g=>g.cells),xs=cells.map(c=>c.x),ys=cells.map(c=>c.y);
-    manualPanBounds=cells.length?{left:Math.min(...xs),right:Math.max(...xs)+1,bottom:0,top:H-Math.min(...ys)+.7}:{left:0,right:W,bottom:0,top:H};
+    const cells=groups.flatMap(g=>g.cells),ys=cells.map(c=>c.y);
+    const floor=puzzleFloorBounds(mural,GRID_DEPTH);
+    manualPanBounds=cells.length?{left:floor.left,right:floor.right,bottom:0,top:H-Math.min(...ys)+.7}:{left:floor.left,right:floor.right,bottom:0,top:H};
     manualPanLevel=activeLevel;
   }
-  const p=worldPosition(player),bounds={...manualPanBounds,back:0,front:Math.max(0,...groups.map(g=>visualDepth(g)))*extrusionScale};
+  const p=worldPosition(player),bounds={...manualPanBounds,back:0,front:Math.max(GRID_DEPTH,...groups.map(g=>visualDepth(g)))*extrusionScale};
   const limited=limitPuzzlePan(viewTarget,right,up,bounds,{width:wrap.clientWidth/viewUnit,height:wrap.clientHeight/viewUnit},p);
   viewTarget=vec3(limited.x,limited.y,limited.z);
 }
@@ -1997,7 +2007,7 @@ function zoomBoard(unit,x,y){
 }
 function cameraZoomBounds(fitUnit=wrap.clientHeight/sceneFrame(wrap.clientWidth,wrap.clientHeight).height){
   const opening=activeLevel.kind==='puzzle'&&!cameraLab&&!activeLevel.studioExample?initialCameraUnit({width:wrap.clientWidth,height:wrap.clientHeight}):fitUnit;
-  return {min:Math.min(fitUnit,opening),max:Math.max(tappingUnit(),fitUnit,opening,occupiedOpeningLevel===activeLevel?occupiedOpeningUnit:0)};
+  return cameraZoomRange({fitUnit,openingUnit:opening,occupiedUnit:occupiedOpeningLevel===activeLevel?occupiedOpeningUnit:0,tappingUnit:tappingUnit()});
 }
 function syncCameraMode(){
   cameraModeSliders.hidden=false;
@@ -2838,5 +2848,9 @@ new ResizeObserver(()=>{
   if(celebration){render3D.updateMatrices(r.width/r.height);return}
   if(changedMode||introPlaying){startBoardView();return}
   if(!viewTouched&&followAnchor?.paused&&activeLevel.kind==='puzzle'&&!cameraLab){startBoardView(false);return}
+  if(occupiedOpeningLevel===activeLevel){
+    const opening=occupiedOpeningFrame(r.width,r.height);
+    if(opening)occupiedOpeningUnit=opening.unit;
+  }
   stopIntro();if(!mobile&&!viewTouched){viewUnit=r.height/baseCameraHeight;viewTarget=sceneFrame(r.width,r.height).target}else if(viewTouched&&worldPresentation())limitManualPan();applyBoardView();
 }).observe(wrap);

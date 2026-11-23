@@ -27,3 +27,9 @@ export function fitOpeningUnit(fits,maxUnit){
   for(let i=0;i<20;i++){const mid=(low+high)/2;if(fits(mid))low=mid;else high=mid}
   return low;
 }
+
+// Keep the playable opening and the occupied overview within the zoom range.
+export function cameraZoomRange({fitUnit,openingUnit,occupiedUnit,tappingUnit}){
+  const overview=Number.isFinite(occupiedUnit)&&occupiedUnit>0?occupiedUnit:fitUnit;
+  return {min:Math.min(overview,openingUnit),max:Math.max(tappingUnit,fitUnit,openingUnit,overview)};
+}
