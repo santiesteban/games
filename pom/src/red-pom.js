@@ -1,5 +1,6 @@
 import {isPomEyeStyle} from './pom-eye-style.js';
 import {pomIdleMotion,pomMovementEyes} from './pom-idle-motion.js';
+import {stepJumpShape} from './pom-movement-pose.js';
 import {Color, EngineObject3D, Mesh, Shader, TextureInfo, TileInfo, glContext, render3D, vec2, vec3} from 'littlejsengine';
 
 const occlusionShader=new Shader(`
@@ -55,11 +56,18 @@ export async function createRedPom(parent){
   const object=make(2,textures.calm.body,false,true),edge=make(2.1,textures.calm.body,true);
   const eyes=make(2.3,textures.calm.eyes,true),idleEyes=make(2.31,textures['happy-open'].eyes,true),mouth=make(2.35,textures['happy-open'].mouth,true),extra=make(2.4,textures['push-back'].extra,true);
   const parts=[object,edge,eyes,idleEyes,mouth,extra],baseDepths=parts.map(part=>part.pos3D.z);
-  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyeStyle='classic',currentPose='calm',currentExtra=true;
+  let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyeStyle='classic',currentPose='calm',currentExtra=true,stepJumpProgress=null;
   idleEyes.color.a=mouth.color.a=extra.color.a=0;
   function setPose(name,showExtra=true){
     const key=`${name}:${showExtra}`;
-    if(key===active||!textures[name])return;
+    if(key===active||(!textures[name]&&name!=='pipe-exit'))return;
+    if(name==='pipe-exit'){
+      active=key;currentPose=name;currentExtra=showExtra;idleTime=0;idleEyes.color.a=0;
+      object.tileInfo=edge.tileInfo=textures.calm.body;
+      const openEyes=textures['happy-open'];
+      eyes.tileInfo=(eyeStyle==='bright'?openEyes.brightEyes:eyeStyle==='crazy'?openEyes.crazyEyes:eyeStyle==='circle'?openEyes.circleEyes:openEyes.eyes);eyes.color.a=1;
+      extra.tileInfo=textures.excited.extra;targetMouth=0;targetExtra=showExtra?1:0;targetX=targetY=1;return;
+    }
     active=key;currentPose=name;currentExtra=showExtra;
     if(name!=='calm'){idleTime=0;idleEyes.color.a=0}
     const bodyName=name==='float'?'float':'calm';
@@ -82,8 +90,9 @@ export async function createRedPom(parent){
       active='';setPose(currentPose,currentExtra);
     },
     setMoving(value){moving=value;idleTime=0},
+    setStepJump(progress){stepJumpProgress=progress},
     resetMotion(){moving=false;idleTime=0},
-    update(now,idle=false){
+    update(now,idle=false,size=1){
       const dt=lastTime===undefined?0:Math.min(.05,(now-lastTime)/1000);lastTime=now;
       const ease=1-Math.exp(-14*dt);
       bodyX+=(targetX-bodyX)*ease;bodyY+=(targetY-bodyY)*ease;
@@ -95,10 +104,13 @@ export async function createRedPom(parent){
       const normalEyes=['calm:','squash:','stretch:'].some(pose=>active.startsWith(pose));
       const motion=resting?pomIdleMotion(idleTime):{breath:0};
       const opening=normalEyes?pomMovementEyes(idleTime,moving):0;
-      const displayX=bodyX*(1-motion.breath*.55);displayY=bodyY*(1+motion.breath);
+      const step=stepJumpProgress===null?null:stepJumpShape(stepJumpProgress);
+      const displayX=step?step.x:bodyX*(1-motion.breath*.55);displayY=step?step.y:bodyY*(1+motion.breath);
       if(normalEyes)eyes.color.a=1-opening;
       idleEyes.color.a=opening;
-      for(const part of [object,edge,eyes,idleEyes])part.scale3D=vec3(displayX,displayY,1);
+      for(const part of [object,edge,eyes,idleEyes])part.scale3D=vec3(displayX*size,displayY*size,1);
+      for(const part of [mouth,extra])part.scale3D=vec3(size,size,1);
+      displayY*=size;
     },
     setCameraTilt(pitch){
       // Move the tilted artwork a little toward the camera to keep it clear

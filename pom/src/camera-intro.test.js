@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sampleCameraIntro,initialCameraUnit,openingFrameFits,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
+import {sampleCameraIntro,initialCameraUnit,openingFrameFits,fitOpeningUnit,INTRO_HOLD_MS as hold,INTRO_PAN_MS as pan,INTRO_ZOOM_MS as zoom} from './camera-intro.js';
 
 test('overview holds, then pans and zooms together to the exact endpoint',()=>{
   assert.deepEqual(sampleCameraIntro(hold-1,20,80),{phase:'overview',pan:0,unit:20,done:false});
@@ -34,4 +34,8 @@ test('the intro can ease out from a closer overview',()=>{
 test('occupied geometry must fit with room around the edges',()=>{
   assert.equal(openingFrameFits([{x:80,y:75},{x:280,y:350}],370,600),true);
   assert.equal(openingFrameFits([{x:350,y:75}],370,600),false);
+});
+test('opening fit finds the largest scale that fits occupied geometry',()=>{
+  assert.ok(Math.abs(fitOpeningUnit(unit=>unit<=43,200)-43)<.001);
+  assert.ok(Math.abs(fitOpeningUnit(unit=>unit<=12,200)-12)<.001);
 });

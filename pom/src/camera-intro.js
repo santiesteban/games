@@ -20,3 +20,10 @@ export function openingFrameFits(points,width,height){
   const margin=Math.min(width,height)*.06;
   return points.every(point=>point&&point.x>=margin&&point.x<=width-margin&&point.y>=margin&&point.y<=height-margin);
 }
+
+// Find the closest overview that contains the occupied puzzle geometry.
+export function fitOpeningUnit(fits,maxUnit){
+  let low=.01,high=Math.max(low,maxUnit);
+  for(let i=0;i<20;i++){const mid=(low+high)/2;if(fits(mid))low=mid;else high=mid}
+  return low;
+}

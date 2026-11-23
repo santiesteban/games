@@ -63,8 +63,14 @@ export function warpEndpoint(board,cell){
   const entry={x:cell.x,y:cell.y+1,z:group.depth};
   let landing;
   for(let y=entry.y;y<=board.height;y++){
-    const candidate={...entry,y};
+    const candidate={...entry,y,z:group.depth-1};
     if(board.validNode(candidate)){landing=candidate;break}
+  }
+  if(!landing){
+    for(let y=entry.y;y<=board.height;y++){
+      const candidate={...entry,y};
+      if(board.validNode(candidate)){landing=candidate;break}
+    }
   }
   return landing?{entry:board.validNode(entry)?entry:null,landing}:null;
 }
@@ -72,11 +78,15 @@ export function warpEntryMatches(board,cell,player,endpoint=warpEndpoint(board,c
   if(!endpoint)return false;
   if(endpoint.entry&&nodeKey(player)===nodeKey(endpoint.entry))return true;
   if(!cell.inverted)return false;
-  const group=board.byCell[cell.y]?.[cell.x],below=board.byCell[cell.y+1]?.[cell.x];
-  // Pom can jump up from the square immediately beneath the opening when
-  // that vertical space is clear at the depth of the pipe.
-  return player.x===cell.x&&player.y===cell.y+2&&player.z===group.depth-1
-    &&(!below||below.depth<group.depth)&&board.validNode(player);
+  const group=board.byCell[cell.y]?.[cell.x];
+  // Allow a jump from one or two cells below the opening, with a clear path.
+  const distance=player.y-(cell.y+1);
+  if(player.x!==cell.x||player.z!==group.depth-1||distance<1||distance>2||!board.validNode(player))return false;
+  for(let y=cell.y+1;y<player.y;y++){
+    const obstacle=board.byCell[y]?.[cell.x];
+    if(obstacle&&obstacle.depth>=group.depth)return false;
+  }
+  return true;
 }
 export function warpDestination(board,p,pairs=[]){
   for(const pair of pairs){
