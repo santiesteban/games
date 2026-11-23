@@ -8,7 +8,7 @@ export function authoredEnvironment(level,groups,fallback='meadow'){
 }
 export function gameplayEnvironmentConfiguration(level,groups,approved,applied,revision,scenario=null){
   if(scenario==='daisy-meadow')return approved;
-  if(['riso-print','dreamscape','grass-clouds','printed-fans','printed-lagoon','stippled-sky','stippled-blue','stippled-green-grid'].includes(scenario))return {environment:scenario,composition:'auto',layers:'both',showGuides:true,sceneryLayout:[],scenicAtmosphere:false};
+  if(['riso-print','dreamscape','grass-clouds','printed-fans','printed-lagoon','stippled-sky','stippled-blue','stippled-green-grid','stippled-fewer-clouds'].includes(scenario))return {environment:scenario,composition:'auto',layers:'both',showGuides:true,sceneryLayout:[],scenicAtmosphere:false};
   if(level.userPuzzle||level.temporaryPlaytest)return USER_PUZZLE_ENVIRONMENT;
   if(authoredEnvironment(level,groups)==='japan-spring'||level.group==='japan-challenges')return null;
   return revision===ENVIRONMENT_REVISION&&applied?applied:approved;
