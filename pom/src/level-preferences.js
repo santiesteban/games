@@ -1,7 +1,7 @@
 const STORAGE_KEY='little-ledges:v4:level-preferences';
 const DEFAULTS={hideKnownIssues:true,hideHelpText:false,scenario:null};
 
-const valid=(name,value)=>name==='scenario'?value===null||['daisy-meadow','riso-print','dreamscape','grass-clouds','printed-fans','printed-lagoon','stippled-sky','stippled-blue'].includes(value):typeof value==='boolean';
+const valid=(name,value)=>name==='scenario'?value===null||['daisy-meadow','riso-print','dreamscape','grass-clouds','printed-fans','printed-lagoon','stippled-sky','stippled-blue','stippled-green-grid'].includes(value):typeof value==='boolean';
 
 export function createLevelPreferences(){
   function read(){

@@ -844,7 +844,7 @@ function drawHoverSpot(){
 }
 function syncFloorGrid(){
   if(worldPresentation()){syncStudyFloor();return}
-  const showFloor=currentBackgroundConfiguration()?.showGuides??true,custom=customFloorGridEnabled(),floor=currentDesign().floorGrid;
+  const showFloor=currentBackgroundConfiguration()?.showGuides??true,scenarioFloor=activeEnvironment.floorGridStyle,custom=!!scenarioFloor||customFloorGridEnabled(),floor=scenarioFloor?{...currentDesign().floorGrid,gridColor:scenarioFloor.color,gridOpacity:1,gridWidth:2,color:scenarioFloor.fill,opacity:scenarioFloor.fillOpacity??1,foregroundOpacity:0}:currentDesign().floorGrid;
   wrap.dataset.floorStyle=custom?'walkability-custom-grid':'walkability-grid';
   const o=backgroundObjects[backgroundObjects.length-1];if(!o)return;
   if(!showFloor){o.mesh=undefined;return}
@@ -853,7 +853,7 @@ function syncFloorGrid(){
   render3D.updateMatrices(aspect);
   const toPlane=p=>{const q=render3D.worldToScreen(p,size);return vec2((q.x/width-.5)*worldWidth,(.5-q.y/height)*ortho)};
   const horizon=render3D.worldToScreen(vec3(4,0,0),size),hy=(.5-horizon.y/height)*ortho;
-  const addPlaneLine=(p,q)=>{if(floorMarkersEnabled()||line<=0||gridColor.a<=0)return;const dx=q.x-p.x,dy=q.y-p.y,length=Math.hypot(dx,dy)||1,nx=-dy/length*line/2,ny=dx/length*line/2,limit=hy-line/2;let poly=[vec2(p.x+nx,p.y+ny),vec2(q.x+nx,q.y+ny),vec2(q.x-nx,q.y-ny),vec2(p.x-nx,p.y-ny)],clipped=[];for(let i=0;i<poly.length;i++){const cur=poly[i],prev=poly[(i+poly.length-1)%poly.length],ci=cur.y<=limit,pi=prev.y<=limit;if(ci!==pi){const t=(limit-prev.y)/(cur.y-prev.y);clipped.push(vec2(prev.x+(cur.x-prev.x)*t,limit))}if(ci)clipped.push(cur)}if(clipped.length<3)return;const center=vec2(clipped.reduce((sum,v)=>sum+v.x,0)/clipped.length,clipped.reduce((sum,v)=>sum+v.y,0)/clipped.length),vertices=[vec3(center.x,center.y,0),...clipped.map(v=>vec3(v.x,v.y,0))],indices=[];for(let i=1;i<=clipped.length;i++)indices.push(0,i,i===clipped.length?1:i+1);m.addTriangles(vertices,indices,vec3(0,0,1),undefined,gridColor)};
+  const addPlaneLine=(p,q)=>{if(scenarioFloor||floorMarkersEnabled()||line<=0||gridColor.a<=0)return;const dx=q.x-p.x,dy=q.y-p.y,length=Math.hypot(dx,dy)||1,nx=-dy/length*line/2,ny=dx/length*line/2,limit=hy-line/2;let poly=[vec2(p.x+nx,p.y+ny),vec2(q.x+nx,q.y+ny),vec2(q.x-nx,q.y-ny),vec2(p.x-nx,p.y-ny)],clipped=[];for(let i=0;i<poly.length;i++){const cur=poly[i],prev=poly[(i+poly.length-1)%poly.length],ci=cur.y<=limit,pi=prev.y<=limit;if(ci!==pi){const t=(limit-prev.y)/(cur.y-prev.y);clipped.push(vec2(prev.x+(cur.x-prev.x)*t,limit))}if(ci)clipped.push(cur)}if(clipped.length<3)return;const center=vec2(clipped.reduce((sum,v)=>sum+v.x,0)/clipped.length,clipped.reduce((sum,v)=>sum+v.y,0)/clipped.length),vertices=[vec3(center.x,center.y,0),...clipped.map(v=>vec3(v.x,v.y,0))],indices=[];for(let i=1;i<=clipped.length;i++)indices.push(0,i,i===clipped.length?1:i+1);m.addTriangles(vertices,indices,vec3(0,0,1),undefined,gridColor)};
   const addLine=(a,b)=>addPlaneLine(toPlane(a),toPlane(b));
   const foregroundWash=designColor(floor.foregroundColor);foregroundWash.a=custom?floor.foregroundOpacity:0;
   // Wash the entire scenery below the horizon; the puzzle remains in front
@@ -872,7 +872,8 @@ function syncFloorGrid(){
   }
   const seen=new Set();
   for(const {x,z,polygon}of walkable){
-    m.addQuad(...polygon.map(p=>vec3(p.x,p.y,0)),floorWash);
+    const cellWash=scenarioFloor?floorWash.copy():floorWash;if(scenarioFloor&&((x+z)&1))cellWash.a*=.35;
+    m.addQuad(...polygon.map(p=>vec3(p.x,p.y,0)),cellWash);
     for(const [a,b]of [[[x,z],[x+1,z]],[[x+1,z],[x+1,z+1]],[[x+1,z+1],[x,z+1]],[[x,z+1],[x,z]]]){
       const ka=a.join(','),kb=b.join(','),key=ka<kb?`${ka}|${kb}`:`${kb}|${ka}`;if(seen.has(key))continue;seen.add(key);
       addLine(worldPoint(a[0],ground,a[1]),worldPoint(b[0],ground,b[1]));
@@ -1705,13 +1706,15 @@ function syncStudyFloor(){
   const object=backgroundObjects.at(-1);if(!object)return;
   const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
   const visible=(cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides))&&!floorMarkersEnabled();
+  const scenarioFloor=activeEnvironment.floorGridStyle;
   const border=getComputedStyle(wrap),lineWidth=parseFloat(border.borderTopWidth)||2,radius=parseFloat(border.borderBottomLeftRadius)||0,color=border.borderTopColor;
   const pixelRatio=Math.min(window.devicePixelRatio||1,2);
-  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,lineWidth,radius,color,pixelRatio,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
+  const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,lineWidth,radius,color,scenarioFloor?.color,scenarioFloor?.fill,scenarioFloor?.fillOpacity,pixelRatio,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
   // Keep an empty transparent guide layer when hidden; removing its mesh can
   // alter the engine's transparent pass and hide the character overlay.
-  const channels=color.match(/[\d.]+/g)?.map(Number)??[17,17,17],mesh=new Mesh(),tint=new Color(channels[0]/255,channels[1]/255,channels[2]/255,visible?.2:0);
+  const channels=color.match(/[\d.]+/g)?.map(Number)??[17,17,17],mesh=new Mesh(),tint=scenarioFloor?designColor(scenarioFloor.color):new Color(channels[0]/255,channels[1]/255,channels[2]/255,visible?.2:0);
+  if(scenarioFloor)tint.a=visible?1:0;
   const project=(x,z)=>render3D.worldToScreen(worldPoint(x,.008,z*extrusionScale),size);
   const strip=(a,b)=>{
     if(!a||!b)return;
@@ -1722,10 +1725,32 @@ function syncStudyFloor(){
     if(points.some(point=>!point))return;
     mesh.addQuad(...points,tint);
   };
-  for(let x=bounds.left+1;x<bounds.right;x++)strip(project(x,bounds.back),project(x,bounds.front));
-  for(let z=bounds.back+1;z<bounds.front;z++)strip(project(bounds.left,z),project(bounds.right,z));
   const corners=[project(bounds.left,bounds.back),project(bounds.right,bounds.back),project(bounds.right,bounds.front),project(bounds.left,bounds.front)];
-  if(corners.every(Boolean)){const outline=floorOutlinePoints(corners,radius).map(p=>vec2(p.x,p.y));for(let i=1;i<outline.length;i++)strip(outline[i-1],outline[i])}
+  if(corners.every(Boolean)){
+    const outline=floorOutlinePoints(corners,radius).map(p=>vec2(p.x,p.y));
+    if(scenarioFloor&&visible){
+      // Clip each projected cell to the same rounded outline as the border.
+      const clip=outline.slice(0,-1),area=clip.reduce((sum,p,i)=>{const q=clip[(i+1)%clip.length];return sum+p.x*q.y-q.x*p.y},0),sign=area>=0?1:-1;
+      const cross=(a,b,p)=>sign*((b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x));
+      for(let x=bounds.left;x<bounds.right;x++)for(let z=bounds.back;z<bounds.front;z++){
+        let polygon=[project(x,z),project(x+1,z),project(x+1,z+1),project(x,z+1)];
+        for(let i=0;i<clip.length&&polygon.length;i++){
+          const a=clip[i],b=clip[(i+1)%clip.length],input=polygon;polygon=[];
+          for(let j=0;j<input.length;j++){const p=input[j],q=input[(j+1)%input.length],dp=cross(a,b,p),dq=cross(a,b,q),pin=dp>=-.001,qin=dq>=-.001;if(pin)polygon.push(p);if(pin!==qin){const t=dp/(dp-dq);polygon.push(vec2(p.x+(q.x-p.x)*t,p.y+(q.y-p.y)*t))}}
+        }
+        if(polygon.length<3)continue;
+        const points=polygon.map(point=>{const ray=render3D.screenToRay(point,size),t=(ground-ray.origin.y)/ray.direction.y;return Number.isFinite(t)&&t>0?ray.getPosition(t):null});
+        if(points.some(p=>!p))continue;
+        const center=points.reduce((sum,p)=>sum.add(p),vec3()).scale(1/points.length),indices=[];for(let i=0;i<points.length;i++)indices.push(0,i+1,(i+1)%points.length+1);
+        const fill=designColor(scenarioFloor.fill);fill.a=(scenarioFloor.fillOpacity??1)*(((x+z)&1)?.35:1);mesh.addTriangles([center,...points],indices,vec3(0,1,0),undefined,fill);
+      }
+    }
+    if(!scenarioFloor){
+      for(let x=bounds.left+1;x<bounds.right;x++)strip(project(x,bounds.back),project(x,bounds.front));
+      for(let z=bounds.back+1;z<bounds.front;z++)strip(project(bounds.left,z),project(bounds.right,z));
+      for(let i=1;i<outline.length;i++)strip(outline[i-1],outline[i]);
+    }
+  }
   mesh.doubleSided=true;object.mesh=mesh;object.pos3D=vec3();object.rotation3D=vec3();object.scale3D=vec3(1);object.tileInfo=undefined;object.color=new Color(1);object.transparent=true;
   floorGuideMesh?.dispose();floorGuideMesh=mesh;floorGuideKey=key;
 }

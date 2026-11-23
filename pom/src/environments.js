@@ -1,3 +1,4 @@
+import stippledSubtleGround from './assets/environments/stippled-green-grid/ground.png';
 import stippledBlueSky from './assets/environments/stippled-blue/background.png';
 import stippledOliveGround from './assets/environments/stippled-blue/ground.png';
 import stippledSky from './assets/environments/stippled-sky/background.png';
@@ -68,6 +69,7 @@ function registeredArtwork(id,name,metadata,images){
 
 export const DEFAULT_ENVIRONMENT='meadow';
 export const ENVIRONMENTS=[
+  {id:'stippled-green-grid',name:'Stippled Green Grid',floorGridStyle:{color:'#698b39',fill:'#ffffff',fillOpacity:.35},background:stippledBlueSky,foreground:stippledSubtleGround,foregroundSize:[1254,1254],width:1774,height:887,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,opaqueGround:true,groundTileWorldSize:[12,12],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'stippled-blue',name:'Stippled Blue Sky',background:stippledBlueSky,foreground:stippledOliveGround,foregroundSize:[1254,1254],width:1774,height:887,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,opaqueGround:true,groundTileWorldSize:[12,12],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'stippled-sky',name:'Stippled Sky',background:stippledSky,foreground:stippledGround,foregroundSize:[1254,1254],width:1774,height:887,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,opaqueGround:true,groundTileWorldSize:[12,12],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {id:'printed-lagoon',name:'Printed Lagoon',background:printedLagoonPattern,foreground:printedLagoonPattern,width:1744,height:2684,aspectRatio:1744/2684,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,mirrorTiles:true,groundTileWorldSize:[8*1744/2684,8],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
