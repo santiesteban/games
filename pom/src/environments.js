@@ -1,3 +1,10 @@
+import stippledBlueSky from './assets/environments/stippled-blue/background.png';
+import stippledOliveGround from './assets/environments/stippled-blue/ground.png';
+import stippledSky from './assets/environments/stippled-sky/background.png';
+import stippledGround from './assets/environments/stippled-sky/ground.png';
+import printedLagoonPattern from './assets/environments/printed-lagoon/pattern.webp';
+import printedFansBackground from './assets/environments/printed-fans/background.png';
+import printedFansGround from './assets/environments/printed-fans/ground.png';
 import grassCloudsBackground from './assets/environments/grass-clouds/background.png';
 import grassCloudsGround from './assets/environments/grass-clouds/ground.png';
 import risoBackground from './assets/environments/riso-print/background.webp';
@@ -61,6 +68,10 @@ function registeredArtwork(id,name,metadata,images){
 
 export const DEFAULT_ENVIRONMENT='meadow';
 export const ENVIRONMENTS=[
+  {id:'stippled-blue',name:'Stippled Blue Sky',background:stippledBlueSky,foreground:stippledOliveGround,foregroundSize:[1254,1254],width:1774,height:887,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,opaqueGround:true,groundTileWorldSize:[12,12],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
+  {id:'stippled-sky',name:'Stippled Sky',background:stippledSky,foreground:stippledGround,foregroundSize:[1254,1254],width:1774,height:887,aspectRatio:2,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,opaqueGround:true,groundTileWorldSize:[12,12],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
+  {id:'printed-lagoon',name:'Printed Lagoon',background:printedLagoonPattern,foreground:printedLagoonPattern,width:1744,height:2684,aspectRatio:1744/2684,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,mirrorTiles:true,groundTileWorldSize:[8*1744/2684,8],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
+  {id:'printed-fans',name:'Printed Fans',background:printedFansBackground,foreground:printedFansGround,foregroundSize:[1254,1254],width:1672,height:941,aspectRatio:1672/941,groundAnchorY:.7,registeredLayers:false,fullTextures:true,spare:true,backgroundWorldHeight:16,backgroundTileWorldHeight:8,repeatBackground:true,mirrorTiles:true,groundTileWorldSize:[12,12],foregroundOpacity:1,groundWashOpacity:0,floorWashOpacity:0,floorTileOpacity:0},
   {
     id:'grass-clouds',name:'Grass & Clouds',
     background:grassCloudsBackground,foreground:grassCloudsGround,
@@ -111,7 +122,7 @@ export function createEnvironmentLoader(defaultTextures){
     createTexture:(image,index,environment)=>{
       const repeats=(index===0&&environment.repeatBackground)||(index===1&&!!environment.groundTileWorldSize);
       // Repeat horizontally. A mirrored vertical copy extends this scenario.
-      const wrap=environment.horizontalTiles?[10497,environment.mirrorVertical?33648:33071]:!!repeats;
+      const wrap=environment.mirrorTiles?[33648,33648]:environment.horizontalTiles?[10497,environment.mirrorVertical?33648:33071]:!!repeats;
       return new TextureInfo(image,true,wrap,false);
     },
   });
