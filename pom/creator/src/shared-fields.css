@@ -1,0 +1,113 @@
+/* Shared fields, switches, ranges and color swatches. */
+.field {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+}
+.field select {
+  display: block;
+  width: 100%;
+  margin: 7px 0 15px;
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+}
+.swatch {
+  border: 2px solid var(--ink);
+  box-shadow: none;
+}
+.swatch[aria-pressed=true] {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.swatch[aria-pressed=true]:after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  text-shadow: 0 1px 1px #fff;
+}
+.range-field {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 17px;
+}
+.range-field output {
+  float: right;
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  margin: 16px 0;
+}
+.check input {
+  accent-color: var(--ink);
+  width: 17px;
+  height: 17px;
+}
+.field input:not([type=checkbox]):not([type=color]),.field textarea {
+  display: block;
+  width: 100%;
+  margin: 7px 0 12px;
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  font: inherit;
+  font-size: 14px;
+}
+.swatch[data-slot=button] {
+  border: 2px solid #111;
+}
+.swatch[data-slot=button][aria-pressed=true] {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+.field [data-slot=input],.field textarea,.field select {
+  border: 2px solid #111;
+  background: #fff;
+  color: #111;
+  border-radius: 8px;
+}
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+.swatch[aria-pressed=true] {
+  outline: 0;
+}
+.swatch[aria-pressed=true]:after {
+  text-shadow: none;
+  color: #111;
+}
+.field select {
+  background: transparent;
+  border: 2px solid #10100d;
+}
+.swatch[data-slot=button],.swatch[data-slot=button][aria-pressed=true] {
+  box-shadow: none;
+  outline: 0;
+}
+.swatch[data-slot=button] {
+  box-shadow: none;
+}
+.swatch[data-slot=button][aria-pressed=true] {
+  outline: 0;
+}
+.swatch[aria-pressed=true]:after {
+  content: none;
+}
+.swatch {
+  position: relative;
+}
+.swatch[aria-pressed=true] .swatch__check {
+  display: block;
+}

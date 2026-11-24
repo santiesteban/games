@@ -1,0 +1,263 @@
+/* Shared page foundation and base elements. */
+@import '../../shared/fonts.css';
+:root {
+  --ink: #292537;
+  --cream: #fffaf0;
+  --surface: #f5f0e5;
+  --selected: #ece2cd;
+  --orange: #ff9d1c;
+  --muted: #726b5e;
+  --line: #d8d0c1;
+  color-scheme: light;
+  font-family: 'DM Sans',sans-serif;
+  color: var(--ink);
+  background: var(--cream);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,input,select {
+  font: inherit;
+  color: inherit;
+}
+button,a,input,summary,select {
+  -webkit-tap-highlight-color: transparent;
+}
+button,summary {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: .4;
+  cursor: default;
+  box-shadow: none;
+}
+.topbar {
+  border-bottom: 1px solid var(--line);
+  background: var(--cream);
+  align-items: center;
+  gap: 20px;
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+}
+input[type=color] {
+  width: 32px;
+  height: 30px;
+  border: 1.5px solid var(--ink);
+  padding: 3px;
+  border-radius: 7px;
+  background: var(--cream);
+  cursor: pointer;
+}
+input[type=range] {
+  display: block;
+  width: 100%;
+  accent-color: var(--ink);
+  margin: 10px 0 0;
+}
+dialog {
+  border: 3px solid var(--ink);
+  border-radius: 21px;
+  background: var(--cream);
+  color: var(--ink);
+  width: min(520px,calc(100% - 28px));
+  max-height: 88dvh;
+  padding: 24px;
+}
+dialog::backdrop {
+  background: #29253799;
+}
+dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+dialog h2 {
+  font: 600 24px 'DM Sans',sans-serif;
+  margin: 0;
+}
+dialog p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,canvas:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+[hidden] {
+  display: none!important;
+}
+@media(max-width:900px) {
+  .topbar {
+    padding-inline: 18px;
+    height: 74px;
+  }
+}
+@media(max-width:680px) {
+  .topbar {
+    padding: 12px 14px;
+    height: 72px;
+    gap: 10px;
+  }
+  .swatch {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  * {
+    transition: none!important;
+  }
+}
+@media(min-width:681px) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}
+:root {
+  --ink: #111;
+  --cream: #fff;
+  --surface: #f5f5f5;
+  --selected: #e6e6e6;
+  --orange: #ffd84a;
+  --muted: #666;
+  --line: #111;
+  font-family: Figtree,system-ui,sans-serif;
+}
+body,button,input,select,textarea {
+  font-family: Figtree,system-ui,sans-serif;
+}
+.topbar {
+  border-bottom: 2px solid #111;
+}
+dialog {
+  border: 2px solid #111;
+  background: #fff;
+  box-shadow: 5px 5px 0 #111;
+}
+body {
+  font-family: Figtree,system-ui,sans-serif;
+}
+#app {
+  margin: auto;
+  padding: 0 clamp(18px,4vw,56px) 48px;
+}
+.topbar {
+  position: static;
+  height: auto;
+  display: flex;
+  justify-content: space-between;
+}
+.swatches {
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+.community-dialog {
+  background: #fff;
+}
+.community-dialog h2,dialog h2 {
+  font-family: 'Bricolage Grotesque',sans-serif;
+}
+.community-dialog .field input,.community-dialog textarea {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 2px solid #10100d;
+  border-radius: 7px;
+  padding: 9px;
+  margin: 6px 0 12px;
+}
+.community-dialog .button.button--primary {
+  background: #10100d;
+  color: white;
+}
+dialog {
+  font-family: Figtree,sans-serif;
+}
+@media(max-width:700px) {
+  #app {
+    padding: 0 16px 36px;
+  }
+  .topbar {
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+  }
+}
+.community-dialog .button[data-slot=button] {
+  background: #10100d;
+  color: #fff;
+}
+.topbar {
+  background: transparent;
+  border: 0;
+}
+.palette-picker__menu[hidden] {
+  display: none;
+}
+#app {
+  max-width: 1440px;
+}
+.button[data-slot=button]:hover:not(:disabled),.icon-button[data-slot=button]:hover:not(:disabled) {
+  background: transparent;
+  filter: brightness(.9);
+  box-shadow: none;
+  transform: none;
+}
+.community-dialog {
+  width: min(440px,calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  padding: 24px;
+  border: 2px solid #10100d;
+  border-radius: 14px;
+  box-shadow: none;
+  font: 500 15px/1.4 Figtree,sans-serif;
+}
+.community-dialog::backdrop {
+  background: #0009;
+}
+.community-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.community-dialog h2 {
+  font-size: 25px;
+}
+.community-dialog .field {
+  display: block;
+  margin: 14px 0;
+  font-weight: 750;
+}
+.community-dialog .field input {
+  height: 42px;
+}
+body {
+  font: 500 14px/1.35 Figtree,system-ui,sans-serif;
+}
+.topbar {
+  min-height: 0;
+  padding: 20px 0 0;
+}
+dialog button,dialog a {
+  box-shadow: none!important;
+}
+dialog button:hover,dialog button:active,dialog a:hover,dialog a:active {
+  transform: none!important;
+}
+button,button:hover,button:active,a,a:hover,a:active {
+  translate: none!important;
+}

@@ -1,0 +1,24 @@
+/* Shared Creator interface fonts and colors. */
+@font-face {
+  font-family: Figtree;
+  src: url('../../src/assets/interface/figtree-variable.ttf') format('truetype');
+  font-weight: 300 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('./bricolage.ttf') format('truetype');
+  font-weight: 200 800;
+  font-display: swap;
+}
+:root {
+  --ink: #10100d;
+  --cream: #ffdf72;
+  --surface: #ffdf72;
+  --selected: #f5d66a;
+  --orange: #10100d;
+  --muted: #49422e;
+  --line: #10100d;
+  font-family: Figtree,system-ui,sans-serif;
+  background: var(--cream);
+}

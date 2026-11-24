@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffdf72"><title>Component Library · Little Ledges</title></head>
+<body>
+<div id="app" class="library">
+<header class="topbar">
+<nav class="creator-nav" aria-label="Main navigation"><a href="./">Level Creator</a><a href="./community-gallery.html">Gallery</a><a href="./components.html" aria-current="page">Component Library</a></nav>
+</header>
+<div class="creator-heading">
+<div><h1>Component Library</h1><p>The building blocks of the Level Creator.</p><p class="library__note">Some controls are visual examples and do not perform an action.</p></div>
+<a class="button button--quiet" href="./">Back to Level Creator</a></div>
+<main class="library__main">
+<nav class="library__nav" aria-label="Component sections"><a href="#typography">Typography</a><a href="#colors">Colors</a><a href="#buttons">Buttons</a><a href="#tools">Selection controls</a><a href="#inputs">Inputs &amp; toggles</a><a href="#panels">Panels &amp; dividers</a><a href="#feedback">Feedback</a><a href="#dialogs">Dialogs</a><a href="#navigation">Navigation</a><a href="#cards">Cards &amp; badges</a><a href="#states">States &amp; overlays</a><a href="#interactive">Interactive controls</a></nav>
+<div class="library-content">
+<section class="library__section" id="typography">
+<div class="library__heading"><span>01</span><h2>Typography</h2><p>Expressive headings and clear, practical text.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Page title · Bricolage Grotesque</span>
+<div class="type-display">Level Creator</div>
+</div>
+<div class="specimen"><span class="specimen__label">Section heading · Bricolage Grotesque</span>
+<div class="type-section">Color Palette</div>
+</div>
+<div class="specimen"><span class="specimen__label">Body · Figtree</span><p class="type-body">Create and test your own Little Ledges levels.</p><p class="hint">Optional. Resize and position an image on the canvas.</p></div>
+<div class="specimen"><span class="specimen__label">Label &amp; helper text</span><label class="field">Puzzle title</label><p class="hint">Give your puzzle a name people will remember.</p></div>
+</div>
+</section>
+<section class="library__section" id="colors">
+<div class="library__heading"><span>02</span><h2>Colors</h2><p>The core interface palette.</p></div>
+<div class="color-grid">
+<div><span style="--sample:#ffdf72"></span><strong>Yellow</strong><small>#FFDF72</small></div>
+<div><span style="--sample:#10100d"></span><strong>Ink</strong><small>#10100D</small></div>
+<div><span style="--sample:#ffffff"></span><strong>Paper</strong><small>#FFFFFF</small></div>
+<div><span style="--sample:#f5d66a"></span><strong>Highlight</strong><small>#F5D66A</small></div>
+</div>
+</section>
+<section class="library__section" id="buttons">
+<div class="library__heading"><span>03</span><h2>Buttons</h2><p>Actions in their common states.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Primary &amp; secondary</span>
+<div class="sample-row"><button class="button button--primary" type="button">Submit</button><button class="button button--quiet" type="button">Playtest</button><button class="button button--primary" disabled>Disabled</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Icon buttons</span>
+<div class="sample-row"><button class="icon-button" type="button" aria-label="Close">×</button><button class="icon-button" type="button" aria-label="Add">＋</button><button class="icon-button" type="button" disabled aria-label="Disabled">−</button></div>
+</div>
+</div>
+</section>
+<section class="library__section" id="tools">
+<div class="library__heading"><span>04</span><h2>Selection controls</h2><p>Selectable items, segmented controls and color swatches.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Vertical icon buttons · click to select</span>
+<div class="toolset library__tools" role="group" aria-label="Example vertical icon buttons"><button class="tool" type="button" data-icon="Draw" aria-pressed="true"><span>Draw</span></button><button class="tool" type="button" data-icon="Erase" aria-pressed="false"><span>Erase</span></button><button class="tool" type="button" data-icon="Fill" aria-pressed="false"><span>Fill</span></button><button class="tool" type="button" data-icon="Place Flag" aria-pressed="false"><span>Place Flag</span></button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Segmented control</span>
+<div class="canvas-sizes" role="group" aria-label="Example segmented control"><button type="button" data-visible-cells="16" aria-pressed="false">16 × 16</button><button type="button" data-visible-cells="32" aria-pressed="true">32 × 32</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Color swatches</span>
+<div class="swatches library__swatches" role="group" aria-label="Example colors"><button class="swatch" type="button" style="background:#f46b44" aria-label="Coral" aria-pressed="true">✓</button><button class="swatch" type="button" style="background:#ffdf72" aria-label="Yellow" aria-pressed="false"></button><button class="swatch" type="button" style="background:#80c6a2" aria-label="Green" aria-pressed="false"></button><button class="swatch" type="button" style="background:#74b4e9" aria-label="Blue" aria-pressed="false"></button></div>
+</div>
+</div>
+</section>
+<section class="library__section" id="inputs">
+<div class="library__heading"><span>05</span><h2>Inputs &amp; toggles</h2><p>Fields, switches and sliders.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Text field</span><label class="field">Puzzle title<input type="text" placeholder="Name your puzzle"></label></div>
+<div class="specimen"><span class="specimen__label">Select</span>
+<div class="field">Choose an option</div>
+<div class="palette-picker" id="samplePicker"><button type="button" class="palette-picker__trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose an option"><span>Option one</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+<div class="palette-picker__menu" role="listbox" aria-label="Options" hidden><button type="button" role="option" aria-selected="true">Option one</button><button type="button" role="option" aria-selected="false">Option two</button><button type="button" role="option" aria-selected="false">Option three</button></div>
+</div>
+</div>
+<div class="specimen sidebar-section"><span class="specimen__label">Switches</span><label class="check"><input type="checkbox" checked> Show grid</label><label class="check"><input type="checkbox"> Show reference image</label><label class="check"><input type="checkbox" disabled> Disabled setting</label></div>
+<div class="specimen"><span class="specimen__label">Range</span><label class="range-field">Image size <output id="rangeValue">100%</output><input id="sampleRange" type="range" min="50" max="200" value="100"></label></div>
+</div>
+</section>
+<section class="library__section" id="panels">
+<div class="library__heading"><span>06</span><h2>Panels &amp; dividers</h2><p>Simple lines group related actions.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Section &amp; divider</span>
+<div class="sidebar-section"><h2>Reference Image</h2><p class="hint">Add an image to guide your drawing.</p><button type="button" class="button">Upload image</button></div>
+<div class="sidebar-section"><h2>Puzzle Settings</h2><label class="check"><input type="checkbox" checked> Show grid</label></div>
+</div>
+<div class="specimen"><span class="specimen__label">Expandable panel</span><details class="panel" open><summary>Start from a level <span>＋</span></summary><p class="hint">Open a puzzle to use as a starting point.</p></details></div>
+</div>
+</section>
+<section class="library__section" id="feedback">
+<div class="library__heading"><span>07</span><h2>Feedback</h2><p>Helpful messages and status indicators.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Status messages</span><p class="analysis-status">Ready to check your puzzle.</p><p class="analysis-status" data-status="solvable">Pom can reach the flag.</p><p class="analysis-status" data-status="unsolvable">The flag cannot be reached yet.</p><p class="title-error">Please enter a puzzle title.</p></div>
+<div class="specimen"><span class="specimen__label">Tag</span><span class="tag">SAVED</span></div>
+</div>
+</section>
+<section class="library__section" id="dialogs">
+<div class="library__heading"><span>08</span><h2>Dialogs</h2><p>Examples of form and confirmation dialogs.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Form dialog</span><button class="button button--primary" id="showSubmit" type="button">Open form dialog</button></div>
+<div class="specimen"><span class="specimen__label">Confirmation dialog</span><button class="button button--quiet" id="showConfirm" type="button">Open confirmation dialog</button></div>
+</div>
+</section>
+<section class="library__section" id="navigation">
+<div class="library__heading"><span>09</span><h2>Navigation</h2><p>Headers, links and list items for moving between screens.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Navigation header</span>
+<div class="navigation-header"><button class="navigation-icon navigation-icon--back" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><strong>Page title</strong><span class="progress-badge">4 / 12</span></div>
+</div>
+<div class="specimen"><span class="specimen__label">Section heading with action</span>
+<div class="section-heading"><strong>Section title</strong><button class="action-link" type="button">View all</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Action links</span>
+<div class="sample-row"><button class="action-link" type="button">Text action</button><button class="action-link" type="button">↶ <span>Icon action</span></button><button class="action-link" type="button" disabled>Disabled</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Navigation list item · joined</span>
+<div class="navigation-list" id="joinedNavigationExamples"><button type="button" class="navigation-list__item"><span class="navigation-list__thumbnail" aria-hidden="true">◆</span><span class="navigation-list__content"><strong>Item title</strong><small>Supporting text</small></span><span class="navigation-icon navigation-icon--forward" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" transform="rotate(180 12 12)"/></svg></span></button><button type="button" class="navigation-list__item"><span class="navigation-list__thumbnail navigation-list__thumbnail--blue" aria-hidden="true">■</span><span class="navigation-list__content"><strong>Item with progress</strong><small><span class="progress-badge">4 / 12</span></small></span><span class="navigation-icon navigation-icon--forward" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" transform="rotate(180 12 12)"/></svg></span></button>
+<div class="navigation-list__item navigation-list__item--locked" aria-label="Locked item"><span class="navigation-list__thumbnail" aria-hidden="true">◆</span><span class="navigation-list__content"><strong>Locked item</strong><small>Coming soon</small></span><span class="navigation-list__lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></div>
+</div>
+</div>
+<div class="specimen"><span class="specimen__label">Navigation list item · separate</span>
+<div class="navigation-list navigation-list--separate" id="separateNavigationExamples"></div>
+</div>
+<div class="specimen"><span class="specimen__label">Featured navigation item</span>
+<div class="navigation-list navigation-list--featured"><button type="button" class="navigation-list__item navigation-list__item--featured"><span class="navigation-list__thumbnail navigation-list__thumbnail--featured" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3l3.1 8.4L28 14.5l-8.9 3.2L16 26l-3.1-8.3L4 14.5l8.9-3.1L16 3z"/><path d="M25 21v6m-3-3h6M6 4v4M4 6h4"/></svg></span><span class="navigation-list__content"><strong>Featured item</strong><small>A little something special</small></span><span class="navigation-icon navigation-icon--forward" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" transform="rotate(180 12 12)"/></svg></span></button></div>
+</div>
+</div>
+</section>
+<section class="library__section" id="cards">
+<div class="library__heading"><span>10</span><h2>Cards &amp; badges</h2><p>Previews, metadata and compact status indicators.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Preview card · joined</span>
+<div class="preview-grid" id="joinedPreviewExamples">
+<article class="preview-card">
+<div class="preview-card__visual"><span class="preview-card__number">01</span><span class="preview-card__completed" aria-label="Completed">✓</span>
+<div class="preview-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+</div>
+<div class="preview-card__body"><strong>Sunny Steps</strong><span class="preview-card__author">by Alex</span>
+<div class="preview-card__tags"><span class="difficulty-tag">Easy</span></div>
+</div>
+</article>
+<article class="preview-card">
+<div class="preview-card__visual"><span class="preview-card__number">02</span>
+<div class="preview-art preview-art--alternate" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+</div>
+<div class="preview-card__body"><strong>Twisty Tower</strong><span class="preview-card__author">by Sam</span>
+<div class="preview-card__tags"><span class="difficulty-tag difficulty-tag--hard">Hard</span><span class="issue-tag">Known issues</span></div>
+</div>
+</article>
+</div>
+</div>
+<div class="specimen"><span class="specimen__label">Preview card · separate</span>
+<div class="preview-grid preview-grid--separate" id="separatePreviewExamples"></div>
+</div>
+<div class="specimen"><span class="specimen__label">Metadata card · available and added</span>
+<div class="preview-grid preview-grid--separate" id="metadataExamples">
+<article class="preview-card preview-card--metadata">
+<div class="preview-card__visual">
+<div class="preview-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+</div>
+<div class="preview-card__body"><strong>Sunny Steps</strong><span class="preview-card__author">by Alex</span><time class="preview-card__date" datetime="2026-11-24">Nov 24, 2026</time>
+<div class="preview-card__tags"><span class="difficulty-tag">Easy</span></div>
+<button type="button" class="button button--primary preview-card__add">Add to My Puzzles</button></div>
+</article>
+<article class="preview-card preview-card--metadata">
+<div class="preview-card__visual">
+<div class="preview-art preview-art--alternate" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+</div>
+<div class="preview-card__body"><strong>Twisty Tower</strong><span class="preview-card__author">by Sam</span><time class="preview-card__date" datetime="2026-11-22">Nov 22, 2026</time>
+<div class="preview-card__tags"><span class="difficulty-tag difficulty-tag--hard">Hard</span><span class="issue-tag">Known issues</span></div>
+<span class="preview-card__added">✓ Added to My Puzzles</span></div>
+</article>
+</div>
+</div>
+<div class="specimen"><span class="specimen__label">Badges &amp; status</span>
+<div class="sample-row"><span class="progress-badge">4 / 12</span><span class="preview-card__number preview-card__number--static">01</span><span class="preview-card__completed preview-card__completed--static" aria-label="Completed">✓</span><span class="status-issue status-issue--static">Known issue</span><span class="status-message">Update available</span></div>
+</div>
+<div class="specimen"><span class="specimen__label">Management list item</span>
+<div class="management-row"><strong>Item title</strong><button class="action-link" type="button">Export</button><button class="action-link" type="button">Delete</button></div>
+</div>
+</div>
+</section>
+<section class="library__section" id="states">
+<div class="library__heading"><span>11</span><h2>States &amp; overlays</h2><p>Messages and layered content for different situations.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Empty state</span>
+<div class="message-state"><strong>Nothing here yet</strong><p>Items will appear here when they are available.</p><button class="button button--quiet" type="button">Add an item</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Loading &amp; error</span>
+<div class="message-state"><span class="loading-spinner" aria-hidden="true"></span><p>Loading…</p></div>
+<div class="message-state"><p>Could not load content.</p><button class="button button--quiet" type="button">Try again</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Toast with action</span>
+<div class="toast-example" role="status"><span>Item removed.</span><button class="action-link" type="button">Undo</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Sheet</span><button class="button button--quiet" id="showSheet" type="button">Open sheet</button></div>
+<div class="specimen"><span class="specimen__label">Bottom sheet · gallery</span><button class="button button--quiet" id="showGallerySheet" type="button">Open gallery sheet</button></div>
+<div class="specimen"><span class="specimen__label">Preview dialog</span><button class="button button--quiet" id="showPreview" type="button">Open preview dialog</button></div>
+<div class="specimen"><span class="specimen__label">Completion overlay</span>
+<div class="completion-overlay"><strong>Nicely done!</strong><p>Completed successfully.</p><button class="button button--primary" type="button">Continue</button></div>
+</div>
+</div>
+</section>
+<section class="library__section" id="interactive">
+<div class="library__heading"><span>12</span><h2>Interactive controls</h2><p>Framed content and controls with selectable states.</p></div>
+<div class="library__specimens">
+<div class="specimen"><span class="specimen__label">Content frame &amp; overlay</span>
+<div class="content-frame"><span>Interactive content</span>
+<div class="content-frame__tools"><button type="button" aria-label="Zoom in">＋</button><button type="button" aria-label="Zoom out">−</button></div>
+</div>
+</div>
+<div class="specimen"><span class="specimen__label">Selectable tabs</span>
+<div class="selection-tabs" role="group" aria-label="Example tabs"><button type="button" aria-pressed="true">◆</button><button type="button" aria-pressed="false">◆</button><button type="button" aria-pressed="false" disabled>◆</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Two-option action control</span>
+<div class="action-control" role="group" aria-label="Example actions"><button type="button" aria-pressed="true">← First</button><button type="button" aria-pressed="false">Second →</button></div>
+<div class="action-control" aria-label="Disabled example"><button type="button" disabled>← First</button><button type="button" disabled>Second →</button></div>
+</div>
+<div class="specimen"><span class="specimen__label">Vertical zoom control</span>
+<div class="zoom-control"><button type="button" data-zoom="1" aria-label="Increase zoom">＋</button><input type="range" min="0" max="100" value="50" aria-label="Zoom"><button type="button" data-zoom="-1" aria-label="Decrease zoom">−</button></div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+<dialog class="community-dialog" id="sampleSubmit" aria-labelledby="sampleSubmitTitle">
+<header><h2 id="sampleSubmitTitle">Submit your level</h2><button type="button" class="icon-button" data-close aria-label="Close">×</button></header>
+<label class="field">Puzzle title<input placeholder="My puzzle"></label><label class="field">Creator name<input placeholder="Your name"></label><button type="button" class="button button--primary button--full" data-close>Submit for review</button></dialog>
+<dialog id="sampleConfirm" aria-labelledby="sampleConfirmTitle"><h2 id="sampleConfirmTitle">Start a new puzzle?</h2><p>Your current draft will stay saved on this device.</p>
+<div class="dialog__actions"><button type="button" class="button button--quiet" data-close>Keep editing</button><button type="button" class="button button--primary" data-close>Continue</button></div>
+</dialog>
+<dialog id="sampleSheet" class="sheet-example" aria-labelledby="sampleSheetTitle">
+<header><h2 id="sampleSheetTitle">Sheet title</h2><button type="button" class="icon-button" data-close aria-label="Close">×</button></header>
+<p>Scrollable content appears here.</p></dialog>
+<dialog id="sampleGallerySheet" class="gallery-sheet" aria-labelledby="sampleGalleryTitle">
+<header class="gallery-sheet__header">
+<div><h2 id="sampleGalleryTitle">Community Gallery</h2><p>Discover puzzles made by the community.</p></div>
+<button type="button" class="gallery-sheet__close" data-close aria-label="Close gallery">×</button></header>
+<div class="gallery-sheet__body">
+<div class="gallery-sheet__controls"><label class="gallery-sheet__search">Search puzzles<input type="search" placeholder="Search by name or creator"></label>
+<div class="gallery-sheet__sort"><span>Sort by</span>
+<div class="palette-picker"><button type="button" class="palette-picker__trigger" aria-label="Sort by" aria-haspopup="listbox" aria-expanded="false"><span>Newest first</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+<div class="palette-picker__menu" role="listbox" aria-label="Sort order" hidden><button type="button" role="option" aria-selected="true">Newest first</button><button type="button" role="option" aria-selected="false">Oldest first</button><button type="button" role="option" aria-selected="false">Name A–Z</button></div>
+</div>
+</div>
+</div>
+<p class="gallery-sheet__count">2 puzzles</p>
+<div class="gallery-sheet__grid"></div>
+<p class="gallery-sheet__empty" hidden>No puzzles match your search.</p></div>
+</dialog>
+<dialog id="samplePreview" class="community-dialog" aria-labelledby="samplePreviewTitle">
+<header><h2 id="samplePreviewTitle">Preview</h2><button type="button" class="icon-button" data-close aria-label="Close">×</button></header>
+<div class="preview-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<h3>Item title</h3><p>Additional details about this item.</p>
+<div class="dialog__actions"><button class="button button--quiet" type="button" data-close>Cancel</button><button class="button button--primary" type="button" data-close>Continue</button></div>
+</dialog>
+<script type="module" src="./src/component-library.js"></script></body></html>

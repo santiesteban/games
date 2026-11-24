@@ -96,3 +96,7 @@ Creator drafts now use a separate `little-ledges-creator` IndexedDB database. Le
 The 16 × 16 and 32 × 32 controls change the visible editing area. The smaller view shows the bottom-left 16 × 16 cells; saved and shared puzzles retain the existing 32 × 32 format, including cells outside the smaller view.
 
 The Gallery reads published levels from the configured community gallery service. In the game it uses the existing import confirmation flow and shows the saved status; on the web it displays a share QR code. Submission requires the configured Turnstile and submission service. Deploy the updated submission Worker together with this creator.
+
+## Component library
+
+Open `components.html` through the Creator's development server to review the interface examples. Examples use sample data and do not modify saved puzzles. Shared fonts, colors, buttons, fields, selection controls and base styles live in `src/shared-*.css`; both the Creator and component library import them. The Creator's page layout remains in `style.css` and `prototype.css`, while library-only examples use `component-library.css`. Prefer BEM names for new components and preserve existing class names when integrating with older Creator behavior.

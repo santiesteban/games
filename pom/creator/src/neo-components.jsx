@@ -19,7 +19,7 @@ function nodeFromMarkup(markup){const template=document.createElement('template'
 export function neoButton(element){
   const props=attributes(element);
   if(!props.type)props.type=element.closest('form')?'submit':'button';
-  props.variant=element.classList.contains('primary')?'default':'neutral';
+  props.variant=element.classList.contains('button--primary')?'default':'neutral';
   props.size=element.classList.contains('icon-button')||element.classList.contains('tool')?'icon':'default';
   props.dangerouslySetInnerHTML={__html:element.innerHTML};
   const result=nodeFromMarkup(renderToStaticMarkup(React.createElement(Button,props)));
