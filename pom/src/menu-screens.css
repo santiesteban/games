@@ -471,7 +471,7 @@
   min-width: 0;
   padding: 24px 12px 18px;
   border-radius: 8px 8px 0 0;
-  background: #faf7eb;
+  background: #fff;
 }
 
 #menuScreen .menu-page .level-card__art {
@@ -628,8 +628,8 @@
 
 /* Match the Creator's shared interface while keeping gameplay controls separate. */
 #menuScreen.is-menu,
-#menuScreen.is-menu .menu-page { background: #ffdf72; }
-#menuScreen .menu-page { --color-paper:#ffdf72; --color-board:#fff1b9; }
+#menuScreen.is-menu .menu-page { background: #f5f5f5; }
+#menuScreen .menu-page { --color-paper:#f5f5f5; --color-board:#e6e6e6; }
 #menuScreen .menu-page .topbar__title,
 #menuScreen .menu-page .section-heading h2 { font-family:'Bricolage Grotesque',sans-serif; font-weight:800; letter-spacing:-.035em; }
 #menuScreen .menu-page .action { font-weight:700; }
@@ -643,7 +643,7 @@
 #menuScreen .menu-page .pack-list:not(.more-puzzles-list) { overflow:hidden; }
 
 /* Settings fields follow the Creator controls. */
-#menuScreen .menu-page .settings-section { background:#fff8df; }
+#menuScreen .menu-page .settings-section { background:#fff; }
 #menuScreen .menu-page .settings-section h2 { font-family:'Bricolage Grotesque',sans-serif; font-weight:800; letter-spacing:-.035em; }
 #menuScreen .menu-page .settings-message + .setting { margin-top:24px; }
 #menuScreen .menu-page .setting .palette-picker { flex:none; width:min(45%,220px); }
