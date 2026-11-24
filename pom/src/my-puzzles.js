@@ -25,8 +25,8 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
   document.body.append(dialog);
   const galleryUrl=import.meta.env.VITE_COMMUNITY_GALLERY_URL||new URL('community-gallery.html',creatorUrl).href;
   const galleryOrigin=new URL(galleryUrl).origin;
-  const gallerySheet=document.createElement('dialog');gallerySheet.className='community-sheet';gallerySheet.setAttribute('aria-labelledby','communitySheetTitle');
-  gallerySheet.innerHTML='<header class="community-sheet-header"><h2 id="communitySheetTitle">Community Gallery</h2><form method="dialog"><button class="community-sheet-close" aria-label="Close community gallery">✕</button></form></header><p class="community-sheet-note" role="status" hidden>The gallery could not be loaded. Please try again.</p><iframe title="Community Gallery" class="community-sheet-frame"></iframe>';
+  const gallerySheet=document.createElement('dialog');gallerySheet.className='gallery-sheet';gallerySheet.setAttribute('aria-labelledby','communitySheetTitle');
+  gallerySheet.innerHTML='<header class="gallery-sheet__header"><div><h2 id="communitySheetTitle">Community Gallery</h2></div><form method="dialog"><button class="gallery-sheet__close" aria-label="Close community gallery">✕</button></form></header><p class="community-sheet-note" role="status" hidden>The gallery could not be loaded. Please try again.</p><iframe title="Community Gallery" class="community-sheet-frame"></iframe>';
   const galleryFrame=gallerySheet.querySelector('iframe'),galleryNote=gallerySheet.querySelector('.community-sheet-note');let galleryTimer;document.body.append(gallerySheet);
   function syncGallery(){if(gallerySheet.open)galleryFrame.contentWindow?.postMessage({type:'little-ledges:gallery-handshake',savedPuzzles:records.map(record=>({id:record.id,revision:record.puzzle.revision}))},galleryOrigin)}
   galleryFrame.addEventListener('load',async()=>{if(!gallerySheet.open)return;await loaded;syncGallery()});
@@ -85,12 +85,13 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     }
     const heading=document.createElement('h2');heading.textContent='Make and manage puzzles';
     const links=document.createElement('div');links.className='collection-tools';
-    const upload=document.createElement('button');upload.type='button';upload.className='action';upload.textContent='Upload a Level';upload.onclick=importFile;
-    const create=document.createElement('a');create.href=creatorUrl;create.target='_blank';create.rel='noopener';create.className='action';create.textContent='Open Level Maker';
+    function labelAction(element,text){element.className='action action-link';const label=document.createElement('span');label.className='action__label';label.textContent=text;element.append(label);return element}
+    const upload=labelAction(document.createElement('button'),'Upload a Level');upload.type='button';upload.onclick=importFile;
+    const create=labelAction(document.createElement('a'),'Open Level Maker');create.href=creatorUrl;create.target='_blank';create.rel='noopener';
     create.onclick=event=>{event.preventDefault();openExternal(creatorUrl).catch(error=>notice(error.message))};
-    const gallery=document.createElement('button');gallery.type='button';gallery.className='action';gallery.textContent='Community Gallery';
+    const gallery=labelAction(document.createElement('button'),'Community Gallery');gallery.type='button';
     gallery.onclick=openGallery;
-    const manage=document.createElement('button');manage.type='button';manage.className='action';manage.textContent='Manage puzzles';manage.disabled=!records.length;
+    const manage=labelAction(document.createElement('button'),'Manage puzzles');manage.type='button';manage.disabled=!records.length;
     manage.onclick=()=>{renderManager();manager.showModal()};
     links.append(upload,create,gallery,manage);actions.append(heading,links);
   }

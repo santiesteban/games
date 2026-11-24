@@ -1,13 +1,19 @@
-/* Shared select styles used by the Creator and component library. */
+/* Shared select styles used by the Creator, game, and component library. */
 .palette-picker {
   position: relative;
 }
 .palette-picker__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   min-height: 37px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  height: 38px;
+  padding: 0 11px 0 12px;
+  border: 2px solid #10100d;
+  border-radius: 8px;
+  background: transparent;
+  color: #10100d;
   font: 700 13px Figtree,sans-serif;
 }
 .palette-picker__trigger svg {
@@ -16,50 +22,33 @@
   stroke: currentColor;
   stroke-width: 2;
 }
-.palette-picker__menu {
-  position: absolute;
-  z-index: 8;
-  top: calc(100% + 5px);
-  left: 0;
-  right: 0;
-  max-height: 260px;
-  overflow: auto;
-  background: #fff;
-}
-.palette-picker__menu button {
-  width: 100%;
-  border: 0;
-  border-radius: 6px;
-  text-align: left;
-  background: white;
-  font: 600 13px Figtree,sans-serif;
-}
-.palette-picker__menu button:hover,.palette-picker__menu button[aria-selected=true] {
-  background: #e9e9e9;
-}
-.palette-picker__trigger {
-  height: 38px;
-  padding: 0 11px 0 12px;
-  border: 2px solid #10100d;
-  border-radius: 8px;
-  background: transparent;
-  color: #10100d;
-}
 .palette-picker__trigger[aria-expanded=true],.palette-picker__trigger:focus-visible {
   background: #10100d;
   color: #fff;
   outline: 0;
 }
 .palette-picker__menu {
+  position: absolute;
+  z-index: 8;
   top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow: auto;
   padding: 5px;
   border: 2px solid #10100d;
   border-radius: 10px;
+  background: #fff;
   box-shadow: 0 4px 0 #0002;
 }
 .palette-picker__menu button {
+  width: 100%;
   padding: 8px 10px;
-  font-weight: 650;
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+  font: 650 13px Figtree,sans-serif;
 }
 .palette-picker__menu button[aria-selected=true] {
   background: #ffdf72;

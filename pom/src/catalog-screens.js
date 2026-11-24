@@ -1,4 +1,4 @@
-import {collectionCard,updateGridEdges} from './collection-view.js';
+import {collectionCard} from './collection-view.js';
 import {userPuzzleThumbnail} from './puzzle-thumbnail.js';
 
 const thumbnails={
@@ -24,7 +24,6 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
   const scroller=document.querySelector('#menuScreen');
   const empty=document.querySelector('#collectionEmpty');
   const actions=document.querySelector('#collectionActions');
-  new ResizeObserver(()=>updateGridEdges(grid)).observe(grid);
 
   function groupLevels(id){return levels.filter(level=>level.group===id)}
   function count(completed,total){return `${completed} / ${total}`}
@@ -59,21 +58,21 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
       link.addEventListener('click',event=>{event.preventDefault();if(ready)play(level)});
       const art=level.userPuzzle?myPuzzles.thumbnail(level):userPuzzleThumbnail(thumbnailLevel(level));art.classList.add('continue-card__art');art.setAttribute('aria-hidden','true');item.querySelector('.pack-card__art').replaceChildren(art);
       item.querySelector('.pack-card__title').textContent=level.name;
-      const pack=item.querySelector('.pack-card__progress');pack.classList.add('continue-card__pack');pack.textContent=level.userPuzzle?'My Puzzles':groups.find(group=>group.id===level.group)?.name??'';
+      const pack=document.createElement('small');pack.textContent=level.userPuzzle?'My Puzzles':groups.find(group=>group.id===level.group)?.name??'';item.querySelector('.pack-card__progress').replaceWith(pack);
       cards.push(item);
     }
     continueList.replaceChildren(...cards);continueSection.hidden=!cards.length;
     packList.replaceChildren(...groups.slice(0,3).map((group,index)=>packCard(group.id,group.name,groupProgress(group.id),index)));
     allPackList.replaceChildren(...groups.map((group,index)=>packCard(group.id,group.name,groupProgress(group.id),index,'collections')));
     const placeholder=document.createElement('li');
-    placeholder.innerHTML=`<article class="pack-card" aria-label="Special Packs, coming soon">
+    placeholder.innerHTML=`<article class="pack-card navigation-list__item navigation-list__item--locked" aria-label="Special Packs, coming soon">
       <span class="pack-card__art pack-card__art-squares pack-card__art-squares--special" aria-hidden="true"><span></span><span></span><span></span></span>
-      <span class="pack-card__copy"><span class="pack-card__title">Special Packs</span></span>
-      <span class="pack-card__lock" aria-hidden="true"><svg class="pack-card__lock-icon" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></span>
+      <span class="pack-card__copy navigation-list__content"><span class="pack-card__title">Special Packs</span></span>
+      <span class="pack-card__lock navigation-list__lock" aria-hidden="true"><svg class="pack-card__lock-icon" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></span>
     </article>`;
     allPackList.append(placeholder);packList.setAttribute('aria-busy',String(!ready));allPackList.setAttribute('aria-busy',String(!ready));
     const personal=packCard('my-puzzles','My Puzzles','',1);
-    personal.querySelector('.pack-card').classList.add('more-puzzles-card','more-puzzles-card--personal');
+    personal.querySelector('.pack-card').classList.add('more-puzzles-card','more-puzzles-card--personal','navigation-list__item--featured');
     personal.querySelector('.pack-card__art').remove();personal.querySelector('.pack-card__progress').remove();
     personalList.replaceChildren(personal);
   }
@@ -101,7 +100,6 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
       }
       if(!grid.childElementCount){empty.hidden=false;empty.textContent='No levels to show with your current settings.'}
     }
-    updateGridEdges(grid);
     scroller.scrollTop=scroll;
   }
 

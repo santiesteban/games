@@ -65,7 +65,7 @@
   flex: none;
   width: 28px;
   height: 28px;
-  background: var(--color-paper);
+  background: transparent;
   border: var(--border);
   border-radius: var(--radius);
   transform: rotate(8deg);
@@ -358,9 +358,9 @@
 .stage.screen--level .level-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: 34px auto;
   column-gap: 10px;
-  row-gap: 6px;
+  row-gap: 0;
 }
 .stage.screen--level .level-header .topbar__actions {
   grid-column: 1 / -1;
@@ -380,7 +380,7 @@
   height: 28px;
   border: var(--border);
   border-radius: var(--radius);
-  background: var(--color-paper);
+  background: transparent;
   transform: rotate(8deg);
   translate: none;
 }
@@ -392,7 +392,7 @@
   padding: 6px 2px;
 }
 .stage.screen--level #levelSettings .action__icon { width: 22px; height: 22px; }
-.stage.screen--level #exitLevel:active { transform: rotate(8deg); translate: none; }
+.stage.screen--level #exitLevel:active { transform: rotate(8deg); translate: 2px 2px; }
 .stage.screen--level button:active:not(:disabled) { transform: none; translate: none; box-shadow: none; }
 .stage.screen--level button:disabled { cursor: default; opacity: 1; }
 .stage.screen--level .level-header button:disabled { opacity: .4; }

@@ -1,3 +1,4 @@
+import {enhanceSelect} from '../creator/src/shared-select.js';
 import catalog from '#level-catalog';
 import {createLevelProgress} from './level-progress.js';
 import {createLevelPreferences} from './level-preferences.js';
@@ -20,6 +21,7 @@ export function startMenu(){
   const menu=document.querySelector('#menuScreen');
   const unfinished=createUnfinishedPuzzles();
   const runtime=menuStartup={progress,preferences,features,unfinished,catalog:null,puzzles:null,open:null,play:null,change:null};
+  const syncSettingsSelects=[...document.querySelectorAll('#settingsPanel select')].map(enhanceSelect);
   function show(panel){
     document.documentElement.dataset.screen=panel==='title'?'home':panel;
     menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
@@ -33,6 +35,7 @@ export function startMenu(){
       document.querySelector('#clearProgress').hidden=false;
       document.querySelector('#progressMessage').textContent='';
       updateProgress();
+      syncSettingsSelects.forEach(sync=>sync());
     }
     menu.scrollTop=0;
     document.querySelector(panel==='title'?'#titlePanel .brand':panel==='collections'?'#collectionsHome':panel==='levels'?'#backTitle':'#settingsHome').focus({preventScroll:true});

@@ -1,16 +1,5 @@
 /* Shared Creator interface fonts and colors. */
-@font-face {
-  font-family: Figtree;
-  src: url('../../src/assets/interface/figtree-variable.ttf') format('truetype');
-  font-weight: 300 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  src: url('./bricolage.ttf') format('truetype');
-  font-weight: 200 800;
-  font-display: swap;
-}
+@import '../../src/interface-fonts.css';
 :root {
   --ink: #10100d;
   --cream: #ffdf72;

@@ -1,9 +1,13 @@
+import {setupSelect} from './shared-select.js';
 import './shared-foundation.css';
 import './shared-tokens.css';
 import './shared-buttons.css';
 import './shared-fields.css';
 import './shared-controls.css';
+import './shared-switch.css';
 import './shared-select.css';
+import './shared-navigation-cards.css';
+import './shared-gallery-sheet.css';
 import './component-library.css';
 import {prototypeIcons} from './prototype-icons.js';
 
@@ -41,45 +45,6 @@ range.addEventListener('input', () => {
 });
 
 // Both examples use the Creator's select styling and the same keyboard behavior.
-function setupSelect(picker, onSelect = () => {}) {
-  const trigger = picker.querySelector('.palette-picker__trigger');
-  const menu = picker.querySelector('[role=listbox]');
-  const options = [...menu.querySelectorAll('[role=option]')];
-  const setOpen = open => {
-    menu.hidden = !open;
-    trigger.setAttribute('aria-expanded', String(open));
-  };
-
-  trigger.addEventListener('click', () => setOpen(menu.hidden));
-  picker.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !menu.hidden) {
-      event.stopPropagation();
-      setOpen(false);
-      trigger.focus();
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      setOpen(true);
-      const index = options.indexOf(document.activeElement);
-      const step = event.key === 'ArrowDown' ? 1 : -1;
-      options[index < 0 ? (step > 0 ? 0 : options.length - 1) : (index + step + options.length) % options.length].focus();
-    }
-  });
-  menu.addEventListener('click', event => {
-    const selected = event.target.closest('[role=option]');
-    if (!selected || !menu.contains(selected)) return;
-    for (const option of options) option.setAttribute('aria-selected', String(option === selected));
-    trigger.querySelector('span').textContent = selected.textContent;
-    setOpen(false);
-    trigger.focus();
-    onSelect(selected.textContent);
-  });
-  document.addEventListener('click', event => {
-    if (!picker.contains(event.target)) setOpen(false);
-  });
-  picker.addEventListener('focusout', event => {
-    if (!picker.contains(event.relatedTarget)) setOpen(false);
-  });
-}
 
 setupSelect(document.querySelector('#samplePicker'));
 

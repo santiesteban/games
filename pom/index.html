@@ -11,6 +11,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
   <!-- Load layout before the first paint, including while the game module loads. -->
   <link rel="stylesheet" href="./src/style.css">
+  <link rel="stylesheet" href="./creator/src/shared-navigation-cards.css">
+  <link rel="stylesheet" href="./creator/src/shared-switch.css">
+  <link rel="stylesheet" href="./creator/src/shared-select.css">
+  <link rel="stylesheet" href="./creator/src/shared-gallery-sheet.css">
   <link rel="stylesheet" href="./src/menu-screens.css">
   <link rel="stylesheet" href="./src/level-screen.css">
   <link rel="stylesheet" href="./src/interface-fonts.css">
@@ -20,7 +24,7 @@
   <div class="app"><section class="stage screen screen--level" aria-label="Little Ledges game" inert>
 
     <header class="topbar game-header level-header">
-      <a class="topbar__back" href="#collection" id="exitLevel" aria-label="Back to levels">
+      <a class="topbar__back navigation-icon navigation-icon--back" href="#collection" id="exitLevel" aria-label="Back to levels">
         <svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M19 12H5M11 6l-6 6 6 6" />
         </svg>
@@ -171,20 +175,20 @@
     <main class="home-main">
       <section class="packs" id="continueSection" aria-labelledby="continue-title" hidden>
         <div class="section-heading"><h2 id="continue-title">Continue Playing</h2></div>
-        <ul class="pack-list" id="continueList"></ul>
+        <ul class="pack-list navigation-list" id="continueList"></ul>
       </section>
       <section class="packs" aria-labelledby="packs-title">
-        <div class="section-heading"><h2 id="packs-title">Puzzle Collections</h2><a class="action" href="#collections" id="viewCollections">View all</a></div>
-        <ul class="pack-list" id="packList" aria-busy="true"></ul>
+        <div class="section-heading"><h2 id="packs-title">Puzzle Collections</h2><a class="action action-link" href="#collections" id="viewCollections"><span class="action__label">View all</span></a></div>
+        <ul class="pack-list navigation-list" id="packList" aria-busy="true"></ul>
       </section>
       <section class="packs" aria-labelledby="more-puzzles-title">
         <div class="section-heading"><h2 id="more-puzzles-title">More Puzzles</h2></div>
-        <ul class="pack-list more-puzzles-list" id="personalPackList"></ul>
-        <ul class="pack-list more-puzzles-list"><li><a class="pack-card more-puzzles-card more-puzzles-card--community" href="#community" id="openCommunityGallery"><span class="pack-card__copy"><span class="pack-card__title">Community Gallery</span></span><span class="pack-card__arrow" aria-hidden="true"><svg class="pack-card__arrow-icon" viewBox="0 0 24 24"><use href="#pack-card__arrow"/></svg></span></a></li></ul>
+        <ul class="pack-list navigation-list navigation-list--featured more-puzzles-list" id="personalPackList"></ul>
+        <ul class="pack-list navigation-list navigation-list--featured more-puzzles-list"><li><a class="pack-card navigation-list__item navigation-list__item--featured more-puzzles-card more-puzzles-card--community" href="#community" id="openCommunityGallery"><span class="pack-card__copy navigation-list__content"><span class="pack-card__title">Community Gallery</span></span><span class="pack-card__arrow navigation-icon navigation-icon--forward" aria-hidden="true"><svg class="pack-card__arrow-icon" viewBox="0 0 24 24"><use href="#pack-card__arrow"/></svg></span></a></li></ul>
       </section>
     </main>
     <footer class="home-footer">
-      <a class="action" href="#settings" id="openSettings" aria-label="Settings">
+      <a class="action action-link" href="#settings" id="openSettings" aria-label="Settings">
         <svg class="action__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#gear-icon"/></svg>
         <span class="action__label">Settings</span>
       </a>
@@ -192,42 +196,41 @@
   </section>
     <section class="screen menu-page" id="collectionsPanel" aria-labelledby="collectionsTitle" hidden>
       <header class="topbar topbar--standard">
-        <a class="topbar__back" href="#home" id="collectionsHome" aria-label="Back to home"><svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg></a>
+        <a class="topbar__back navigation-icon navigation-icon--back" href="#home" id="collectionsHome" aria-label="Back to home"><svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg></a>
         <h1 class="topbar__title" id="collectionsTitle">Puzzle Collections</h1>
       </header>
-      <main class="home-main"><ul class="pack-list" id="allPackList"></ul></main>
+      <main class="home-main"><ul class="pack-list navigation-list" id="allPackList"></ul></main>
     </section>
     <section class="screen menu-page" id="levelsPanel" aria-labelledby="collectionTitle" hidden>
       <header class="topbar topbar--standard">
-        <a class="topbar__back" href="#home" id="backTitle" aria-label="Back to home">
+        <a class="topbar__back navigation-icon navigation-icon--back" href="#home" id="backTitle" aria-label="Back to home">
           <svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
         </a>
         <h1 class="topbar__title" id="collectionTitle">Basic Lessons</h1>
-        <span class="collection-progress" id="collectionProgress"></span>
+        <span class="collection-progress progress-badge" id="collectionProgress"></span>
       </header>
       <div class="collection-content" id="levelList" tabindex="0">
-        <main class="level-grid" id="collectionGrid" aria-label="Collection levels"></main>
+        <main class="level-grid preview-grid preview-grid--separate" id="collectionGrid" aria-label="Collection levels"></main>
         <p class="collection-empty" id="collectionEmpty" role="status" hidden></p>
         <section class="collection-actions" id="collectionActions" aria-label="My Puzzles tools" hidden></section>
       </div>
     </section>
     <template id="packCardTemplate">
-      <li><a class="pack-card" href="#collection">
-        <span class="pack-card__art"><img class="pack-card__art-image" alt=""></span>
-        <span class="pack-card__copy"><span class="pack-card__title"></span><span class="pack-card__progress"></span></span>
-        <span class="pack-card__arrow" aria-hidden="true"><svg class="pack-card__arrow-icon" viewBox="0 0 24 24"><use href="#pack-card__arrow"/></svg></span>
+      <li><a class="pack-card navigation-list__item" href="#collection">
+        <span class="pack-card__art navigation-list__thumbnail"><img class="pack-card__art-image" alt=""></span>
+        <span class="pack-card__copy navigation-list__content"><span class="pack-card__title"></span><span class="pack-card__progress progress-badge"></span></span>
+        <span class="pack-card__arrow navigation-icon navigation-icon--forward" aria-hidden="true"><svg class="pack-card__arrow-icon" viewBox="0 0 24 24"><use href="#pack-card__arrow"/></svg></span>
       </a></li>
     </template>
     <template id="levelCardTemplate">
-      <a class="level-card" href="#level">
-        <span class="level-card__number"></span>
-        <div class="level-card__preview"></div>
-        <div class="level-card__title"></div>
+      <a class="level-card preview-card" href="#level">
+        <div class="level-card__preview preview-card__visual"><span class="level-card__number preview-card__number"></span></div>
+        <div class="level-card__title preview-card__body"></div>
       </a>
     </template>
   <section class="screen screen--settings menu-page" id="settingsPanel" aria-labelledby="settingsTitle" hidden>
     <header class="topbar topbar--standard">
-      <a class="topbar__back" href="#home" id="settingsHome" aria-label="Back to home">
+      <a class="topbar__back navigation-icon navigation-icon--back" href="#home" id="settingsHome" aria-label="Back to home">
         <svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
       </a>
       <h1 class="topbar__title" id="settingsTitle">Settings</h1>
@@ -240,7 +243,7 @@
             <label class="setting__label" for="hideKnownIssues">Hide levels with known issues</label>
             <p class="setting__description" id="hideKnownIssues-description">Show only levels without reported issues.</p>
           </div>
-          <input class="switch" id="hideKnownIssues" type="checkbox" role="switch" aria-describedby="hideKnownIssues-description">
+          <input class="switch switch-control" id="hideKnownIssues" type="checkbox" role="switch" aria-describedby="hideKnownIssues-description">
         </div>
         <p class="settings-message" id="preferenceMessage" role="status" aria-live="polite"></p>
       </section>
@@ -252,7 +255,7 @@
             <label class="setting__label" for="pieceNuts">Piece corner nuts</label>
             <p class="setting__description" id="pieceNuts-description">Show small nuts at the corners of puzzle pieces.</p>
           </div>
-          <input class="switch" id="pieceNuts" type="checkbox" role="switch" aria-describedby="pieceNuts-description">
+          <input class="switch switch-control" id="pieceNuts" type="checkbox" role="switch" aria-describedby="pieceNuts-description">
         </div>
         <div class="setting setting--select">
           <div class="setting__copy">
@@ -290,14 +293,14 @@
             <label class="setting__label" for="movementArrow">Show movement arrow</label>
             <p class="setting__description" id="movementArrow-description">Show the route arrow while choosing where Pom should move.</p>
           </div>
-          <input class="switch" id="movementArrow" type="checkbox" role="switch" aria-describedby="movementArrow-description">
+          <input class="switch switch-control" id="movementArrow" type="checkbox" role="switch" aria-describedby="movementArrow-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="hideHelpText">Hide help text</label>
             <p class="setting__description" id="hideHelpText-description">Hide the hint banner above the puzzle.</p>
           </div>
-          <input class="switch" id="hideHelpText" type="checkbox" role="switch" aria-describedby="hideHelpText-description">
+          <input class="switch switch-control" id="hideHelpText" type="checkbox" role="switch" aria-describedby="hideHelpText-description">
         </div>
         <div class="setting setting--select">
           <div class="setting__copy">
@@ -320,42 +323,42 @@
             <label class="setting__label" for="showCameraTuning">Show Tuning control</label>
             <p class="setting__description" id="showCameraTuning-description">Show Tuning during a level to adjust camera pitch and extrusion depth.</p>
           </div>
-          <input class="switch" id="showCameraTuning" type="checkbox" role="switch" aria-describedby="showCameraTuning-description">
+          <input class="switch switch-control" id="showCameraTuning" type="checkbox" role="switch" aria-describedby="showCameraTuning-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="stackedPieceButtons">Piece control dock</label>
             <p class="setting__description" id="stackedPieceButtons-description">Choose a nearby piece using tabs above Push and Pull. Turn off to use only the selected piece.</p>
           </div>
-          <input class="switch" id="stackedPieceButtons" type="checkbox" role="switch" aria-describedby="stackedPieceButtons-description">
+          <input class="switch switch-control" id="stackedPieceButtons" type="checkbox" role="switch" aria-describedby="stackedPieceButtons-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="pieceDragArrows">Drag arrows on pieces</label>
             <p class="setting__description" id="pieceDragArrows-description">Drag an arrow to slide the selected piece with your pointer. Release to snap to a legal step. Turn off to compare with the screen buttons.</p>
           </div>
-          <input class="switch" id="pieceDragArrows" type="checkbox" role="switch" aria-describedby="pieceDragArrows-description">
+          <input class="switch switch-control" id="pieceDragArrows" type="checkbox" role="switch" aria-describedby="pieceDragArrows-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="allPieceDragArrows">Arrows on all movable pieces</label>
             <p class="setting__description" id="allPieceDragArrows-description">With drag arrows enabled, show centered arrows on every piece Pom can move. Turn off to show arrows only on the selected piece.</p>
           </div>
-          <input class="switch" id="allPieceDragArrows" type="checkbox" role="switch" aria-describedby="allPieceDragArrows-description">
+          <input class="switch switch-control" id="allPieceDragArrows" type="checkbox" role="switch" aria-describedby="allPieceDragArrows-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="movementStuds">Reachable platform markers</label>
             <p class="setting__description" id="movementStuds-description">Show small markers on platforms Pom can reach. Tap a marker to move there.</p>
           </div>
-          <input class="switch" id="movementStuds" type="checkbox" role="switch" aria-describedby="movementStuds-description">
+          <input class="switch switch-control" id="movementStuds" type="checkbox" role="switch" aria-describedby="movementStuds-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="floorMarkers">Reachable floor markers</label>
             <p class="setting__description" id="floorMarkers-description">Show reachable markers on the floor instead of the grid.</p>
           </div>
-          <input class="switch" id="floorMarkers" type="checkbox" role="switch" aria-describedby="floorMarkers-description">
+          <input class="switch switch-control" id="floorMarkers" type="checkbox" role="switch" aria-describedby="floorMarkers-description">
         </div>
         <div class="setting setting--select">
           <div class="setting__copy">
@@ -373,7 +376,7 @@
             <label class="setting__label" for="autoSelectPieces">Automatically select nearby pieces</label>
             <p class="setting__description" id="autoSelectPieces-description">After Pom moves, select a piece he can push or pull: behind him first, then right, then left.</p>
           </div>
-          <input class="switch" id="autoSelectPieces" type="checkbox" role="switch" aria-describedby="autoSelectPieces-description">
+          <input class="switch switch-control" id="autoSelectPieces" type="checkbox" role="switch" aria-describedby="autoSelectPieces-description">
         </div>
         <div class="setting setting--select">
           <div class="setting__copy">
@@ -393,14 +396,14 @@
             <label class="setting__label" for="pieceShadows">Cast shadows</label>
             <p class="setting__description" id="pieceShadows-description">Pieces and Pom cast shadows from a light at the top right. Unshadowed colors stay unchanged.</p>
           </div>
-          <input class="switch" id="pieceShadows" type="checkbox" role="switch" aria-describedby="pieceShadows-description">
+          <input class="switch switch-control" id="pieceShadows" type="checkbox" role="switch" aria-describedby="pieceShadows-description">
         </div>
         <div class="setting">
           <div class="setting__copy">
             <label class="setting__label" for="floorGrid">Custom floor grid</label>
             <p class="setting__description" id="floorGrid-description">Customize the existing flat floor in Design Playground: walkable fill, foreground wash, and grid-line color, opacity, and width.</p>
           </div>
-          <input class="switch" id="floorGrid" type="checkbox" role="switch" aria-describedby="floorGrid-description">
+          <input class="switch switch-control" id="floorGrid" type="checkbox" role="switch" aria-describedby="floorGrid-description">
         </div>
         <a class="action settings-lab-link" id="interactionLabLink" href="?interaction-lab" hidden>Open Interaction Lab</a>
         <p class="settings-message" id="controlFeatureMessage" role="status" aria-live="polite"></p>

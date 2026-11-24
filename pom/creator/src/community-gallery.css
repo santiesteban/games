@@ -1,5 +1,54 @@
-@font-face{font-family:Figtree;src:url('../../src/assets/interface/figtree-variable.ttf') format('truetype');font-weight:300 900;font-display:swap}@font-face{font-family:'Bricolage Grotesque';src:url('./bricolage.ttf') format('truetype');font-weight:200 800;font-display:swap}:root{font-family:Figtree,system-ui,sans-serif;color:#111;background:#ffdf72;color-scheme:light}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.6;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #005eca;outline-offset:3px}.page{max-width:1440px;margin:auto;padding:20px clamp(18px,4vw,56px) 56px}.gallery-nav{display:flex;gap:32px}.gallery-nav a{color:inherit;text-decoration:none;padding-bottom:7px}.gallery-nav a[aria-current=page]{font-weight:800;border-bottom:3px solid}.gallery-header{border-bottom:2px solid #111;padding:24px 0 20px}.gallery-header h1{font:800 clamp(34px,3.4vw,52px)/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.045em;margin:0}.gallery-header p{margin:6px 0 0;font-size:clamp(16px,1.65vw,23px)}.gallery{padding-top:26px}.gallery-controls{display:flex;align-items:end;gap:18px;flex-wrap:wrap}.gallery-controls label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:800}.gallery-controls label:first-child{flex:1 1 250px;max-width:420px}.gallery-controls input,.gallery-controls select{height:40px;border:2px solid #111;border-radius:8px;padding:0 12px;background:#fff;font-weight:500}.gallery-controls select{min-width:190px;background:#ffdf72;font-weight:700}.section-heading{text-align:right;margin:18px 0 10px}.count{font-size:13px;font-weight:750}.notice{font-size:14px}.notice:empty{display:none}.puzzle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.puzzle-card{display:flex;flex-direction:column;min-width:0;border:2px solid #111;border-radius:6px;background:#fff;overflow:hidden}.puzzle-art{height:230px;display:flex;justify-content:center;align-items:end;border-bottom:2px solid #111;background:#fff8df}.puzzle-art svg,.puzzle-art canvas{display:block;width:min(86%,190px);height:190px;max-width:100%;object-fit:contain;object-position:center bottom}.card-content{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px 14px;flex:1}.card-content h2{font:700 17px/1.2 'Bricolage Grotesque',sans-serif;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}.creator,.date{font-size:12px;color:#555;margin:0;overflow-wrap:anywhere}.saved-status{font-size:12px;margin-top:4px}.card-actions{margin-top:auto;padding-top:7px}.gallery-button,#qrDone{border:1.5px solid #111;border-radius:999px;background:transparent;padding:5px 12px;min-height:32px;font-size:12px;font-weight:700}.gallery-button:hover:not(:disabled),#qrDone:hover{background:#ffdf72}.gallery-button:disabled{background:#eee;color:#444}.in-app .gallery-nav,.in-app .gallery-header{display:none}.in-app .page{padding-top:0}.in-app .gallery{padding-top:20px}dialog{width:min(440px,calc(100% - 32px));border:2px solid #111;border-radius:14px;background:#fff;color:#111;padding:24px}dialog::backdrop{background:#0009}dialog header{display:flex;justify-content:space-between;align-items:center}dialog h2{font:700 24px 'Bricolage Grotesque',sans-serif;margin:0}dialog header button{border:0;background:transparent;font-size:24px}dialog canvas{display:block;max-width:100%;margin:10px auto}#qrDone{display:block;margin-left:auto}#qrStatus{color:#a02922}@media(max-width:700px){.puzzle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.puzzle-art{height:180px}.puzzle-art svg,.puzzle-art canvas{width:min(90%,145px);height:145px}}@media(max-width:420px){.puzzle-grid{grid-template-columns:1fr}.gallery-controls label,.gallery-controls label:first-child{max-width:none;width:100%}.gallery-controls select{width:100%}}
-.gallery-controls input:focus-visible{outline:0;border-color:#10100d;background:#fffbe9;font-weight:500}.gallery-button:hover:not(:disabled),#qrDone:hover{background:transparent;filter:brightness(.9)}.gallery-controls select:focus-visible{outline:0;background:#10100d;color:#fff}.puzzle-art svg{shape-rendering:crispEdges}
-.gallery-sort{position:relative;width:190px}.gallery-sort__trigger{width:100%;height:38px;padding:0 11px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:2px solid #10100d;border-radius:8px;background:transparent;text-align:left;font-size:14px;font-weight:700}.gallery-sort__trigger[aria-expanded=true],.gallery-sort__trigger:focus-visible{background:#10100d;color:#fff;outline:0}.gallery-sort__trigger svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.gallery-sort__menu{position:absolute;z-index:10;top:calc(100% + 6px);left:0;right:0;padding:5px;border:2px solid #10100d;border-radius:10px;background:#fff;box-shadow:0 4px 0 #0002}.gallery-sort__menu[hidden]{display:none}.gallery-sort__menu button{display:block;width:100%;padding:8px 10px;border:0;border-radius:6px;background:#fff;text-align:left;font-weight:650}.gallery-sort__menu button[aria-selected=true]{background:#ffdf72;font-weight:800}.gallery-sort__menu button:hover,.gallery-sort__menu button:focus-visible{background:#10100d;color:#fff;outline:0}@media(max-width:420px){.gallery-sort{width:100%}}
-button{box-shadow:none!important}button:hover,button:active,a:hover,a:active{transform:none!important}
-button,button:hover,button:active,a,a:hover,a:active{translate:none!important}
+/* Layout for the standalone gallery and its embedded view. */
+:root { color:#10100d; color-scheme:light; }
+* { box-sizing:border-box; }
+body { margin:0; }
+button,input,select { font:inherit; color:inherit; }
+button { cursor:pointer; }
+button:disabled { opacity:.6; cursor:default; }
+button:focus-visible,input:focus-visible,a:focus-visible { outline:3px solid #005eca; outline-offset:3px; }
+.page { max-width:1440px; margin:auto; padding:20px clamp(18px,4vw,56px) 56px; }
+.gallery-header { border-bottom:2px solid #10100d; padding:24px 0 20px; }
+.gallery-header h1 { margin:0; font:800 clamp(34px,3.4vw,52px)/1 'Bricolage Grotesque',sans-serif; letter-spacing:-.045em; }
+.gallery-header p { margin:6px 0 0; font-size:clamp(16px,1.65vw,23px); }
+.gallery { padding-top:26px; }
+.gallery-controls { display:flex; align-items:end; gap:18px; flex-wrap:wrap; }
+.gallery-controls label { display:flex; flex-direction:column; gap:6px; font-size:14px; font-weight:800; }
+.gallery-controls label:first-child { flex:1 1 250px; max-width:420px; }
+.gallery-controls input { height:40px; border:2px solid #10100d; border-radius:8px; padding:0 12px; background:#fff; font-weight:500; }
+.gallery-controls input:focus-visible { outline:0; background:#fffbe9; }
+.gallery-sort { width:190px; }
+.section-heading { text-align:right; margin:18px 0 10px; }
+.count { font-size:13px; font-weight:750; }
+.notice { font-size:14px; }
+.notice:empty { display:none; }
+.puzzle-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.puzzle-card { display:flex; flex-direction:column; }
+.puzzle-art { height:230px; display:flex; justify-content:center; align-items:center; padding:0; }
+.puzzle-art svg,.puzzle-art canvas { display:block; width:min(86%,190px); height:190px; max-width:100%; object-fit:contain; object-position:center; }
+.puzzle-art svg { shape-rendering:crispEdges; }
+.card-content { flex:1; padding:14px; }
+.card-content h2 { margin:0; font:700 15px/1.25 Figtree,system-ui,sans-serif; overflow-wrap:anywhere; }
+.creator,.date { margin:0; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+.card-actions { width:100%; margin-top:auto; padding-top:10px; }
+.gallery-button { width:100%; min-height:36px; margin-top:0; font-size:12px; }
+.saved-status { margin:0; }
+.in-app .gallery-nav,.in-app .gallery-header { display:none; }
+.in-app .page { padding-top:0; }
+.in-app .gallery { padding-top:20px; }
+dialog { width:min(440px,calc(100% - 32px)); border:2px solid #10100d; border-radius:14px; background:#fff; color:#10100d; padding:24px; }
+dialog::backdrop { background:#0009; }
+dialog header { display:flex; justify-content:space-between; align-items:center; }
+dialog h2 { margin:0; font:700 24px 'Bricolage Grotesque',sans-serif; }
+dialog header button { border:0; background:transparent; font-size:24px; }
+dialog canvas { display:block; max-width:100%; margin:10px auto; }
+#qrDone { display:block; margin-left:auto; border:2px solid #10100d; border-radius:999px; background:transparent; padding:5px 12px; min-height:32px; font-size:12px; font-weight:700; }
+#qrStatus { color:#a02922; }
+@media(max-width:700px) {
+  .puzzle-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .puzzle-art { height:180px; }
+  .puzzle-art svg,.puzzle-art canvas { width:min(90%,145px); height:145px; }
+}
+@media(max-width:420px) {
+  .gallery-controls label,.gallery-controls label:first-child { max-width:none; width:100%; }
+  .gallery-sort { width:100%; }
+}
