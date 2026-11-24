@@ -960,9 +960,9 @@ function syncBackground(){
   const place=(o,distance,x,y,w,h)=>{o.pos3D=cam.pos.add(forward.scale(distance)).add(right.scale(x)).add(up.scale(y));o.scale3D=vec3(w,h,.012);o.rotation3D=cam.rotation.copy()};
   const frame=environmentFrame(activeEnvironment,{ortho,worldWidth,groundQ}),preview=currentBackgroundConfiguration();
   const sky=backgroundObjects[0],ground=backgroundObjects[1];
-  for(const [index,object]of [sky,ground].entries()){const visible=!preview||preview.layers==='both'||preview.layers===(index?'foreground':'background');object.mesh=visible||index===0?box:undefined;object.tileInfo=visible?activeEnvironmentTextures[index]:undefined;if(index===0)object.color=visible?new Color(1):designColor('#eee8fa')}
+  for(const [index,object]of [sky,ground].entries()){const visible=!preview||preview.layers==='both'||preview.layers===(index?'foreground':'background');object.mesh=visible||index===0?box:undefined;object.tileInfo=visible?activeEnvironmentTextures[index]:undefined;if(index===0)object.color=visible?(activeEnvironment.flatColors?designColor(activeEnvironment.flatColors.background):new Color(1)):designColor('#eee8fa')}
   place(sky,90,0,frame.backgroundY,frame.backgroundHeight*activeEnvironment.aspectRatio,frame.backgroundHeight);
-  place(ground,89.7,0,frame.foregroundY,frame.foregroundHeight*activeEnvironment.aspectRatio,frame.foregroundHeight);ground.color=new Color(1,1,1,activeEnvironment.foregroundOpacity);
+  place(ground,89.7,0,frame.foregroundY,frame.foregroundHeight*activeEnvironment.aspectRatio,frame.foregroundHeight);ground.color=activeEnvironment.flatColors?designColor(activeEnvironment.flatColors.foreground):new Color(1,1,1,activeEnvironment.foregroundOpacity);
   const overlay=backgroundObjects[2],overlayMesh=new Mesh(),horizon=Math.max(-ortho/2,Math.min(ortho/2,groundQ));
   // The divider is the same projected ground plane used by the floor guide.
   // Paint behind the puzzle and floor/shadows, independent of image cropping.

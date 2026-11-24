@@ -16,6 +16,7 @@ export function createEnvironmentTextureLoader(defaultId,defaultTextures,{create
       const key=environmentCacheKey(environment),cached=cache.get(key);
       if(cached?.textures)return Promise.resolve(cached.textures);
       if(cached?.promise)return cached.promise;
+      if(environment.flatColors){const textures=[undefined,undefined];cache.set(key,{textures});return Promise.resolve(textures)}
       const record={};cache.set(key,record);
       record.promise=Promise.all([loadImage(environment.background),loadImage(environment.foreground)]).then(images=>{
         if(images.some((image,index)=>{

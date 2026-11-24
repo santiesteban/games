@@ -21,7 +21,7 @@ test('stacked controls adopt once and preserve subsequent user choices and unrel
 test('explicit scenario preference covers catalog, Japan and user puzzles',()=>{
  for(const level of [catalog.levels[0],{environment:'japan-spring'},{userPuzzle:{id:'custom'}},{temporaryPlaytest:true}]){
    assert.equal(gameplayEnvironmentConfiguration(level,[],approved,null,null,'daisy-meadow'),approved);
-   for(const scenario of ['riso-print','dreamscape','grass-clouds','printed-fans','printed-lagoon','stippled-sky','stippled-blue','stippled-green-grid','stippled-fewer-clouds']){
+   for(const scenario of ['riso-print','dreamscape','grass-clouds','printed-fans','printed-lagoon','stippled-sky','stippled-blue','stippled-green-grid','stippled-fewer-clouds','flat-colors']){
      const result=gameplayEnvironmentConfiguration(level,[],approved,null,null,scenario);
      assert.equal(result.environment,scenario);
      assert.equal(result.showGuides,true);

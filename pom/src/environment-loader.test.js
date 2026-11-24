@@ -35,3 +35,11 @@ test('an unseeded loader fetches Meadow on demand instead of caching empty start
  assert.equal(loader.cached({id:'meadow'}),undefined);assert.deepEqual(calls,[]);
  await loader.load({...art,id:'meadow',variant:undefined});assert.deepEqual(calls,['bg','fg']);
 });
+
+
+test('flat color environments do not load or create image textures',async()=>{
+ const loader=createEnvironmentTextureLoader('meadow',undefined,{loadImage:()=>{throw Error('unexpected image load')},createTexture:()=>{throw Error('unexpected texture')}});
+ const flat={id:'flat-colors',flatColors:{background:'#70b9e8',foreground:'#82aa65'}};
+ assert.deepEqual(await loader.load(flat),[undefined,undefined]);
+ assert.deepEqual(loader.cached(flat),[undefined,undefined]);
+});

@@ -67,7 +67,7 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       for(let i=0;i<segments;i++){
         const a=-arc+2*arc*i/segments,b=-arc+2*arc*(i+1)/segments;
         const end=environment.fullTextures?1:anchor;
-        mesh.addQuad(point(a,wallHeight),point(b,wallHeight),point(b,0),point(a,0),state.background?new Color(1):color('#eee9df'),[vec2(i/segments,0),vec2((i+1)/segments,0),vec2((i+1)/segments,end),vec2(i/segments,end)]);
+        mesh.addQuad(point(a,wallHeight),point(b,wallHeight),point(b,0),point(a,0),state.background?(environment.flatColors?color(environment.flatColors.background):new Color(1)):color('#eee9df'),[vec2(i/segments,0),vec2((i+1)/segments,0),vec2((i+1)/segments,end),vec2(i/segments,end)]);
       }
       backdrop=add(mesh,state.background?textures[0]:undefined);
       reference={curved:true,points:[point(-yaw-.4,0),point(-yaw,0),point(-yaw+.4,0)]};
@@ -79,12 +79,10 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
       const backgroundUV=environment.backgroundWorldHeight
         ? [vec2(.5-repeatWidth/2,skyTop),vec2(.5+repeatWidth/2,skyTop),vec2(.5+repeatWidth/2,1),vec2(.5-repeatWidth/2,1)]
         : uv(0,environment.fullTextures?1:anchor);
-      backdrop=patch(wall,state.background?textures[0]:undefined,backgroundUV,state.background?new Color(1):color('#eee9df'));
+      backdrop=patch(wall,state.background?textures[0]:undefined,backgroundUV,state.background?(environment.flatColors?color(environment.flatColors.background):new Color(1)):color('#eee9df'));
       reference={curved:false,points:[wallPoint(-1,0),wallPoint(0,0),wallPoint(1,0)]};
     }
-    backdrop.receiveShadow=true;
-    backdrop.shader=pieceShadowShader;
-    reference.shadowReceivers=1;
+    if(!environment.flatColors){backdrop.receiveShadow=true;backdrop.shader=pieceShadowShader;reference.shadowReceivers=1}else reference.shadowReceivers=0;
     const groundBack=environment.backgroundTileWorldHeight?-groundFront:environment.groundDepth?back:(landscape||following||curved?-40:back);
     const ground=[vec3(cx-span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundBack),vec3(cx+span/2,-.045,groundFront),vec3(cx-span/2,-.045,groundFront)];
     if(!(environment.mirrorTiles||environment.opaqueGround)||!state.foreground)patch(ground,undefined,undefined,color(landscape?'#a9b58a':'#c9c9a9'));
@@ -94,9 +92,9 @@ export function createCameraScenery({onChange=()=>{},onStatus=()=>{}}={}){
         point.x/tile[0],
         environment.horizontalTiles?(point.z-groundBack)/environment.groundDepth:point.z/tile[1],
       )):uv(environment.fullTextures?0:Math.min(.99,anchor+.025),1);
-      patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],groundUV,new Color(1));
+      patch(ground.map(p=>p.add(vec3(0,.003,0))),textures[1],groundUV,environment.flatColors?color(environment.flatColors.foreground):new Color(1));
     }
-    if(!landscape&&!curved){
+    if(!landscape&&!curved&&!environment.flatColors){
       // A fine join makes the set's right-angle construction easy to inspect.
       patch([wallPoint(-span/2,0),wallPoint(span/2,0),wallPoint(span/2,.025),wallPoint(-span/2,.025)].map(p=>p.add(vec3(Math.sin(yaw)*.003,0,.003))),undefined,undefined,color('#6f7765'));
     }else if(landscape&&state.props&&!environment.spare){
