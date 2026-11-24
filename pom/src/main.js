@@ -1522,7 +1522,7 @@ function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=fals
   syncScreenAppearance(panel==='title'?'home':panel);
   hideHelp();interactionHelpKey=null;stopIntro();celebration=null;
   const menu=document.querySelector('#menuScreen');menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
-  for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
+  for(const name of ['title','collections','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
   document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;document.querySelector('#progressMessage').textContent='';
   if(panel==='levels'){
     renderLevelList(completedLevelId);
@@ -1536,11 +1536,11 @@ function showMenu(panel='title',completedLevelId,{preserveVictoryTransition=fals
       resolve(card);
     }));
   }
-  if(panel==='title'){catalogScreens?.renderHome();menu.scrollTop=0}
+  if(panel==='title'||panel==='collections'){catalogScreens?.renderHome();menu.scrollTop=0}
   if(panel==='settings'){syncScenarioInput();document.querySelector('#settingsHome').setAttribute('aria-label',settingsReturnToLevel?'Back to level':'Back to home');updateProgressSettings();menu.scrollTop=0}
   document.querySelector('.stage').classList.remove('is-won');document.querySelector('.stage').inert=true;
   if(panel==='settings')document.querySelector('#settingsHome').focus();
-  else if(!completedLevelId)document.querySelector(panel==='levels'?'#backTitle':'#titlePanel .brand').focus({preventScroll:true});
+  else if(!completedLevelId)document.querySelector(panel==='levels'?'#backTitle':panel==='collections'?'#collectionsHome':'#titlePanel .brand').focus({preventScroll:true});
   return cardReady;
 }
 function levelIsAvailable(level){return level.compatibility.playable&&(!levelPreferences.hideKnownIssues||!level.knownIssues)}
@@ -1658,7 +1658,10 @@ document.querySelector('#confirmClearProgress').addEventListener('click',()=>{
   progressSaved=true;renderLevelList();updateProgressSettings();document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false;message.textContent='Your progress has been cleared.';document.querySelector('#settingsHome').focus();
 });
 window.addEventListener('storage',event=>{if(event.key===unfinished.key)catalogScreens?.renderHome();if(event.key===levelProgress.key||event.key===null){levelProgress.reload();renderLevelList();updateProgressSettings();if(levelProgress.count===0){document.querySelector('#clearProgressConfirm').hidden=true;document.querySelector('#clearProgress').hidden=false}}});
-document.querySelector('#backTitle').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
+document.querySelector('#backTitle').addEventListener('click',event=>{event.preventDefault();showMenu(catalogScreens?.returnPanel??'title')});
+document.querySelector('#viewCollections').addEventListener('click',event=>{event.preventDefault();showMenu('collections')});
+document.querySelector('#collectionsHome').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
+document.querySelector('#openCommunityGallery').addEventListener('click',event=>{event.preventDefault();myPuzzles.openGallery()});
 document.querySelector('[data-home]').addEventListener('click',event=>{event.preventDefault();showMenu('title')});
 document.querySelector('#exitLevel').addEventListener('click',event=>{event.preventDefault();isMakerPlaytest?returnToMaker():showMenu('levels',won?activeLevel.id:undefined)});
 const creatorUrl=deploymentUrls().creator;

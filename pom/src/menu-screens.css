@@ -1,11 +1,11 @@
 /* Approved little_ledges_layout styles for Home, Collection and Settings.
    Scoped to menu pages so gameplay presentation stays unchanged. */
 /* The menu owns scrolling; the existing canvas layout stays untouched. */
-:root[data-screen="home"], :root[data-screen="levels"], :root[data-screen="settings"] { --screen-top-color: #f5f5f5; }
+:root[data-screen="home"], :root[data-screen="collections"], :root[data-screen="levels"], :root[data-screen="settings"] { --screen-top-color: #f5f5f5; }
 
 /* Scrolling menu pages paint their own background and real safe-area padding.
    The gameplay chrome-sampling strip must not cover their moving content. */
-:root:is([data-screen="home"], [data-screen="levels"], [data-screen="settings"]) .screen-safe-area {
+:root:is([data-screen="home"], [data-screen="collections"], [data-screen="levels"], [data-screen="settings"]) .screen-safe-area {
   display: none;
 }
 
@@ -335,6 +335,15 @@
   text-decoration: none;
 }
 
+#menuScreen .menu-page .more-puzzles-list + .more-puzzles-list { margin-top: 10px; }
+#menuScreen .menu-page .more-puzzles-list { overflow: hidden; }
+#menuScreen .menu-page .more-puzzles-card {
+  grid-template-columns: minmax(0, 1fr) 28px;
+  padding: 4px 16px;
+}
+#menuScreen .menu-page .more-puzzles-card--personal { background: #ffc75f; }
+#menuScreen .menu-page .more-puzzles-card--community { background: #8fdda3; }
+
 #menuScreen .menu-page .pack-card__art {
   display: grid;
   place-items: center;
@@ -476,6 +485,8 @@
     min-height: 84px;
     gap: 6px;
   }
+
+  #menuScreen .menu-page .more-puzzles-card { grid-template-columns: minmax(0, 1fr) 28px; }
 
   #menuScreen .menu-page .pack-card__art {
     width: 72px;

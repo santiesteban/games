@@ -23,10 +23,10 @@ export function startMenu(){
   function show(panel){
     document.documentElement.dataset.screen=panel==='title'?'home':panel;
     menu.hidden=false;menu.classList.toggle('is-levels',panel==='levels');menu.classList.toggle('is-settings',panel==='settings');
-    for(const name of ['title','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
+    for(const name of ['title','collections','levels','settings'])document.querySelector(`#${name}Panel`).hidden=panel!==name;
     document.querySelector('.stage').inert=true;
     if(panel==='levels')runtime.catalog.render();
-    if(panel==='title')runtime.catalog.renderHome();
+    if(panel==='title'||panel==='collections')runtime.catalog.renderHome();
     if(panel==='settings'){
       document.querySelector('#scenario').value=preferences.scenario??DEFAULT_SCENARIO;
       document.querySelector('#clearProgressConfirm').hidden=true;
@@ -35,7 +35,7 @@ export function startMenu(){
       updateProgress();
     }
     menu.scrollTop=0;
-    document.querySelector(panel==='title'?'#titlePanel .brand':panel==='levels'?'#backTitle':'#settingsHome').focus({preventScroll:true});
+    document.querySelector(panel==='title'?'#titlePanel .brand':panel==='collections'?'#collectionsHome':panel==='levels'?'#backTitle':'#settingsHome').focus({preventScroll:true});
   }
   function updateProgress(){
     document.querySelector('#progressCount').textContent=`${progress.count} of ${levels.filter(level=>!isPreview(level)).length} levels completed`;
@@ -65,7 +65,9 @@ export function startMenu(){
   runtime.catalog=createCatalogScreens({levels,groups,progress,unfinished,isAvailable:level=>level.compatibility.playable&&(!preferences.hideKnownIssues||!level.knownIssues),myPuzzles:puzzles,thumbnailLevel:level=>level.kind==='movement-studio'?studioLevel(levels,movementExamples[0]):level,open:()=>runtime.open(),play:level=>runtime.play(level)});
   runtime.catalog.ready();puzzles.openPending();
   document.querySelector('#buildNumber').textContent=`Build ${__BUILD_INFO__.number} · ${__BUILD_INFO__.revision}${__BUILD_INFO__.development?' (development)':''}`;
-  for(const [selector,panel] of [['#openSettings','settings'],['#settingsHome','title'],['#backTitle','title'],['[data-home]','title']])document.querySelector(selector).addEventListener('click',event=>{event.preventDefault();show(panel)},options);
+  for(const [selector,panel] of [['#openSettings','settings'],['#settingsHome','title'],['#viewCollections','collections'],['#collectionsHome','title'],['[data-home]','title']])document.querySelector(selector).addEventListener('click',event=>{event.preventDefault();show(panel)},options);
+  document.querySelector('#backTitle').addEventListener('click',event=>{event.preventDefault();show(runtime.catalog.returnPanel)},options);
+  document.querySelector('#openCommunityGallery').addEventListener('click',event=>{event.preventDefault();puzzles.openGallery()},options);
   for(const feature of CONTROL_FEATURES){const toggle=document.querySelector(`#${feature.id}`);if(!toggle)continue;toggle.addEventListener('change',()=>{const saved=features.set(feature.id,toggle.checked);if(toggle.checked&&['stackedPieceButtons','pieceDragArrows'].includes(feature.id))features.set(feature.id==='stackedPieceButtons'?'pieceDragArrows':'stackedPieceButtons',false);syncFeatures();preferenceMessage('#controlFeatureMessage',saved)},options)}
   document.querySelector('#pieceHighlight').addEventListener('change',event=>preferenceMessage('#pieceHighlightMessage',features.set('selectionLightbox',event.target.value==='lightbox')),options);
   document.querySelector('#topFaceAppearance').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setTopFaceStyle(event.target.value));syncFeatures()},options);

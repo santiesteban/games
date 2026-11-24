@@ -15,8 +15,9 @@ export function packProgress(levels,progress,isAvailable){
 }
 
 export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzles,unfinished,thumbnailLevel,open,play}) {
-  let collection=groups[0]?.id,ready=false;
+  let collection=groups[0]?.id,ready=false,returnPanel='title';
   const packList=document.querySelector('#packList');
+  const allPackList=document.querySelector('#allPackList');
   const personalList=document.querySelector('#personalPackList');
   const continueList=document.querySelector('#continueList'),continueSection=document.querySelector('#continueSection');
   const grid=document.querySelector('#collectionGrid');
@@ -29,13 +30,13 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
   function count(completed,total){return `${completed} / ${total}`}
   function groupProgress(id){const {completed,total}=packProgress(groupLevels(id),progress,isAvailable);return count(completed,total)}
 
-  function packCard(id,name,progressText,index){
+  function packCard(id,name,progressText,index,source='title'){
     const item=document.querySelector('#packCardTemplate').content.firstElementChild.cloneNode(true);
     const link=item.querySelector('a');link.href=`#collection=${encodeURIComponent(id)}`;link.dataset.collection=id;
     link.setAttribute('aria-disabled',String(!ready));
     link.addEventListener('click',event=>{
       event.preventDefault();if(!ready)return;
-      collection=id;scroller.scrollTop=0;open();
+      collection=id;returnPanel=source;scroller.scrollTop=0;open();
     });
     item.querySelector('.pack-card__title').textContent=name;
     item.querySelector('.pack-card__progress').textContent=progressText;
@@ -62,16 +63,19 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
       cards.push(item);
     }
     continueList.replaceChildren(...cards);continueSection.hidden=!cards.length;
-    packList.replaceChildren(...groups.map((group,index)=>packCard(group.id,group.name,groupProgress(group.id),index)));
+    packList.replaceChildren(...groups.slice(0,3).map((group,index)=>packCard(group.id,group.name,groupProgress(group.id),index)));
+    allPackList.replaceChildren(...groups.map((group,index)=>packCard(group.id,group.name,groupProgress(group.id),index,'collections')));
     const placeholder=document.createElement('li');
     placeholder.innerHTML=`<article class="pack-card" aria-label="Special Packs, coming soon">
       <span class="pack-card__art pack-card__art-squares pack-card__art-squares--special" aria-hidden="true"><span></span><span></span><span></span></span>
       <span class="pack-card__copy"><span class="pack-card__title">Special Packs</span></span>
       <span class="pack-card__lock" aria-hidden="true"><svg class="pack-card__lock-icon" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></span>
     </article>`;
-    packList.append(placeholder);packList.setAttribute('aria-busy',String(!ready));
-    const summary=myPuzzles.summary;
-    personalList.replaceChildren(packCard('my-puzzles','My Puzzles',summary.ready?count(summary.completed,summary.total):'Loading…',1));
+    allPackList.append(placeholder);packList.setAttribute('aria-busy',String(!ready));allPackList.setAttribute('aria-busy',String(!ready));
+    const personal=packCard('my-puzzles','My Puzzles','',1);
+    personal.querySelector('.pack-card').classList.add('more-puzzles-card','more-puzzles-card--personal');
+    personal.querySelector('.pack-card__art').remove();personal.querySelector('.pack-card__progress').remove();
+    personalList.replaceChildren(personal);
   }
 
   function render(revealLevelId){
@@ -79,6 +83,7 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
     renderHome();
     grid.replaceChildren();actions.replaceChildren();actions.hidden=true;empty.hidden=true;
     const personal=collection==='my-puzzles';
+    const back=document.querySelector('#backTitle');back.setAttribute('aria-label',returnPanel==='collections'?'Back to puzzle collections':'Back to home');back.href=returnPanel==='collections'?'#collections':'#home';
     const group=groups.find(group=>group.id===collection);
     const title=personal?'My Puzzles':group?.name??'Levels';
     document.querySelector('#collectionTitle').textContent=title;
@@ -103,6 +108,7 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
   return{
     render,renderHome,
     ready(){ready=true;renderHome()},
-    selectForLevel(level){collection=level.userPuzzle?'my-puzzles':level.group},
+    selectForLevel(level){const next=level.userPuzzle?'my-puzzles':level.group;if(collection!==next)returnPanel='title';collection=next},
+    get returnPanel(){return returnPanel},
   };
 }

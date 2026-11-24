@@ -89,7 +89,7 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     const create=document.createElement('a');create.href=creatorUrl;create.target='_blank';create.rel='noopener';create.className='action';create.textContent='Open Level Maker';
     create.onclick=event=>{event.preventDefault();openExternal(creatorUrl).catch(error=>notice(error.message))};
     const gallery=document.createElement('button');gallery.type='button';gallery.className='action';gallery.textContent='Community Gallery';
-    gallery.onclick=()=>{galleryNote.hidden=true;galleryFrame.src=galleryUrl;gallerySheet.showModal();clearTimeout(galleryTimer);galleryTimer=setTimeout(()=>{if(gallerySheet.open)galleryNote.hidden=false},12000)};
+    gallery.onclick=openGallery;
     const manage=document.createElement('button');manage.type='button';manage.className='action';manage.textContent='Manage puzzles';manage.disabled=!records.length;
     manage.onclick=()=>{renderManager();manager.showModal()};
     links.append(upload,create,gallery,manage);actions.append(heading,links);
@@ -111,5 +111,6 @@ export function createMyPuzzles({play,onChange,creatorUrl}){
     if(pendingLink){preview(pendingLink);pendingLink=null}
   }
   window.addEventListener('hashchange',()=>{readLink();openPending()});
-  return {renderCollection,complete,openPending,preview,thumbnail,levelById(id){const record=records.find(item=>`user:${item.id}`===id);return record?puzzleLevel(record.puzzle):null},get summary(){return {ready,total:records.length,completed:records.filter(record=>record.completed).length}}};
+  function openGallery(){galleryNote.hidden=true;galleryFrame.src=galleryUrl;gallerySheet.showModal();clearTimeout(galleryTimer);galleryTimer=setTimeout(()=>{if(gallerySheet.open)galleryNote.hidden=false},12000)}
+  return {renderCollection,complete,openPending,openGallery,preview,thumbnail,levelById(id){const record=records.find(item=>`user:${item.id}`===id);return record?puzzleLevel(record.puzzle):null},get summary(){return {ready,total:records.length,completed:records.filter(record=>record.completed).length}}};
 }

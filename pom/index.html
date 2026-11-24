@@ -174,12 +174,13 @@
         <ul class="pack-list" id="continueList"></ul>
       </section>
       <section class="packs" aria-labelledby="packs-title">
-        <div class="section-heading"><h2 id="packs-title">Puzzle Collections</h2></div>
+        <div class="section-heading"><h2 id="packs-title">Puzzle Collections</h2><a class="action" href="#collections" id="viewCollections">View all</a></div>
         <ul class="pack-list" id="packList" aria-busy="true"></ul>
       </section>
-      <section class="packs" aria-labelledby="my-puzzles-title">
-        <div class="section-heading"><h2 id="my-puzzles-title">My Puzzles</h2></div>
-        <ul class="pack-list" id="personalPackList"></ul>
+      <section class="packs" aria-labelledby="more-puzzles-title">
+        <div class="section-heading"><h2 id="more-puzzles-title">More Puzzles</h2></div>
+        <ul class="pack-list more-puzzles-list" id="personalPackList"></ul>
+        <ul class="pack-list more-puzzles-list"><li><a class="pack-card more-puzzles-card more-puzzles-card--community" href="#community" id="openCommunityGallery"><span class="pack-card__copy"><span class="pack-card__title">Community Gallery</span></span><span class="pack-card__arrow" aria-hidden="true"><svg class="pack-card__arrow-icon" viewBox="0 0 24 24"><use href="#pack-card__arrow"/></svg></span></a></li></ul>
       </section>
     </main>
     <footer class="home-footer">
@@ -189,6 +190,13 @@
       </a>
     </footer>
   </section>
+    <section class="screen menu-page" id="collectionsPanel" aria-labelledby="collectionsTitle" hidden>
+      <header class="topbar topbar--standard">
+        <a class="topbar__back" href="#home" id="collectionsHome" aria-label="Back to home"><svg class="topbar__back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg></a>
+        <h1 class="topbar__title" id="collectionsTitle">Puzzle Collections</h1>
+      </header>
+      <main class="home-main"><ul class="pack-list" id="allPackList"></ul></main>
+    </section>
     <section class="screen menu-page" id="levelsPanel" aria-labelledby="collectionTitle" hidden>
       <header class="topbar topbar--standard">
         <a class="topbar__back" href="#home" id="backTitle" aria-label="Back to home">
