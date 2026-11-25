@@ -122,7 +122,6 @@ export async function createRedPom(parent){
       if(!edge.mesh)return;
       render3D.flushTransparentQueue();render3D.flush();
       const state={shader:render3D.shader,lighting:render3D.lighting,blend:render3D.blend,depthTest:render3D.depthTest,depthWrite:render3D.depthWrite,receiveShadow:render3D.receiveShadow};
-      const previousDepth=glContext.getParameter(glContext.DEPTH_FUNC);
       try{
         render3D.shader=occlusionShader;render3D.lighting=false;render3D.blend=true;
         render3D.depthTest=true;render3D.depthWrite=false;render3D.receiveShadow=false;
@@ -134,7 +133,11 @@ export async function createRedPom(parent){
           render3D.drawMesh(extra.mesh,extra.getMatrix(),extra.tileInfo,new Color(1,1,1,extra.color.a));
         }
         render3D.flush();
-      }finally{glContext.depthFunc(previousDepth);Object.assign(render3D,state)}
+      }finally{
+        // LittleJS and this game's other rendering paths use WebGL's default
+        // depth function. Avoid a synchronous GPU state query on every frame.
+        glContext.depthFunc(glContext.LESS);Object.assign(render3D,state);
+      }
     },
     alignToSurface(surfaceOffset,anchorCorrection=vec3()){
       const matrix=parent.getMatrix(),upY=matrix.m[5];
