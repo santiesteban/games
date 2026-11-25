@@ -2629,7 +2629,8 @@ function gameInit(){
     const animateButton=document.createElement('button');animateButton.type='button';animateButton.className='btn';animateButton.textContent='Animate warp';animateButton.onclick=()=>animateWarpPreview();panel.append(animateButton);
     wrap.append(panel);
   }
-  const opaqueOutlineExperiment=import.meta.env.VITE_PERF_OPAQUE_OUTLINES==='1'&&new URLSearchParams(location.search).get('performance')==='1';
+  // Keep the experimental rendering path opt-in on deployed builds too.
+  const opaqueOutlineExperiment=new URLSearchParams(location.search).get('performance')==='1';
   if(opaqueOutlineExperiment)render3D.onRenderOpaque=()=>{if(!render3D.shadowPass)drawMapOutlines('edges')};
   render3D.onRenderTransparent=()=>{
     const mode=opaqueOutlineExperiment?'rest':'all';
@@ -2917,7 +2918,7 @@ if(new URLSearchParams(location.search).get('performance')==='1'){
     level:`${activeLevel.number} ${activeLevel.name} (${activeLevel.id})`,
     environment:wrap.dataset.environment||'unknown',
     shadows:render3D.shadows?'on':'off',highlight:lightboxEnabled()?'lightbox':'classic',
-    diagnostic:(import.meta.env.VITE_PERF_HOLD_FLOOR==='1'?'floor mesh held during movement':'normal floor updates')+(import.meta.env.VITE_PERF_HIDE_OUTLINES==='1'?'; outlines and corner nuts hidden':'')+(import.meta.env.VITE_PERF_OPAQUE_OUTLINES==='1'?'; opaque outline batching and merged edges experiment':''),
+    diagnostic:(import.meta.env.VITE_PERF_HOLD_FLOOR==='1'?'floor mesh held during movement':'normal floor updates')+(import.meta.env.VITE_PERF_HIDE_OUTLINES==='1'?'; outlines and corner nuts hidden':'')+'; opaque outline batching and merged edges experiment',
     controls:Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.label,controlFeatures.enabled(feature.id)?'on':'off'])),
     topFaceStyle:controlFeatures.topFaceStyle,markerShape:controlFeatures.movementMarkerShape,pomEyeStyle:controlFeatures.pomEyeStyle,
     preferences:{scenario:levelPreferences.scenario??'default',hideKnownIssues:levelPreferences.hideKnownIssues,hideHelpText:levelPreferences.hideHelpText},
