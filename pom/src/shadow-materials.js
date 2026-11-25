@@ -2,6 +2,17 @@ import { Shader } from 'littlejsengine';
 
 // Radius in world units, shared by puzzle and scenery shadows.
 export const SHADOW_BLUR_RADIUS=.12;
+// Precompute the original 32 weighted offsets. Check half first so uniformly
+// lit or shadowed regions can avoid the remaining lookups.
+const initialShadowIndices=Array.from({length:16},(_,i)=>i*2);
+function precomputedShadowSample(i,probe=false){
+  const radius=Math.sqrt((i+.5)/32),angle=i*2.39996323,weight=Math.exp(-2*radius*radius);
+  const x=(Math.cos(angle)*radius).toFixed(9),y=(Math.sin(angle)*radius).toFixed(9);
+  return `{highp vec2 offset=vec2(${x},${y})*shadowParams.z;highp float depth=q.z+dot(slope,offset)-bias;float sampleValue=texture(shadowMap,vec3(q.xy+offset,depth));result+=sampleValue*${weight.toFixed(9)};${probe?'sampleMin=min(sampleMin,sampleValue);sampleMax=max(sampleMax,sampleValue);':''}}`;
+}
+const earlyShadowSamples=initialShadowIndices.map(i=>precomputedShadowSample(i,true)).join('\n');
+const remainingShadowSamples=Array.from({length:32},(_,i)=>i).filter(i=>!initialShadowIndices.includes(i)).map(i=>precomputedShadowSample(i)).join('\n');
+const precomputedShadowWeight=Array.from({length:32},(_,i)=>Math.exp(-2*(i+.5)/32)).reduce((sum,weight)=>sum+weight,0).toFixed(9);
 
 // LittleJS 1.27.2 supplies S, shadowMap, and shadowParams to 3D Shader snippets.
 // Compare each filtered sample against the receiver plane at that sample, rather
@@ -18,9 +29,7 @@ const receiverShadow=`
     return clamp(glow,0.0,0.8);
   }
   vec3 pomIllumination(){return vec3(1.0,0.82,0.58)*pomLight();}
-  float surfaceShadow(){
-    highp vec3 q=S.xyz/max(S.w,0.000001)*0.5+0.5;
-    highp vec3 dx=dFdx(q),dy=dFdy(q);
+  float surfaceShadowAt(highp vec3 q,highp vec3 dx,highp vec3 dy){
     if(shadowParams.x<=0.0||S.w<=0.0)return 1.0;
     if(any(greaterThanEqual(abs(q-0.5),vec3(0.5))))return 1.0;
 
@@ -33,14 +42,17 @@ const receiverShadow=`
     // Hardware linear filtering also compares the four surrounding texels.
     // Cover that footprint in light space so the correction stays stable at zoom.
     highp float bias=shadowParams.y/(S.w*S.w)+dot(abs(slope),texel);
-    highp float result=0.0,weight=0.0;
-    for(int i=0;i<32;i++){
-      float r=sqrt((float(i)+.5)/32.),angle=float(i)*2.39996323,w=exp(-2.*r*r);
-      highp vec2 offset=vec2(cos(angle),sin(angle))*r*shadowParams.z;
-      highp float depth=q.z+dot(slope,offset)-bias;
-      result+=texture(shadowMap,vec3(q.xy+offset,depth))*w;weight+=w;
-    }
-    return result/weight;
+    highp float result=0.0;
+    float sampleMin=1.0,sampleMax=0.0;
+    ${earlyShadowSamples}
+    if(sampleMin>=0.999)return 1.0;
+    if(sampleMax<=0.001)return 0.0;
+    ${remainingShadowSamples}
+    return result/${precomputedShadowWeight};
+  }
+  float surfaceShadow(){
+    highp vec3 q=S.xyz/max(S.w,0.000001)*0.5+0.5;
+    return surfaceShadowAt(q,dFdx(q),dFdy(q));
   }
 `;
 
@@ -75,8 +87,10 @@ export const solidPieceGlowShader=new Shader(`${receiverShadow}
 const solidPieceShadow=(strength)=>new Shader(`${receiverShadow}
   void mainImage(out vec4 color,vec2 uv){
     color=texture(iChannel0,uv);
-    float shadowVisibility=surfaceShadow();
-    float visible=dot(normalize(worldNormal),sunDirection)>0.0001?shadowVisibility:0.0;
+    highp vec3 q=S.xyz/max(S.w,0.000001)*0.5+0.5;
+    highp vec3 dx=dFdx(q),dy=dFdy(q);
+    float visible=0.0;
+    if(dot(normalize(worldNormal),sunDirection)>0.0001)visible=surfaceShadowAt(q,dx,dy);
     color.rgb*=1.0-${strength}*sunColor.r*(1.0-visible);
     color.rgb+=pomIllumination()*0.85;
   }
