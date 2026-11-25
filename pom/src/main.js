@@ -320,7 +320,7 @@ function animateEffort(){
 const pomContour=[quadraticSegment([-1,.28],[-1.02,1.15],[0,1.22]),quadraticSegment([0,1.22],[1.02,1.15],[1,.28]),quadraticSegment([1,.28],[.84,-.12],[0,-.12]),quadraticSegment([0,-.12],[-.84,-.12],[-1,.28])].flatMap((segment,index)=>index?segment.slice(1):segment).map(([x,y])=>[x*.5,y*.709-.294]).reverse();
 const pomBlob=makeFanMesh(pomContour),pomEye=makeFanMesh(Array.from({length:20},(_,i)=>[Math.cos(i*Math.PI/10)*.5,Math.sin(i*Math.PI/10)*.5]));
 
-function makeGroups(){const board=createMovementBoard(mural,activeLevel.initialDepths);groups=board.groups;byCell=board.byCell;for(const g of groups){g.objects=[];g.nuts=pieceNutPositions(g.cells);g.frontOutline=buildPieceFrontOutline(g.cells);g.mergedFrontOutline=mergeStraightOutlineEdges(g.frontOutline)}}
+function makeGroups(){const board=createMovementBoard(mural,activeLevel.initialDepths);groups=board.groups;byCell=board.byCell;for(const g of groups){g.objects=[];g.nuts=pieceNutPositions(g.cells);g.frontOutline=mergeStraightOutlineEdges(buildPieceFrontOutline(g.cells))}}
 function clearMovementRoutes(){movementRouteCache.clear();movementBoardCache=null;movementBoardKey=null;reachableKey=null;reachableValue=null}
 function movementBoard(){const key=groups.map(g=>g.depth).join(',');if(!movementBoardCache||key!==movementBoardKey){movementBoardKey=key;movementBoardCache=createMovementBoard(mural,groups.map(g=>g.depth))}return movementBoardCache}
 let pulloutAnimationDepths=null,pulloutAnimationToken=0;
@@ -763,7 +763,7 @@ function drawMapOutlines(mode='all'){
   };
   for(const g of groups){
     const depth=visualDepth(g),z=depth?depth+.04:.028,offset=depth?depthSkew()*z:0;
-    for(const [x1,y1,x2,y2] of mode==='edges'?g.mergedFrontOutline:g.frontOutline){
+    for(const [x1,y1,x2,y2] of g.frontOutline){
       edge(vec3(x1+offset,stretchY(H-y1),z),vec3(x2+offset,stretchY(H-y2),z));
     }
   }
@@ -2629,11 +2629,9 @@ function gameInit(){
     const animateButton=document.createElement('button');animateButton.type='button';animateButton.className='btn';animateButton.textContent='Animate warp';animateButton.onclick=()=>animateWarpPreview();panel.append(animateButton);
     wrap.append(panel);
   }
-  // Keep the experimental rendering path opt-in on deployed builds too.
-  const opaqueOutlineExperiment=new URLSearchParams(location.search).get('performance')==='1';
-  if(opaqueOutlineExperiment)render3D.onRenderOpaque=()=>{if(!render3D.shadowPass)drawMapOutlines('edges')};
+  render3D.onRenderOpaque=()=>{if(!render3D.shadowPass)drawMapOutlines('edges')};
   render3D.onRenderTransparent=()=>{
-    const mode=opaqueOutlineExperiment?'rest':'all';
+    const mode='rest';
     if(!performanceReadout?.isMeasuring())return drawMapOutlines(mode);
     const start=performance.now();try{return drawMapOutlines(mode)}finally{performanceReadout.recordTiming('Outlines and transparent callback CPU',performance.now()-start)}
   };
@@ -2918,7 +2916,7 @@ if(new URLSearchParams(location.search).get('performance')==='1'){
     level:`${activeLevel.number} ${activeLevel.name} (${activeLevel.id})`,
     environment:wrap.dataset.environment||'unknown',
     shadows:render3D.shadows?'on':'off',highlight:lightboxEnabled()?'lightbox':'classic',
-    diagnostic:(import.meta.env.VITE_PERF_HOLD_FLOOR==='1'?'floor mesh held during movement':'normal floor updates')+(import.meta.env.VITE_PERF_HIDE_OUTLINES==='1'?'; outlines and corner nuts hidden':'')+'; opaque outline batching and merged edges experiment',
+    diagnostic:(import.meta.env.VITE_PERF_HOLD_FLOOR==='1'?'floor mesh held during movement':'normal floor updates')+(import.meta.env.VITE_PERF_HIDE_OUTLINES==='1'?'; outlines and corner nuts hidden':'')+'; batched outlines with merged edges',
     controls:Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.label,controlFeatures.enabled(feature.id)?'on':'off'])),
     topFaceStyle:controlFeatures.topFaceStyle,markerShape:controlFeatures.movementMarkerShape,pomEyeStyle:controlFeatures.pomEyeStyle,
     preferences:{scenario:levelPreferences.scenario??'default',hideKnownIssues:levelPreferences.hideKnownIssues,hideHelpText:levelPreferences.hideHelpText},
