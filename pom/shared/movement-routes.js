@@ -176,9 +176,23 @@ function searchCorner(a,b,blocks){
     for(const block of blocks)for(const value of [block.min[axis]-.015,block.max[axis]+.015])if(value>=low&&value<=high)values.push(value);
     coords[axis]=[...new Set(values)].sort((x,y)=>x-y);
   }
-  const start=axes.map(axis=>coords[axis].indexOf(a[axis])),goal=axes.map(axis=>coords[axis].indexOf(b[axis])).join(','),key=p=>p.join(','),pose=p=>Object.fromEntries(axes.map((axis,i)=>[axis,coords[axis][p[i]]])),queue=[{p:start,cost:0,score:distance(a,b)}],costs=new Map([[key(start),0]]),previous=new Map;
+  const start=axes.map(axis=>coords[axis].indexOf(a[axis])),goal=axes.map(axis=>coords[axis].indexOf(b[axis])).join(','),key=p=>p.join(','),pose=p=>({x:coords.x[p[0]],y:coords.y[p[1]],z:coords.z[p[2]]});
+  const queue=[],costs=new Map([[key(start),0]]),previous=new Map;let sequence=0;
+  const before=(a,b)=>a.score<b.score||(a.score===b.score&&a.order<b.order);
+  function enqueue(p,cost,score){
+    const entry={p,cost,score,order:sequence++};let index=queue.length;queue.push(entry);
+    while(index>0){const parent=(index-1)>>1;if(!before(entry,queue[parent]))break;queue[index]=queue[parent];index=parent}
+    queue[index]=entry;
+  }
+  function dequeue(){
+    const first=queue[0],last=queue.pop();if(!queue.length)return first;
+    let index=0;
+    while(true){let child=index*2+1;if(child>=queue.length)break;if(child+1<queue.length&&before(queue[child+1],queue[child]))child++;if(!before(queue[child],last))break;queue[index]=queue[child];index=child}
+    queue[index]=last;return first;
+  }
+  enqueue(start,0,distance(a,b));
   while(queue.length){
-    queue.sort((x,y)=>x.score-y.score);const current=queue.shift(),k=key(current.p);
+    const current=dequeue(),k=key(current.p);
     if(current.cost!==costs.get(k))continue;
     if(k===goal){const path=[];let p=current.p;while(p){path.push(pose(p));p=previous.get(key(p))}return path.reverse()}
     const from=pose(current.p);
@@ -186,7 +200,7 @@ function searchCorner(a,b,blocks){
       const p=[...current.p];p[axis]+=direction;if(p[axis]<0||p[axis]>=coords[axes[axis]].length)continue;
       const to=pose(p),next=key(p),cost=current.cost+distance(from,to);
       if(cost>=(costs.get(next)??Infinity)||!segmentClear(blocks,from,to))continue;
-      costs.set(next,cost);previous.set(next,current.p);queue.push({p,cost,score:cost+distance(to,b)});
+      costs.set(next,cost);previous.set(next,current.p);enqueue(p,cost,cost+distance(to,b));
     }
   }
   return null;
