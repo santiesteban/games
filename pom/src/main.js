@@ -1,6 +1,7 @@
 import {buildPieceFrontOutline,mergeStraightOutlineEdges} from './piece-front-outline.js';
 import {installPerformanceReadout} from './performance-readout.js';
 let performanceReadout;
+let floorLayoutSnapshot;
 import {pomMovementPose} from './pom-movement-pose.js';
 import {createRedPom} from './red-pom.js';
 import approvedEnvironment from './data/daisy-meadow-ivan-v2.json';
@@ -313,7 +314,7 @@ function animateEffort(){
     if(frame!==effortFrame)return;const elapsed=now-start,t=Math.min(1,elapsed/duration),effort=Math.sin(Math.PI*t);
     playerObject.scale3D=vec3(.72*(1+.025*effort),.56*(1-.04*effort),.018);
     for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(elapsed-i*65)/340)),alpha=Math.sin(Math.PI*q);drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.20-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
-    if(t<1)requestAnimationFrame(tick);else{showRedPom('calm');playerObject.scale3D=vec3(.72,.56,.018);for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}}
+    if(t<1)requestAnimationFrame(tick);else{performanceReadout?.pieceActionEnd();showRedPom('calm');playerObject.scale3D=vec3(.72,.56,.018);for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}}
   }
   requestAnimationFrame(tick);
 }
@@ -342,7 +343,7 @@ function animatePulloutSwitch(result,depths,from,done){
     if(t<1){requestAnimationFrame(tick);return}
     depths=step.depths;from=to;index++;start=undefined;
     if(index<steps.length){requestAnimationFrame(tick);return}
-    pulloutAnimationDepths=null;busy=false;syncFlag();syncPlayer();done();
+    pulloutAnimationDepths=null;busy=false;syncFlag();syncPlayer();performanceReadout?.pieceActionEnd();done();
   }
   requestAnimationFrame(tick);
 }
@@ -1398,6 +1399,7 @@ function pieceDragRange(g,dir){
 }
 function commitPieceDrag(dir,steps=1){
   if(!selected||busy||won||introPlaying||levelLoading||pieceDragRange(selected,dir)<steps)return;
+  performanceReadout?.pieceActionStart();
   hideHelp();save();resetStudyFollow();let result,depths,from;for(let index=0;index<steps;index++){selected.depth+=dir;player={...player,z:player.z+dir};depths=groups.map(group=>group.depth);from={...player};result=activatePulloutSwitch();if(result)break}const finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort();finish()}
 }
 function pieceDragState(atGrab=false,piece=selected){
@@ -1483,6 +1485,13 @@ function syncPieceDock(){
   pieceDock.sync(pieceDockState(movementBoard(),player,selected?.id,{paused,tabs}),activeLevel.palette);
 }
 function updateUI(){
+  // Read layout before the UI writes below, avoiding a synchronous layout in
+  // the floor-guide update that follows them.
+  const width=wrap.clientWidth,height=wrap.clientHeight,style=getComputedStyle(wrap);
+  floorLayoutSnapshot={width,height,lineWidth:parseFloat(style.borderTopWidth)||2,radius:parseFloat(style.borderBottomLeftRadius)||0,color:style.borderTopColor};
+  try{return updateUIImpl()}finally{floorLayoutSnapshot=undefined}
+}
+function updateUIImpl(){
   cameraLab?.setBusy(busy||won||introPlaying||levelLoading);
   const cameraAvailable=activeLevel.kind==='puzzle'&&!cameraLab;
   cameraModeToggle.hidden=!cameraAvailable;
@@ -1747,10 +1756,10 @@ function syncStudyFloor(){
   // Diagnostic build: hold the existing floor mesh while Pom is moving.
   if(import.meta.env.VITE_PERF_HOLD_FLOOR==='1'&&new URLSearchParams(location.search).get('performance')==='1'&&busy&&floorGuideMesh)return;
   const object=backgroundObjects.at(-1);if(!object)return;
-  const camera=render3D.camera,width=wrap.clientWidth,height=wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
+  const camera=render3D.camera,width=floorLayoutSnapshot?.width??wrap.clientWidth,height=floorLayoutSnapshot?.height??wrap.clientHeight,size=vec2(width,height),bounds=puzzleFloorBounds(mural,GRID_DEPTH),ground=stretchY(.008);
   const visible=(cameraLab?cameraState.guides:(currentBackgroundConfiguration()?.showGuides??cameraState.guides))&&!floorMarkersEnabled();
   const scenarioFloor=activeEnvironment.floorGridStyle;
-  const border=getComputedStyle(wrap),lineWidth=parseFloat(border.borderTopWidth)||2,radius=parseFloat(border.borderBottomLeftRadius)||0,color=border.borderTopColor;
+  const border=floorLayoutSnapshot??getComputedStyle(wrap),lineWidth=floorLayoutSnapshot?.lineWidth??(parseFloat(border.borderTopWidth)||2),radius=floorLayoutSnapshot?.radius??(parseFloat(border.borderBottomLeftRadius)||0),color=floorLayoutSnapshot?.color??border.borderTopColor;
   const pixelRatio=Math.min(window.devicePixelRatio||1,2);
   const key=[width,height,bounds.left,bounds.right,bounds.back,bounds.front,ground,depthSkew(),extrusionScale,visible,lineWidth,radius,color,scenarioFloor?.color,scenarioFloor?.fill,scenarioFloor?.fillOpacity,pixelRatio,camera.pos.x,camera.pos.y,camera.pos.z,camera.rotation.x,camera.rotation.y,camera.rotation.z,camera.fov,camera.orthographic].join(':');
   if(key===floorGuideKey&&object.mesh===floorGuideMesh)return;
@@ -2590,7 +2599,7 @@ function gameInit(){
     for(const name of ['drawElements','drawArrays','drawElementsInstanced','drawArraysInstanced']){
       const draw=glContext[name];if(typeof draw!=='function')continue;
       glContext[name]=function(...args){
-        if(performanceReadout.isMeasuring())performanceReadout.recordDraw(name,name.startsWith('drawElements')?args[1]:args[2]);
+        if(performanceReadout.isMeasuring())performanceReadout.recordDraw(name,name.startsWith('drawElements')?args[1]:args[2],render3D.shadowPass);
         return draw.apply(this,args);
       };
     }
@@ -2831,7 +2840,7 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
     if(x>=-1&&x<W+1&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }
 }
-function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;const depths=groups.map(group=>group.depth),from={...player},result=activatePulloutSwitch(),finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort();finish()}}
+function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;performanceReadout?.pieceActionStart();hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;const depths=groups.map(group=>group.depth),from={...player},result=activatePulloutSwitch(),finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort();finish()}}
 function restore(s){movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();saveUnfinished();applyBoardView();updateUI()}
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
 const safariZoom=installSafariZoom(wrap,{
@@ -2915,7 +2924,7 @@ if(new URLSearchParams(location.search).get('performance')==='1'){
     build:document.querySelector('#buildNumber')?.textContent||'unknown',
     level:`${activeLevel.number} ${activeLevel.name} (${activeLevel.id})`,
     environment:wrap.dataset.environment||'unknown',
-    shadows:render3D.shadows?'on':'off',highlight:lightboxEnabled()?'lightbox':'classic',
+    shadows:render3D.shadows?'on':'off',highlight:lightboxEnabled()?'lightbox':'classic',shadowMap:`${render3D.shadowMapSize}x${render3D.shadowMapSize}; range ${render3D.shadowRange}; softness ${render3D.shadowSoftness}`,
     diagnostic:(import.meta.env.VITE_PERF_HOLD_FLOOR==='1'?'floor mesh held during movement':'normal floor updates')+(import.meta.env.VITE_PERF_HIDE_OUTLINES==='1'?'; outlines and corner nuts hidden':'')+'; batched outlines with merged edges',
     controls:Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.label,controlFeatures.enabled(feature.id)?'on':'off'])),
     topFaceStyle:controlFeatures.topFaceStyle,markerShape:controlFeatures.movementMarkerShape,pomEyeStyle:controlFeatures.pomEyeStyle,
