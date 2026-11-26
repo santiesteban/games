@@ -27,9 +27,11 @@ The current game lives directly in `pom/`. The Pages workflow publishes it at `/
 per-level RGB palettes, explicit geometry, categories, and source/object metadata.
 See [the level-format guide](docs/LEVEL_FORMAT.md) and
 [JSON Schema](docs/levels.schema.json) before adding levels. The Murals group is
-displayed after More Challenges, with 18 reconstructions in their original colors;
-see [Murals references and numbering](docs/MURALS.md).
-Japan Challenges follows Murals, with 16 grounded Pushmo QR conversions in Japan
+displayed between Level 1 Challenges and Level 2 Challenges, with 18 reconstructions in their original colors;
+see [Murals references and numbering](docs/MURALS.md). Advanced Lessons - P3DS
+follows Level 2 Challenges and includes Lessons 19–36, reconstructed from the
+annotated Pushmo references with pullout switches and paired pipes.
+Japan Challenges contains 16 grounded Pushmo QR conversions in Japan
 Spring scenery. Candidate Challenges, Food for Thought, Interesting Challenges,
 and Challenging Challenges follow it. The last two contain 31 QR levels split
 16 and 15, with all artwork aligned to the floor. See

@@ -43,14 +43,15 @@ positions, and engine compatibility. A valid document is not proof of solvabilit
 ```
 
 Group order controls gallery and next-level order. Within a group, levels sort
-by `number`. Empty groups are not rendered. The built-in catalog reserves
-`murals` immediately after `more-challenges`, followed by `japan-challenges`,
-`candidate-challenges`, `food-for-thought`, `interesting-challenges`,
-`challenging-challenges`, and `others`.
+by `number`. Empty groups are not rendered. The original story collections are
+ordered `basic-lessons`, `first-challenges`, `murals`, `more-challenges`,
+`advanced-lessons`, `level-3-challenges`,
+followed by `interesting-challenges`, `challenging-challenges`,
+`japan-challenges`, `candidate-challenges`, `food-for-thought`, and `others`.
 `rangeLabel` optionally replaces the automatically generated number range.
 
-The 18 reconstructed Murals occupy display numbers 55–72. Japan Challenges follows
-with 16 QR conversions (73–88), using Japan Spring scenery. Candidate Challenges
+The 18 reconstructed Murals occupy display numbers 55–72. Japan Challenges has
+16 QR conversions (73–88), using Japan Spring scenery. Candidate Challenges
 has ten entries numbered 93–102; Food for Thought contains Hot Dog with
 Everything (103). Interesting Challenges and Challenging Challenges contain 16
 and 15 QR conversions, numbered 104–134 and aligned to the floor. Their archive
