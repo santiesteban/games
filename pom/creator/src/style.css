@@ -699,7 +699,7 @@
   font-family: Figtree,system-ui,sans-serif;
 }
 .creator-layout,.creator-workspace {
-  background: #f5f5f5;
+  background: var(--surface);
 }
 .creator-inspector {
   background: #fff;
