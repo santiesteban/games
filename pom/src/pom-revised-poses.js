@@ -1,8 +1,8 @@
 // Choose artwork from the supplied pose sheet; gameplay still controls motion.
-export function revisedPomPose({pose='calm',motion=null,pipe=false,moving=false,idleTime=0,now=0,push='backward'}={}){
+export function revisedPomPose({pose='calm',motion=null,pipe=false,moving=false,idleTime=0,now=0,push='backward',effort='push',effortProgress=0}={}){
   if(pipe)return {name:'thin-stretch',flip:false};
   if(pose==='float')return {name:Math.floor(now/220)%2?'jump-up-launch':'jump-up-apex',flip:false};
-  if(pose==='push-back')return {name:`push-${push}`,flip:false};
+  if(pose==='push-back')return {name:`${effort}-${push==='backward'?'center':push}-${effortProgress<.5?1:2}`,flip:false};
   if(pose==='excited'||pose==='pipe-exit')return {name:'excited',flip:false};
   if(pose==='worried')return {name:'scared',flip:false};
   if(motion?.kind==='up'||motion?.kind==='side'){
