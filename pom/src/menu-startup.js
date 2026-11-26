@@ -50,6 +50,7 @@ export function startMenu(){
     document.querySelector('#topFaceAppearance').value=features.topFaceStyle;
     document.querySelector('#movementMarkerShape').value=features.movementMarkerShape;
     document.querySelector('#pomEyeStyle').value=features.pomEyeStyle;
+    document.querySelector('#pomAppearance').value=features.pomAppearance;
   }
   function preferenceMessage(id,saved){document.querySelector(id).textContent=saved?'':'This setting applies now, but could not be saved in this browser.'}
   runtime.open=()=>show('levels');
@@ -76,6 +77,7 @@ export function startMenu(){
   document.querySelector('#topFaceAppearance').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setTopFaceStyle(event.target.value));syncFeatures()},options);
   document.querySelector('#movementMarkerShape').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setMovementMarkerShape(event.target.value));syncFeatures()},options);
   document.querySelector('#pomEyeStyle').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setPomEyeStyle(event.target.value));syncFeatures()},options);
+  document.querySelector('#pomAppearance').addEventListener('change',event=>{preferenceMessage('#controlFeatureMessage',features.setPomAppearance(event.target.value));syncFeatures()},options);
   document.querySelector('#scenario').addEventListener('change',event=>preferenceMessage('#scenarioMessage',preferences.set('scenario',event.target.value)),options);
   for(const name of ['hideKnownIssues','hideHelpText']){const toggle=document.querySelector(`#${name}`);toggle.checked=preferences[name];toggle.addEventListener('change',()=>{preferenceMessage('#preferenceMessage',preferences.set(name,toggle.checked));runtime.change()},options)}
   document.querySelector('#clearProgress').addEventListener('click',()=>{document.querySelector('#clearProgress').hidden=true;document.querySelector('#clearProgressConfirm').hidden=false;document.querySelector('#cancelClearProgress').focus()},options);

@@ -1,11 +1,14 @@
 import {animationCases} from './animation-cases.js';
+import {createControlFeatures} from './control-features.js';
 const length=4000;
 const previews=[...document.querySelectorAll('.preview iframe')];
 const play=document.querySelector('#play'),timeline=document.querySelector('#timeline'),speed=document.querySelector('#speed');
 const yaw=document.querySelector('#yaw'),pitch=document.querySelector('#pitch');
 let time=0,last,playing=true;
+const features=createControlFeatures();
+window.addEventListener('storage',event=>{if(event.key===features.key||event.key===null)features.reload()});
 function broadcast(){
-  const state={type:'animation-playground',time,yaw:Number(yaw.value),pitch:Number(pitch.value)};
+  const state={type:'animation-playground',time,yaw:Number(yaw.value),pitch:Number(pitch.value),appearance:features.pomAppearance};
   for(const preview of previews)preview.contentWindow?.postMessage(state,location.origin);
   timeline.value=Math.round(time/length*1000);
   document.querySelector('#yaw-value').textContent=`${yaw.value}°`;

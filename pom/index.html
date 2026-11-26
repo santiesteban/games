@@ -279,8 +279,18 @@
         <p class="settings-message" id="scenarioMessage" role="status" aria-live="polite"></p>
         <div class="setting setting--select">
           <div class="setting__copy">
+            <label class="setting__label" for="pomAppearance">Pom's appearance</label>
+            <p class="setting__description" id="pomAppearance-description">Choose which version of Pom to use.</p>
+          </div>
+          <select id="pomAppearance" aria-describedby="pomAppearance-description">
+            <option value="classic">Current Pom</option>
+            <option value="revised">New Pom</option>
+          </select>
+        </div>
+        <div class="setting setting--select">
+          <div class="setting__copy">
             <label class="setting__label" for="pomEyeStyle">Pom's eyes</label>
-            <p class="setting__description" id="pomEyeStyle-description">Choose how Pom's eyes look when open.</p>
+            <p class="setting__description" id="pomEyeStyle-description">Choose how the current Pom's eyes look when open.</p>
           </div>
           <select id="pomEyeStyle" aria-describedby="pomEyeStyle-description">
             <option value="classic">Classic</option>
