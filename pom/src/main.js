@@ -310,13 +310,15 @@ function standingSpotCenter(p){const ground=p.y===H,top=ground?0:H-p.y;return wo
 function syncHoverSpot(){if(!hoverObject)return;hoverObject.setMesh(standingSpotMesh());if(studioTargetObject){studioTargetObject.setMesh(standingSpotMesh());if(activeLevel.previewMove)studioTargetObject.pos3D=standingSpotCenter(activeLevel.previewMove)}if(hovered)hoverObject.pos3D=standingSpotCenter(hovered)}
 function setUmbrellaVisible(show){if(umbrellaCanopy)umbrellaCanopy.color=new Color(.15,.2,.27,show?1:0);if(umbrellaHandle)umbrellaHandle.color=new Color(.15,.2,.27,show?1:0);for(let i=0;i<umbrellaPanels.length;i++){const color=i%2?new Color(.64,.83,.97):new Color(.98,.99,.96);color.a=show?1:0;umbrellaPanels[i].color=color}}
 function positionUmbrella(t=0){const sway=Math.sin(t*Math.PI*2)*.06,y=.84+Math.sin(t*Math.PI*4)*.025;if(umbrellaCanopy)umbrellaCanopy.pos3D=vec3(sway,y,3);if(umbrellaHandle)umbrellaHandle.pos3D=vec3(sway,y,2.96);for(const panel of umbrellaPanels)panel.pos3D=vec3(sway,y,3.035)}
-function animateEffort(){
+function animateEffort(dir){
   redPom?.setPushDirection(revisedPushDirection(selected,player));
+  redPom?.setEffort(dir>0?'pull':'push');
   showRedPom('push-back');
   const frame=++effortFrame,start=performance.now(),duration=PIECE_EFFORT_DURATION;
   function tick(now){
     if(frame!==effortFrame)return;const elapsed=now-start,t=Math.min(1,elapsed/duration),scale=pieceEffortScale(elapsed);
     redPom?.setActionProgress(t);
+    redPom?.setEffort(dir>0?'pull':'push',t);
     playerObject.scale3D=vec3(.72*scale.x,.56*scale.y,.018);
     for(let i=0;i<sweatDrops.length;i++){const drop=sweatDrops[i],q=Math.max(0,Math.min(1,(elapsed-i*65)/340)),alpha=Math.sin(Math.PI*q);drop.outline.pos3D=vec3(.48+i*.17+q*.16,.65-i*.20-q*.12,2.8);drop.outline.color=new Color(.157,.145,.122,alpha);drop.fill.color=new Color(.64,.83,.97,alpha)}
     if(t<1)requestAnimationFrame(tick);else{performanceReadout?.pieceActionEnd();showRedPom('calm');playerObject.scale3D=vec3(.72,.56,.018);for(const drop of sweatDrops){drop.outline.color.a=0;drop.fill.color.a=0}}
@@ -1402,7 +1404,7 @@ function commitPieceDrag(dir,steps=1){
   if(!selected||busy||won||introPlaying||levelLoading||pieceDragRange(selected,dir)<steps)return;
   redPom?.beginAction();
   performanceReadout?.pieceActionStart();
-  hideHelp();save();resetStudyFollow();let result,depths,from;for(let index=0;index<steps;index++){selected.depth+=dir;player={...player,z:player.z+dir};depths=groups.map(group=>group.depth);from={...player};result=activatePulloutSwitch();if(result)break}const finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort();finish()}
+  hideHelp();save();resetStudyFollow();let result,depths,from;for(let index=0;index<steps;index++){selected.depth+=dir;player={...player,z:player.z+dir};depths=groups.map(group=>group.depth);from={...player};result=activatePulloutSwitch();if(result)break}const finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort(dir);finish()}
 }
 function pieceDragState(atGrab=false,piece=selected){
   if(!controlFeatures.enabled('pieceDragArrows')||controlFeatures.enabled('stackedPieceButtons')||!gameReady||busy||won||introPlaying||levelLoading||!viewReady||document.querySelector('.stage').inert||!document.querySelector('#menuScreen').hidden||!piece||!canReach(piece))return null;
@@ -1447,8 +1449,8 @@ function pieceDragState(atGrab=false,piece=selected){
 }
 function previewPieceDrag(piece,offset){
   pieceDragPreview=piece&&groups.includes(piece)?{piece,offset}:null;
-  if(pieceDragPreview&&offset<0){redPom?.setPushDirection(revisedPushDirection(selected,player));showRedPom('push-back')}
-  else if(!pieceDragPreview){showRedPom('calm');}
+  if(pieceDragPreview&&(offset<0||(offset>0&&controlFeatures.pomAppearance==='revised'))){redPom?.setPushDirection(revisedPushDirection(piece,player));redPom?.setEffort(offset>0?'pull':'push',Math.abs(offset)%1);showRedPom('push-back')}
+  else if(!pieceDragPreview||offset===0){showRedPom('calm');}
   wrap.dataset.dragPreviewOffset=String(pieceDragPreview?.offset??0);
   if(!gameReady)return;
   syncBlocks();syncPlayer();syncFlag();syncPuzzleProjection();
@@ -2837,7 +2839,7 @@ function clickBoard(e){if(levelLoading||busy||won)return;enterPlayFromIntro();co
     if(x>=-1&&x<W+1&&floor.z>=0&&floor.z<GRID_DEPTH&&Math.hypot(worldPosition(player).x-floor.x,worldPosition(player).z-floor.z)>.72)showHelp('That spot is out of reach. Push or pull the blocks to make a path.','unreachable');
   }
 }
-function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;redPom?.beginAction();performanceReadout?.pieceActionStart();hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;const depths=groups.map(group=>group.depth),from={...player},result=activatePulloutSwitch(),finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort();finish()}}
+function manipulate(dir){if(levelLoading||busy||won||!gameReady||!viewReady)return;enterPlayFromIntro();const g=selected;if(!g||!canReach(g))return;const next=g.depth+dir;if(next<0||next>3)return;const dest={...player,z:player.z+dir};if(!safeManipulation(g,next,dir))return;redPom?.beginAction();performanceReadout?.pieceActionStart();hideHelp();save();resumeStudyFollow();g.depth=next;player=dest;const depths=groups.map(group=>group.depth),from={...player},result=activatePulloutSwitch(),finish=()=>{autoSelectNearbyPiece();saveUnfinished();updateUI()};if(result)animatePulloutSwitch(result,depths,from,finish);else{animateEffort(dir);finish()}}
 function restore(s){movementMarkerRoute=null;movementMarkerRouteTargets=null;movementMarkerRouteIndex=0;hideHelp();celebration=null;resumeStudyFollow();groups.forEach((g,i)=>g.depth=s.depths[i]);player={...s.player};selected=groups.find(g=>g.id===s.selected)||null;won=s.won;autoSelectNearbyPiece();saveUnfinished();applyBoardView();updateUI()}
 wrap.addEventListener('pointerdown',boardDown);wrap.addEventListener('pointermove',boardMove);wrap.addEventListener('pointerup',e=>boardUp(e));wrap.addEventListener('pointercancel',e=>boardUp(e,true));wrap.addEventListener('lostpointercapture',e=>{if(!pieceDrag.pointerUp(e))boardUp(e,true)});wrap.addEventListener('pointerleave',()=>{if(!boardPointers.size)clearBoardHover()});
 const safariZoom=installSafariZoom(wrap,{

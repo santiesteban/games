@@ -72,6 +72,7 @@ function update(){
   let effortScale={x:1,y:1};
   if(scene==='push'||scene==='pull'){
     const triggered=state.time>=500,active=triggered&&elapsed<PIECE_EFFORT_DURATION;
+    sprite?.setEffort(scene,Math.min(1,elapsed/PIECE_EFFORT_DURATION));
     point={x:1.5,y:.205,z:triggered?(scene==='push'?1.5:3.5):2.5};
     pose=active?'push-back':'calm';if(active)effortScale=pieceEffortScale(elapsed);
     sprite?.setActionProgress(Math.min(1,elapsed/PIECE_EFFORT_DURATION),clock);

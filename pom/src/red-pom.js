@@ -43,12 +43,12 @@ async function loadRevisedPose(name){
   await image.decode();
   const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
   // Normalize the supplied sheets around Pom's body center and foot contact.
-  const push=name.startsWith('push-'),scale=.8,anchorX=push?130:140,anchorY=push?204:255;
+  const depthPose=/^(push|pull)-(center|left|right)-[12]$/.test(name),push=name.startsWith('push-'),scale=.8,anchorX=depthPose?140:push?130:140,anchorY=depthPose?212:push?204:255;
   canvas.getContext('2d').drawImage(image,128-anchorX*scale,200-anchorY*scale,image.width*scale,image.height*scale);
   const texture=new TextureInfo(canvas,true,false,false);
   return new TileInfo(vec2(),texture.size,texture,0,0);
 }
-const revisedNames=['standing-original','standing-relaxed','standing-wave','standing-step','neutral','excited','scared','thin-stretch','push-backward','push-left','push-right',...['up','side'].flatMap(kind=>['anticipation','launch','apex','descent','land'].map(phase=>`jump-${kind}-${phase}`))];
+const revisedNames=['standing-original','standing-relaxed','standing-wave','standing-step','neutral','excited','scared','thin-stretch',...['push','pull'].flatMap(action=>['center','left','right'].flatMap(side=>[1,2].map(frame=>`${action}-${side}-${frame}`))),...['up','side'].flatMap(kind=>['anticipation','launch','apex','descent','land'].map(phase=>`jump-${kind}-${phase}`))];
 export async function createRedPom(parent){
   const actionPulse=createPomActionPulse();
   const entries=await Promise.all(Object.entries(poses).map(async([name,pose])=>{
@@ -80,7 +80,7 @@ export async function createRedPom(parent){
   for(const part of revisedParts)part.render3D=()=>{};
   const parts=[...classicParts,...revisedParts],baseDepths=parts.map(part=>part.pos3D.z);
   let active='',targetX=1,targetY=1,bodyX=1,bodyY=1,displayY=1,targetMouth=0,targetExtra=0,lastTime,idleTime=0,moving=false,eyeStyle='classic',currentPose='calm',currentExtra=true,stepJumpProgress=null;
-  let characterStyle='classic',requestedStyle='classic',revisedTextures,revisedLoading,revisedFrame='',revisedFlip=false,revisedPreviousFlip=false,revisedFade=1,motion=null,pipe=false,push='backward';
+  let characterStyle='classic',requestedStyle='classic',revisedTextures,revisedLoading,revisedFrame='',revisedFlip=false,revisedPreviousFlip=false,revisedFade=1,motion=null,pipe=false,push='backward',effort='push',effortProgress=0;
   function showStyle(style){
     characterStyle=style;
     for(const part of classicParts){part.mesh=style==='classic'?mesh:undefined;part.render3D=style==='classic'?renderPart:()=>{}}
@@ -126,6 +126,7 @@ export async function createRedPom(parent){
     setMotion(value){motion=value},
     setPipePhase(value){pipe=!!value},
     setPushDirection(value){push=['left','right','backward'].includes(value)?value:'backward'},
+    setEffort(value,progress=0){effort=value==='pull'?'pull':'push';effortProgress=progress},
     setEyeStyle(style){
       if(eyeStyle===style||!isPomEyeStyle(style))return;
       eyeStyle=style;
@@ -157,7 +158,7 @@ export async function createRedPom(parent){
       for(const part of [object,edge,eyes,idleEyes])part.scale3D=vec3(displayX*size,displayY*size,1);
       for(const part of [mouth,extra])part.scale3D=vec3(size,size,1);
       if(characterStyle==='revised'){
-        const frame=revisedPomPose({pose:currentPose,motion,pipe,moving,idleTime,now,push});
+        const frame=revisedPomPose({pose:currentPose,motion,pipe,moving,idleTime,now,push,effort,effortProgress});
         if(frame.name!==revisedFrame||frame.flip!==revisedFlip){
           revisedPrevious.tileInfo=revisedCurrent.tileInfo;revisedPreviousFlip=revisedFlip;
           revisedBody.tileInfo=revisedCurrent.tileInfo=revisedTextures[frame.name];revisedFlip=frame.flip;

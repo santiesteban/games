@@ -13,3 +13,9 @@ test('pipes take precedence and falling uses flapping poses',()=>{
 test('push drawings match the piece relative to Pom',()=>{
   const p={x:2,y:4,z:2};assert.equal(revisedPushDirection({depth:2,cells:[{x:2,y:3}]},p),'backward');assert.equal(revisedPushDirection({depth:3,cells:[{x:1,y:3}]},p),'left');assert.equal(revisedPushDirection({depth:3,cells:[{x:3,y:3}]},p),'right');
 });
+test('push and pull select both foot positions for each piece direction',()=>{
+  for(const action of ['push','pull'])for(const direction of ['backward','left','right'])for(const [progress,frame] of [[0,1],[.49,1],[.5,2],[1,2]]){
+    const side=direction==='backward'?'center':direction;
+    assert.equal(revisedPomPose({pose:'push-back',push:direction,effort:action,effortProgress:progress}).name,`${action}-${side}-${frame}`);
+  }
+});
