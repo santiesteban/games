@@ -1,6 +1,7 @@
 import {isPomEyeStyle} from './pom-eye-style.js';
 import {pomIdleMotion,pomMovementEyes} from './pom-idle-motion.js';
 import {stepJumpShape} from './pom-movement-pose.js';
+import {createPomActionPulse} from './pom-action-pulse.js';
 import {Color, EngineObject3D, Mesh, Shader, TextureInfo, TileInfo, glContext, render3D, vec2, vec3} from 'littlejsengine';
 
 const occlusionShader=new Shader(`
@@ -11,6 +12,8 @@ const occlusionShader=new Shader(`
 // Each illustration's body has the same scale and contact point on the floor.
 // Its features and accessories were extracted from the supplied SVG paths.
 const alternateEyePoses=new Set(['happy-open','excited','worried','float','warp-in','warp-out']);
+// Size the resting artwork to roughly one cell; movement remains cell-based.
+const visualScale=1.27;
 const poses={
   calm:{anchor:[56,90],layers:['body','eyes']},
   'happy-open':{anchor:[56,90],layers:['body','eyes','mouth']},
@@ -35,6 +38,7 @@ async function loadLayer(name,layer,[anchorX,anchorY]){
   return new TileInfo(vec2(),texture.size,texture,0,0);
 }
 export async function createRedPom(parent){
+  const actionPulse=createPomActionPulse();
   const entries=await Promise.all(Object.entries(poses).map(async([name,pose])=>{
     const parts=await Promise.all(pose.layers.map(async layer=>[layer,await loadLayer(name,layer,pose.anchor)]));
     if(alternateEyePoses.has(name)){
@@ -91,8 +95,11 @@ export async function createRedPom(parent){
     },
     setMoving(value){moving=value;idleTime=0},
     setStepJump(progress){stepJumpProgress=progress},
-    resetMotion(){moving=false;idleTime=0},
+    beginAction(){actionPulse.start()},
+    setActionProgress(progress,now=performance.now()){actionPulse.advance(progress,now)},
+    resetMotion(){moving=false;idleTime=0;actionPulse.reset()},
     update(now,idle=false,size=1){
+      size*=visualScale*actionPulse.scale(now);
       const dt=lastTime===undefined?0:Math.min(.05,(now-lastTime)/1000);lastTime=now;
       const ease=1-Math.exp(-14*dt);
       bodyX+=(targetX-bodyX)*ease;bodyY+=(targetY-bodyY)*ease;

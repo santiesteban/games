@@ -4,6 +4,10 @@ import {vibrantWarpColor} from './warp-pulse.js';
 import {createPuzzleBadgeMesh} from './puzzle-badge.js';
 import {drawWarpPipeBadge} from '../shared/warp-pipe-badge.js';
 
+export const WARP_PIPE_HEIGHT=.72;
+export const INVERTED_PIPE_LENGTH=.4;
+export const invertedPipeExtension=()=>INVERTED_PIPE_LENGTH-.37*WARP_PIPE_HEIGHT;
+
 const DARK=new Color(.20,.08,.28);
 const fromHex=hex=>new Color(...[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255));
 

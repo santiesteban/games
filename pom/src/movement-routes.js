@@ -1,6 +1,20 @@
 // Compatibility entry point for the game and existing tools.
 export * from '../shared/movement-routes.js';
-import {planMovement as planLogicalMovement,movementSegmentClear,sampleMovementProgress} from '../shared/movement-routes.js';
+import {planMovement as planLogicalMovement,movementSegmentClear,sampleMovementProgress,STEP_UP_DURATION} from '../shared/movement-routes.js';
+
+// Both ordinary steps and pipe entries follow this same rising step arc.
+export function stepArcPoints(a,b,{power=2,lift=.4,around,capAtDestination=false}={}){
+  return Array.from({length:33},(_,i)=>{
+    const t=i/32,h=t**power,x=a.x+(b.x-a.x)*h,z=a.z+(b.z-a.z)*h,p=around?.(h);
+    const y=a.y+(b.y-a.y)*(2*t-t*t)+4*lift*t*(1-t);
+    return {x:x+(p?(p.x-x)*.45:0),z:z+(p?(p.z-z)*.45:0),y:capAtDestination?Math.min(y,b.y):y};
+  });
+}
+export function pipeEntryStepPlan(a,b){
+  const points=stepArcPoints(a,b,{capAtDestination:true}),lengths=[0];
+  for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y,points[i].z-points[i-1].z));
+  return {points,lengths,length:lengths.at(-1),duration:STEP_UP_DURATION};
+}
 
 // The solver and movement rules keep their collision-safe paths. For a step
 // up, animate a smooth arc; in cramped spaces use the least obstructed arc so
@@ -28,11 +42,7 @@ export function planMovement(board,from,to){
   const a=safe.points[0],b=safe.points.at(-1);
   let best,bestHits=Infinity;
   for(const [power,lift] of [[2,.4],[2,.6],[3,.4],[4,.2]]){
-    const points=Array.from({length:33},(_,i)=>{
-      const t=i/32,h=t**power,x=a.x+(b.x-a.x)*h,z=a.z+(b.z-a.z)*h;
-      const around=diagonal?sampleMovementProgress(safe,h):null;
-      return{x:x+(around?(around.x-x)*.45:0),z:z+(around?(around.z-z)*.45:0),y:a.y+(b.y-a.y)*(2*t-t*t)+4*lift*t*(1-t)};
-    });
+    const points=stepArcPoints(a,b,{power,lift,around:diagonal?h=>sampleMovementProgress(safe,h):undefined});
     let hits=0;for(let i=1;i<points.length;i++)if(!movementSegmentClear(board,points[i-1],points[i]))hits++;
     if(hits<bestHits){best=points;bestHits=hits}if(!hits)break;
   }

@@ -1,5 +1,6 @@
 import {collectionCard} from './collection-view.js';
 import {userPuzzleThumbnail} from './puzzle-thumbnail.js';
+import {animationCaseLevel} from './animation-cases.js';
 
 const thumbnails={
   'basic-lessons':new URL('./assets/interface/pack_01_thumb.webp',import.meta.url).href,
@@ -96,6 +97,12 @@ export function createCatalogScreens({levels,groups,progress,isAvailable,myPuzzl
       for(const level of groupLevels(collection).filter(level=>level.id===revealLevelId||isAvailable(level))){
         const card=collectionCard(level,{completed:progress.has(level.id),pending:level.id===revealLevelId,play});
         const art=userPuzzleThumbnail(thumbnailLevel(level));art.classList.add('level-card__art');
+        card.querySelector('.level-card__preview').prepend(art);grid.append(card);
+      }
+      if(collection==='others'){
+        const preview=animationCaseLevel('step',levels.find(level=>level.kind==='puzzle'));
+        const card=collectionCard({id:'animation-playground',name:'Animation Playground'}, {href:new URL('./animation-playground.html',location.href).href});
+        const art=userPuzzleThumbnail(preview);art.classList.add('level-card__art');
         card.querySelector('.level-card__preview').prepend(art);grid.append(card);
       }
       if(!grid.childElementCount){empty.hidden=false;empty.textContent='No levels to show with your current settings.'}
