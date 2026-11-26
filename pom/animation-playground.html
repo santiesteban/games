@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Animation Playground · Little Ledges</title>
+  <link rel="stylesheet" href="./src/animation-playground.css">
+</head>
+<body>
+  <main class="playground">
+    <header class="playground__header">
+      <a class="playground__back" href="./" aria-label="Back to Little Ledges">←</a>
+      <div><p class="playground__eyebrow">Little Ledges</p><h1>Animation Playground</h1><p class="playground__intro">Compare Pom’s movement animations together. The previews use the game’s artwork and movement code.</p></div>
+    </header>
+    <section class="playable" aria-labelledby="playable-title">
+      <div class="playable__header"><div><h2 id="playable-title">Try it in the game</h2><p>Choose an animation, then use the game controls to perform it.</p></div><button id="reset-scenario" type="button">Reset scenario</button></div>
+      <label class="playable__select">Animation <select id="scenario-select"></select></label>
+      <p id="scenario-help" class="playable__help"></p>
+      <iframe id="scenario-game" title="Playable animation scenario"></iframe>
+    </section>
+    <h2 class="playground__comparison-title">Compare animations</h2>
+    <section class="controls" aria-label="Playback controls">
+      <button id="play" type="button">Pause</button>
+      <button id="replay" type="button">Replay</button>
+      <label>Speed <select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+      <label class="controls__timeline">Timeline <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Animation timeline"></label>
+    </section>
+    <section class="perspective" aria-label="Perspective controls"><label>Side angle <input id="yaw" type="range" min="-50" max="50" value="20"><output id="yaw-value">20°</output></label><label>Camera height <input id="pitch" type="range" min="0" max="55" value="20"><output id="pitch-value">20°</output></label><button id="reset-view" type="button">Reset view</button></section>
+    <p class="playground__hint">Animations loop together. Slow them down or pause and drag the timeline to compare a moment.</p>
+    <section class="previews" aria-label="Animation previews">
+      <article class="preview"><h2>Idle</h2><p>Breathing and expression</p><iframe title="Pom idle animation" src="./animation-preview.html?scene=idle"></iframe></article>
+      <article class="preview"><h2>Walking</h2><p>Moving across a level surface</p><iframe title="Pom walking animation" src="./animation-preview.html?scene=walk"></iframe></article>
+      <article class="preview"><h2>Push</h2><p>Moving a piece in</p><iframe title="Pom pushing animation" src="./animation-preview.html?scene=push" loading="lazy"></iframe></article>
+      <article class="preview"><h2>Pull</h2><p>Bringing a piece out</p><iframe title="Pom pulling animation" src="./animation-preview.html?scene=pull" loading="lazy"></iframe></article>
+      <article class="preview"><h2>Step jump</h2><p>Climbing a step, as in Lessons 5 and 6</p><iframe title="Pom step jump animation" src="./animation-preview.html?scene=step"></iframe></article>
+      <article class="preview"><h2>Inverted pipe jump</h2><p>Jumping from a ledge to the pipe</p><iframe title="Pom inverted pipe jump animation" src="./animation-preview.html?scene=pipe"></iframe></article>
+      <article class="preview"><h2>Gap jump · same height</h2><p>Jumping between equal-height ledges</p><iframe title="Gap jump · same height" src="./animation-preview.html?scene=gap-level"></iframe></article>
+      <article class="preview"><h2>Gap jump · lower landing</h2><p>Jumping across to a lower ledge</p><iframe title="Gap jump · lower landing" src="./animation-preview.html?scene=gap-down"></iframe></article>
+      <article class="preview"><h2>Umbrella descent</h2><p>Dropping to a lower surface</p><iframe title="Umbrella descent" src="./animation-preview.html?scene=umbrella"></iframe></article>
+      <article class="preview"><h2>Enter normal pipe</h2><p>Entering from the top</p><iframe title="Enter normal pipe" src="./animation-preview.html?scene=normal-in"></iframe></article>
+      <article class="preview"><h2>Exit normal pipe</h2><p>Emerging and landing on the rim</p><iframe title="Exit normal pipe" src="./animation-preview.html?scene=normal-out"></iframe></article>
+      <article class="preview"><h2>Enter inverted pipe · directly below</h2><p>Entering from immediately below</p><iframe title="Enter inverted pipe · directly below" src="./animation-preview.html?scene=inverted-under"></iframe></article>
+      <article class="preview"><h2>Enter inverted pipe · two cells up</h2><p>Jumping straight up into the opening</p><iframe title="Enter inverted pipe · two cells up" src="./animation-preview.html?scene=inverted-high"></iframe></article>
+      <article class="preview"><h2>Exit inverted pipe</h2><p>Emerging and landing below</p><iframe title="Exit inverted pipe" src="./animation-preview.html?scene=inverted-out"></iframe></article>
+    </section>
+    <p class="playground__note">The previews use the game’s 3D renderer, Pom artwork, and cell dimensions. Pipe previews show their individual entry or exit phases.</p>
+  </main>
+  <script type="module" src="./src/animation-playground.js"></script>
+</body>
+</html>

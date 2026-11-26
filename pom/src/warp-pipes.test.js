@@ -64,6 +64,19 @@ test('Pom can jump into an inverted pipe two cells above a clear standing space'
   const blocked=[...grid];blocked[30]='3'+'.'.repeat(31);
   assert.equal(warpDestination(createMovementBoard(blocked,[2,1,2,2]),pom,pairs),null);
 });
+test('Pom can jump diagonally from an adjacent ledge into an inverted pipe',()=>{
+  const grid=['PPPPP','PTTTT','PTTTT','PTTWP','PTWWP','PTTTP','PPPPP'];
+  const pairs=[[{x:0,y:0},{x:4,y:2,inverted:true}]],pom={x:3,y:5,z:1};
+  const board=createMovementBoard(grid,[1,2,0]);
+  assert(board.validNode(pom));
+  assert.deepEqual(warpDestination(board,pom,pairs),{x:0,y:0,z:0});
+  assert.equal(warpDestination(board,{...pom,x:2},pairs),null);
+  assert.equal(warpDestination(board,{...pom,z:0},pairs),null);
+  const blocked=createMovementBoard(grid,[1,2,2]);
+  assert.equal(warpDestination(blocked,pom,pairs),null);
+  const blockedOpening=createMovementBoard(grid,[2,2,0]);
+  assert.equal(warpDestination(blockedOpening,pom,pairs),null);
+});
 test('a piece directly below an inverted pipe blocks both ends at equal or greater depth',()=>{
   const grid=[...Array(29).fill('.'.repeat(32)),'0....2'+'.'.repeat(26),'1'+'.'.repeat(31),'.'.repeat(32)];
   const board=createMovementBoard(grid,[1,1,1]),pairs=[[{x:0,y:29,inverted:true},{x:5,y:29}]],from={x:5,y:29,z:0};

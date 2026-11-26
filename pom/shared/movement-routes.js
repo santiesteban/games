@@ -1,4 +1,5 @@
 const EPS=.0001, BODY={x:.38,down:.205,up:.31,z:.18};
+export const STEP_UP_DURATION=240;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 
@@ -52,19 +53,52 @@ export function movementSegmentClear(board,a,b){return segmentClear(board.blocks
 export function isJumpCandidate(from,to){
   const dx=Math.abs(to.x-from.x),dz=Math.abs(to.z-from.z),span=Math.max(dx,dz),drop=to.y-from.y;
   const diagonalGap=drop===0&&span===2&&Math.min(dx,dz)===1;
-  return span>=2&&span<=(drop>0?3:2)&&drop>=-1
-    &&(dx===0||dz===0||dx===dz||diagonalGap)
+  return (span>=2||(drop>1&&span===0))&&span<=(drop>0?3:2)&&drop>=-1
+    &&(drop>0||dx===0||dz===0||dx===dz||diagonalGap)
     &&!(drop<0&&dx!==0&&dz!==0);
+}
+
+// Use a smaller collision area for parachuting, allowing Pom's outline to
+// overlap nearby pieces without allowing his center to pass through them.
+export function parachuteCollisionBlocks(board){
+  return board.blocks.map(block=>({
+    min:{x:block.min.x+.16,y:block.min.y+.16,z:block.min.z+.12},
+    max:{x:block.max.x-.16,y:block.max.y-.12,z:block.max.z-.12},
+  }));
+}
+
+// A single cubic curve carries Pom out past the ledge before descending to
+// the target. Vary the control points to find a clear, continuous flight.
+function planParachute(board,from,to){
+  const drop=to.y-from.y,dx=Math.abs(to.x-from.x),dz=Math.abs(to.z-from.z);
+  if(drop<=1||Math.max(dx,dz)>3||!board.validNode(from)||!board.validNode(to))return null;
+  const a=nodePose(board,from),b=nodePose(board,to);
+  const blocks=parachuteCollisionBlocks(board).filter(block=>block.max.x>=Math.min(a.x,b.x)&&block.min.x<=Math.max(a.x,b.x)&&block.max.y>=b.y&&block.min.y<=a.y+.2&&block.max.z>=Math.min(a.z,b.z)&&block.min.z<=Math.max(a.z,b.z)+4);
+  for(const bulge of [0,.75,1.5,2,2.5,3,3.5,4])for(const height of [.25,.4,.6,.8]){
+    const c1={x:a.x+(b.x-a.x)/3,y:a.y+.2,z:a.z+bulge};
+    const c2={x:b.x,y:b.y+drop*height,z:b.z};
+    const points=Array.from({length:33},(_,i)=>{
+      const t=i/32,s=1-t;
+      return Object.fromEntries(['x','y','z'].map(axis=>[axis,s*s*s*a[axis]+3*s*s*t*c1[axis]+3*s*t*t*c2[axis]+t*t*t*b[axis]]));
+    });
+    if(!points.slice(1).every((point,i)=>segmentClear(blocks,points[i],point)))continue;
+    const lengths=[0];
+    for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
+    const visualOverlap=points.slice(1).some((point,i)=>!segmentClear(board.blocks,points[i],point));
+    return {points,lengths,length:lengths.at(-1),controls:[a,c1,c2,b],visualOverlap,takeoff:0,landing:1,continuousFlight:true,duration:1050+Math.max(dx,dz)*90+drop*90,isFall:true,stretch:false,isJump:true};
+  }
+  return null;
 }
 
 function planJump(board,from,to){
   if(!isJumpCandidate(from,to))return null;
   const dx=to.x-from.x,dz=to.z-from.z,span=Math.max(Math.abs(dx),Math.abs(dz)),drop=to.y-from.y;
   if(!board.validNode(from)||!board.validNode(to))return null;
+  if(!span)return planParachute(board,from,to);
   for(let i=1;i<span;i++){
     const x=from.x+dx*i/span,z=from.z+dz*i/span;
     for(const cellX of new Set([Math.floor(x),Math.ceil(x)]))for(const cellZ of new Set([Math.floor(z),Math.ceil(z)])){
-      if(board.validNode({x:cellX,y:from.y,z:cellZ}))return null;
+      if(board.validNode({x:cellX,y:from.y,z:cellZ}))return planParachute(board,from,to);
     }
   }
   const a=nodePose(board,from),b=nodePose(board,to),edgeB={...b,x:b.x-dx/span*.2,z:b.z-dz/span*.2};
@@ -138,11 +172,11 @@ function planJump(board,from,to){
     candidate.push(b);
     if(candidate.slice(1).every((p,i)=>segmentClear(blocks,candidate[i],p))){points=candidate;break findArc}
   }
-  if(!points)return null;
+  if(!points)return planParachute(board,from,to);
   const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
   const takeoff=continuousFlight&&points[1].y!==a.y?0:lengths[1]/lengths.at(-1);
   const duration=drop>1 ? 1050+span*90+drop*90 : 560+span*55+Math.max(0,drop)*70;
-  return {points,lengths,length:lengths.at(-1),takeoff,landing:continuousFlight?1:lengths.at(-2)/lengths.at(-1),continuousFlight,duration,isFall:drop>1,stretch:false,isJump:true};
+  return {points,lengths,length:lengths.at(-1),takeoff,landing:continuousFlight||drop>1?1:lengths.at(-2)/lengths.at(-1),continuousFlight,duration,isFall:drop>1,stretch:false,isJump:true};
 }
 
 function permutations(items){return items.length?items.flatMap((v,i)=>permutations(items.filter((_,j)=>i!==j)).map(rest=>[v,...rest])):[[]]}
@@ -221,12 +255,12 @@ export function planMovement(board,from,to){
     }
     candidates.sort((x,y)=>x.reduce((sum,p,i)=>sum+(i?distance(x[i-1],p):0),0)-y.reduce((sum,p,i)=>sum+(i?distance(y[i-1],p):0),0));
     points=candidates[0]??searchCorner(a,b,blocks);
-    if(!points)return null;
+    if(!points)return planParachute(board,from,to);
     points=roundCorners(simplify(points,blocks),blocks);
   }
   const lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
   const drop=to.y-from.y,isFall=drop>1,level=drop===0,diagonal=from.x!==to.x&&from.z!==to.z;
-  const duration=isFall?360+drop*135:level?(diagonal?200:175)+(lengths.at(-1)-distance(a,b))*25:240+(lengths.at(-1)-distance(a,b))*25;
+  const duration=isFall?360+drop*135:level?(diagonal?200:175)+(lengths.at(-1)-distance(a,b))*25:STEP_UP_DURATION+(lengths.at(-1)-distance(a,b))*25;
   return{points,lengths,length:lengths.at(-1),duration,isFall,stretch:!isFall&&(drop<0||diagonal||points.length>2)};
 }
 

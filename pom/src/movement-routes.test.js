@@ -1,10 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createMovementBoard,planMovement,sampleMovement,movementSegmentClear,nodePose,findMovementPath,isSingleMove,movementProfiles} from './movement-routes.js';
+import {createMovementBoard,planMovement,pipeEntryStepPlan,stepArcPoints,STEP_UP_DURATION,sampleMovement,sampleMovementProgress,movementSegmentClear,parachuteCollisionBlocks,nodePose,findMovementPath,isSingleMove,movementProfiles} from './movement-routes.js';
+import {jumpRouteTiming} from './pom-movement-pose.js';
 import {movementExamples,studioLevel} from './movement-studio.js';
 import {loadLevelCatalog} from './level-format.js';
 const {levels}=loadLevelCatalog(JSON.parse(fs.readFileSync(new URL('./data/levels.json',import.meta.url))));
+
+test('pipe entry shares the step arc and timing without rising above the opening',()=>{
+  const from={x:0,y:0,z:0},to={x:1,y:2,z:0},normal=stepArcPoints(from,to),pipe=pipeEntryStepPlan(from,to);
+  assert.equal(pipe.duration,STEP_UP_DURATION);
+  for(let i=0;i<normal.length;i++){
+    assert.equal(pipe.points[i].x,normal[i].x);
+    assert.equal(pipe.points[i].y,Math.min(normal[i].y,to.y));
+  }
+  assert.deepEqual(sampleMovement(pipe,0),from);
+  assert.deepEqual(sampleMovement(pipe,1),to);
+});
 
 for(const example of movementExamples)test(`reported movement: ${example.label}`,()=>{
   const level=studioLevel(levels,example),board=createMovementBoard(level.grid,level.initialDepths);
@@ -208,15 +220,43 @@ test('a one-cell gap permits all three same-height landings on the opposite ledg
   }
 });
 
-test('offset jumps work in every direction and remain restricted to equal height',()=>{
+test('offset jumps work in every direction at equal or lower heights',()=>{
   const from={x:4,y:5,z:4};
   for(const [dx,dz] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){
     for(const drop of [-1,0,1]){
       const to={x:from.x+dx,y:from.y+drop,z:from.z+dz};
       const board={height:10,blocks:[],validNode:p=>[from,to].some(n=>n.x===p.x&&n.y===p.y&&n.z===p.z)};
-      assert.equal(Boolean(planMovement(board,from,to)),drop===0,JSON.stringify({dx,dz,drop}));
+      assert.equal(Boolean(planMovement(board,from,to)),drop>=0,JSON.stringify({dx,dz,drop}));
     }
   }
+});
+
+test('parachute can reach the lower ledges in Challenge 1-12',()=>{
+  const level=levels.find(item=>item.name==='Challenge 1-12 - P3DS');
+  const board=createMovementBoard(level.grid,[2,3,0,0,0]),from={x:6,y:2,z:2};
+  for(const x of [6,7])for(const z of [1,2]){
+    const to={x,y:6,z},plan=planMovement(board,from,to);
+    assert(plan?.isFall&&plan.isJump,JSON.stringify(to));
+    assert.deepEqual(findMovementPath(board,from,to),[from,to]);
+    const [start,first,second,last]=plan.controls;
+    assert(first.z>start.z,'starts toward the front of the ledge');
+    assert(Math.max(...plan.points.map(point=>point.z))>start.z+.5,'moves visibly ahead of the upper piece');
+    assert.equal(second.x,last.x,'finishes with a vertical tangent');
+    assert.equal(second.z,last.z,'finishes with a vertical tangent');
+    for(let i=0;i<plan.points.length;i++){
+      const t=i/(plan.points.length-1),s=1-t,point=plan.points[i];
+      for(const axis of ['x','y','z'])assert(Math.abs(point[axis]-(s**3*start[axis]+3*s*s*t*first[axis]+3*s*t*t*second[axis]+t**3*last[axis]))<1e-9,'follows one cubic curve');
+    }
+    const smallerHitbox={...board,blocks:parachuteCollisionBlocks(board)};
+    for(let i=1;i<plan.points.length;i++)assert(movementSegmentClear(smallerHitbox,plan.points[i-1],plan.points[i]),'clears pieces with the smaller hitbox');
+    const touchdown=nodePose(board,to);
+    for(const t of [.88,.94,1]){
+      const point=sampleMovementProgress(plan,jumpRouteTiming(plan,t).progress);
+      for(const axis of ['x','y','z'])assert(Math.abs(point[axis]-touchdown[axis])<1e-9,'stays at the destination during landing');
+    }
+  }
+  board.blocks.push({min:{x:4,y:0,z:3.05},max:{x:10,y:8,z:5}});
+  assert.equal(planMovement(board,from,{x:6,y:6,z:1}),null,'does not send Pom through an impassable wall');
 });
 
 test('offset jumps still require a gap and a clear flight',()=>{
@@ -225,4 +265,13 @@ test('offset jumps still require a gap and a clear flight',()=>{
   const board=createMovementBoard(['R.R'],[3,3]);
   board.blocks.push({min:{x:.9,y:1.3,z:0},max:{x:2.1,y:2,z:2}});
   assert.equal(planMovement(board,from,to),null);
+});
+
+test('a lower platform can be reached two cells sideways and one cell forward or back',()=>{
+  const board=createMovementBoard(['A..','A..','A.B'],[3,3]),from={x:0,y:0,z:1};
+  for(const z of [0,2]){
+    const to={x:2,y:2,z},plan=planMovement(board,from,to);
+    assert(plan?.isJump&&plan.isFall,JSON.stringify(to));
+    for(let i=1;i<plan.points.length;i++)assert(movementSegmentClear(board,plan.points[i-1],plan.points[i]));
+  }
 });

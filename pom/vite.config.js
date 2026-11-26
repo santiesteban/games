@@ -10,6 +10,6 @@ export default defineConfig(({mode,command})=>{
   const build={number,revision,development:command==='serve'};
   return {base:'./',cacheDir:`node_modules/.vite-${playtest?'playtest':'game'}`,define:{__PLAYTEST_BUILD__:JSON.stringify(playtest),__BUILD_INFO__:JSON.stringify(build)},
     resolve:{alias:{'#level-catalog':fileURLToPath(new URL(playtest?'./src/playtest-catalog.js':'./src/game-catalog.js',import.meta.url))}},
-    server:{fs:{allow:['.']}},build:{outDir:playtest?'dist-playtest':'dist'},
+    server:{fs:{allow:['.']}},build:{outDir:playtest?'dist-playtest':'dist',rollupOptions:{input:playtest?fileURLToPath(new URL('./index.html',import.meta.url)):{game:fileURLToPath(new URL('./index.html',import.meta.url)),animations:fileURLToPath(new URL('./animation-playground.html',import.meta.url)),animationPreview:fileURLToPath(new URL('./animation-preview.html',import.meta.url))}}},
     plugins:[bundledFontLicenses(),{name:'playtest-entry',transformIndexHtml:{order:'pre',handler(html){return playtest?html.replace('./src/game-entry.js','./src/playtest-entry.js').replace('<title>Little Ledges</title>','<title>Puzzle Playtest · Little Ledges</title>'):html}}}]};
 });

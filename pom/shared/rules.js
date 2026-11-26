@@ -79,12 +79,15 @@ export function warpEntryMatches(board,cell,player,endpoint=warpEndpoint(board,c
   if(endpoint.entry&&nodeKey(player)===nodeKey(endpoint.entry))return true;
   if(!cell.inverted)return false;
   const group=board.byCell[cell.y]?.[cell.x];
-  // Allow a jump from one or two cells below the opening, with a clear path.
+  // Allow a jump from one or two cells below the opening, including an
+  // adjacent ledge when both columns leave room for the diagonal approach.
   const distance=player.y-(cell.y+1);
-  if(player.x!==cell.x||player.z!==group.depth-1||distance<1||distance>2||!board.validNode(player))return false;
+  if(Math.abs(player.x-cell.x)>1||player.z!==group.depth-1||distance<1||distance>2||!board.validNode(player))return false;
   for(let y=cell.y+1;y<player.y;y++){
-    const obstacle=board.byCell[y]?.[cell.x];
-    if(obstacle&&obstacle.depth>=group.depth)return false;
+    for(const x of new Set([cell.x,player.x])){
+      const obstacle=board.byCell[y]?.[x];
+      if(obstacle&&obstacle.depth>=group.depth)return false;
+    }
   }
   return true;
 }
