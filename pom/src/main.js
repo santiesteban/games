@@ -1,5 +1,6 @@
 import {normalPipeFrame,normalPipeEntryProgress,invertedPipeEntryFrame,invertedPipeExitFrame} from './pipe-animation.js';
 import {animationCaseLevel} from './animation-cases.js';
+import {revisedPushDirection} from './pom-revised-poses.js';
 import {buildPieceFrontOutline,mergeStraightOutlineEdges} from './piece-front-outline.js';
 import {installPerformanceReadout} from './performance-readout.js';
 let performanceReadout;
@@ -310,6 +311,7 @@ function syncHoverSpot(){if(!hoverObject)return;hoverObject.setMesh(standingSpot
 function setUmbrellaVisible(show){if(umbrellaCanopy)umbrellaCanopy.color=new Color(.15,.2,.27,show?1:0);if(umbrellaHandle)umbrellaHandle.color=new Color(.15,.2,.27,show?1:0);for(let i=0;i<umbrellaPanels.length;i++){const color=i%2?new Color(.64,.83,.97):new Color(.98,.99,.96);color.a=show?1:0;umbrellaPanels[i].color=color}}
 function positionUmbrella(t=0){const sway=Math.sin(t*Math.PI*2)*.06,y=.84+Math.sin(t*Math.PI*4)*.025;if(umbrellaCanopy)umbrellaCanopy.pos3D=vec3(sway,y,3);if(umbrellaHandle)umbrellaHandle.pos3D=vec3(sway,y,2.96);for(const panel of umbrellaPanels)panel.pos3D=vec3(sway,y,3.035)}
 function animateEffort(){
+  redPom?.setPushDirection(revisedPushDirection(selected,player));
   showRedPom('push-back');
   const frame=++effortFrame,start=performance.now(),duration=PIECE_EFFORT_DURATION;
   function tick(now){
@@ -1271,6 +1273,7 @@ function animateWarpPreview(source=0,destination=1){
   function tick(now){
     if(token!==warpPreviewAnimation)return;
     start??=now;const elapsed=now-start;
+    redPom?.setPipePhase(elapsed>=450&&elapsed<1400||elapsed>=1700&&elapsed<2200);
     if(elapsed>=450&&elapsed<1700){if(!entryStarted){entryStarted=true;redPom?.beginAction()}redPom?.setActionProgress(normalPipeEntryProgress(elapsed))}
     panCamera(elapsed);
     showRedPom(elapsed<1700?'calm':'pipe-exit');
@@ -1340,12 +1343,14 @@ function animateInvertedWarp(source,destination,endpoints){
     began??=now;const elapsed=now-began-jumpDuration;
     if(elapsed<0){
       const progress=(now-began)/jumpDuration,point=sampleMovement(jumpPlan,progress);
+      redPom?.setMotion({kind:'up',progress,direction:sourceCell.x-from.x});
       redPom?.setActionProgress(progress*progress*(3-2*progress));
       showRedPom(pomMovementPose({isStepJump:true},from,{y:from.y-1},progress,progress));redPom?.setStepJump(progress);
       playerObject.pos3D=vec3(point.x,point.y,point.z);syncPomMatrix();
       requestAnimationFrame(tick);return;
     }
     if(!entryStarted){entryStarted=true;redPom?.beginAction()}
+    redPom?.setMotion(null);redPom?.setPipePhase(elapsed<500||elapsed>=650&&elapsed<1100);
     redPom?.setStepJump(null);
     panCamera(elapsed);
     if(elapsed>=600&&!placed){player={...to};placed=true;syncBlocks();syncFlag()}
@@ -1442,7 +1447,7 @@ function pieceDragState(atGrab=false,piece=selected){
 }
 function previewPieceDrag(piece,offset){
   pieceDragPreview=piece&&groups.includes(piece)?{piece,offset}:null;
-  if(pieceDragPreview&&offset<0)showRedPom('push-back');
+  if(pieceDragPreview&&offset<0){redPom?.setPushDirection(revisedPushDirection(selected,player));showRedPom('push-back')}
   else if(!pieceDragPreview){showRedPom('calm');}
   wrap.dataset.dragPreviewOffset=String(pieceDragPreview?.offset??0);
   if(!gameReady)return;
@@ -1621,6 +1626,7 @@ function syncControlFeatureInputs(){
   const appearance=document.querySelector('#topFaceAppearance');if(appearance)appearance.value=controlFeatures.topFaceStyle;
   const markerShape=document.querySelector('#movementMarkerShape');if(markerShape)markerShape.value=controlFeatures.movementMarkerShape;
   const eyes=document.querySelector('#pomEyeStyle');if(eyes)eyes.value=controlFeatures.pomEyeStyle;
+  const characterAppearance=document.querySelector('#pomAppearance');if(characterAppearance)characterAppearance.value=controlFeatures.pomAppearance;
 }
 const scenarioInput=document.querySelector('#scenario');
 function syncScenarioInput(){
@@ -1653,6 +1659,12 @@ const pomEyeStyle=document.querySelector('#pomEyeStyle');
 pomEyeStyle.addEventListener('change',()=>{
   const saved=controlFeatures.setPomEyeStyle(pomEyeStyle.value);
   redPom?.setEyeStyle(controlFeatures.pomEyeStyle);
+  document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';
+});
+const pomAppearance=document.querySelector('#pomAppearance');
+pomAppearance.addEventListener('change',()=>{
+  const saved=controlFeatures.setPomAppearance(pomAppearance.value);
+  redPom?.setCharacterStyle(controlFeatures.pomAppearance);
   document.querySelector('#controlFeatureMessage').textContent=saved?'':'This setting applies now, but could not be saved in this browser.';
 });
 const movementMarkerShape=document.querySelector('#movementMarkerShape');
@@ -2692,7 +2704,7 @@ function gameUpdateImpl(){
   introTick?.(timeReal*1000);
   if(pulloutSwitchesMoving){syncPulloutSwitches(switchVisualPlayer,switchVisualDepths);if(!busy&&pulloutSwitchAt(player))syncPlayer()}
   if(warpPreviewEnds.length&&(warpPipesMoving||warpPreviewPlayerKey!==`${player.x},${player.y},${player.z}`)){syncWarpPipePreview();if(!busy&&warpPlayerOnPipe())syncPlayer()}
-  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setEyeStyle(controlFeatures.pomEyeStyle);const camera=render3D.camera,forward=camera.getForward(),position=playerObject.pos3D,depth=position.subtract(camera.pos).dot(forward),groundDepth=vec3(position.x,0,position.z).subtract(camera.pos).dot(forward),size=camera.orthographic?1:Math.max(.6,Math.min(1,depth/Math.max(.001,groundDepth)));redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches,size);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),pomSurfaceCorrection())}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
+  syncCellGeometry();if(playerObject)playerObject.rotation3D=render3D.camera.rotation.copy();syncPomMatrix();if(redPom&&playerObject){redPom.setCharacterStyle(controlFeatures.pomAppearance);redPom.setEyeStyle(controlFeatures.pomEyeStyle);const camera=render3D.camera,forward=camera.getForward(),position=playerObject.pos3D,depth=position.subtract(camera.pos).dot(forward),groundDepth=vec3(position.x,0,position.z).subtract(camera.pos).dot(forward),size=camera.orthographic?1:Math.max(.6,Math.min(1,depth/Math.max(.001,groundDepth)));redPom.update(performance.now(),!busy&&!won&&!introPlaying&&!levelLoading&&!pieceDragPreview&&!document.hidden&&!reducedSelectionMotion.matches,size);redPom.setCameraTilt(render3D.camera.rotation.x);redPom.alignToSurface(stretchY(-.205),pomSurfaceCorrection())}if(pomLight&&playerObject)pomLight.pos3D=puzzlePoint(playerObject.pos3D);updatePomGlow(performance.now());updateStudyFollow();updateStudyVisibility();keepPomEyesRound();
   if(isDesignPlayground())designPlayground.updateCellMeasurement(cellMeasurement());
   movementMarkers?.update(performance.now());
   if(warpPreviewEnds.length)updateWarpPulse(performance.now());
@@ -2732,6 +2744,7 @@ function moveTo(p,pressMarker=false,preview=null){
       finish();return;
     }
     const plan=plans[index],from=path[index],to=path[index+1],t=(now-start)/plan.duration,profile=profiles[index];
+    redPom?.setMotion({kind:plan.isStepJump?'up':plan.isJump?'side':'walk',progress:t,direction:to.x-from.x});
     if(pulsedIndex!==index&&(plan.isJump||plan.isStepJump)){pulsedIndex=index;redPom?.beginAction()}
     redPom?.setStepJump(plan.isStepJump&&!reducedSelectionMotion.matches?t:null);
     const {flight,progress,launchAt}=jumpRouteTiming(plan,t);

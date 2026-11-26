@@ -66,6 +66,9 @@ function update(){
   const elapsed=Math.max(0,state.time-500),moving=scene!=='idle';
   let plan=scene==='walk'?walk:scene==='step'?step:scene==='pipe'?pipeJump:scene==='gap-level'?gap:scene==='gap-down'?gapDown:scene==='umbrella'?fall:scene==='inverted-high'?highJump:scene==='inverted-under'?underJump:null;
   let progress=plan?Math.max(0,Math.min(1,elapsed/plan.duration)):0,flight=progress,point={x:1.5,y:.205,z:.5},pose='calm',shape=null,size=1,squash=0;
+  sprite?.setCharacterStyle(state.appearance);
+  sprite?.setPushDirection('backward');
+  sprite?.setPipePhase(false);
   let effortScale={x:1,y:1};
   if(scene==='push'||scene==='pull'){
     const triggered=state.time>=500,active=triggered&&elapsed<PIECE_EFFORT_DURATION;
@@ -75,6 +78,7 @@ function update(){
     for(const {part,mesh} of pieceEnd)part.mesh=(scene==='push'?!triggered:triggered)?mesh:undefined;
   }
   if(plan){
+    sprite?.setMotion({kind:scene==='step'||scene==='pipe'||scene==='inverted-high'||scene==='inverted-under'?'up':plan.isJump?'side':'walk',progress,direction:1});
     const timing=jumpRouteTiming(plan,progress);flight=timing.flight;
     if(['step','pipe','inverted-high','inverted-under','gap-level','gap-down'].includes(scene)&&elapsed<plan.duration)sprite?.setActionProgress(plan.isJump?timing.progress:progress*progress*(3-2*progress),clock);
     point=plan.isJump?sampleMovementProgress(plan,timing.progress):sampleMovement(plan,progress);
@@ -91,6 +95,7 @@ function update(){
   if(scene==='inverted-under'||scene==='inverted-high'||scene==='pipe'){
     const jumpDuration=plan.duration,entry=invertedPipeEntryFrame(elapsed-jumpDuration);
     if(elapsed>=jumpDuration){
+      sprite?.setMotion(null);sprite?.setPipePhase(elapsed<jumpDuration+500);
       if(previousTime<500+jumpDuration||state.time<previousTime)sprite?.beginAction();
       sprite?.setActionProgress(entry.progress,clock);
       const start=vec3(point.x,point.y,point.z),end=vec3(1.5,(scene==='inverted-under'?1:2)-INVERTED_PIPE_LENGTH+.18,.5);point=start.lerp(end,entry.progress);size=entry.size;shape=null;pose='calm';
@@ -100,11 +105,13 @@ function update(){
     const frame=normalPipeFrame(scene==='normal-in'?Math.min(1400,elapsed):1700+Math.min(900,elapsed));
     if(scene==='normal-in'){if(state.time>=950&&(previousTime<950||state.time<previousTime))sprite?.beginAction();sprite?.setActionProgress(normalPipeEntryProgress(elapsed),clock)}
     size=Math.max(.001,frame.size*frame.visibility);point={x:1.5,y:.205+.266+frame.lift,z:.5};pose=scene==='normal-out'?'pipe-exit':'calm';
+    sprite?.setPipePhase(scene==='normal-in'?elapsed>=450&&elapsed<1400:elapsed<500);
     if(scene==='normal-out'&&elapsed>=650)shape=Math.min(1,.82+.18*(elapsed-650)/250);
   }
   if(scene==='inverted-out'){
     const frame=invertedPipeExitFrame(elapsed,true),emergence=vec3(1.5,2-INVERTED_PIPE_LENGTH+.18,.5),landing=vec3(1.5,.205,.5);
     point=emergence.lerp(landing,frame.burst);size=frame.size;squash=frame.squash;shape=frame.stepJump;pose='pipe-exit';
+    sprite?.setPipePhase(elapsed<450);
   }
   pom.pos3D=vec3(point.x,point.y,point.z);pom.rotation3D=camera.rotation.copy();pom.scale3D=vec3(.72*size*(1+squash)*effortScale.x,.56*size*(1-squash)*effortScale.y,.018);
   if(sprite){sprite.setPose(pose);sprite.setStepJump(shape);sprite.update(clock,!moving);sprite.setCameraTilt(camera.rotation.x);sprite.alignToSurface(-.205,vec3())}

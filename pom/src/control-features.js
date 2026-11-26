@@ -22,7 +22,7 @@ export const TOP_FACE_STYLES=[['flat','Flat'],['checkerboard','Checkerboard'],['
 const STORAGE_KEY='little-ledges:v4:control-features';
 
 export function createControlFeatures({persistent=true}={}){
-  const defaults={...Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.id,feature.defaultEnabled===true])),flatTopFaces:true,movementMarkerShape:'diamond',pomEyeStyle:'classic',brightPomEyes:false};
+  const defaults={...Object.fromEntries(CONTROL_FEATURES.map(feature=>[feature.id,feature.defaultEnabled===true])),flatTopFaces:true,movementMarkerShape:'diamond',pomEyeStyle:'classic',pomAppearance:'classic',brightPomEyes:false};
   function read(){
     if(!persistent)return {...defaults};
     try{
@@ -35,6 +35,7 @@ export function createControlFeatures({persistent=true}={}){
       })));
       flags.brightPomEyes=savedFlags?.brightPomEyes===true;
       flags.pomEyeStyle=resolvePomEyeStyle(savedFlags?.pomEyeStyle,flags.brightPomEyes);
+      flags.pomAppearance=savedFlags?.pomAppearance==='revised'?'revised':'classic';
       flags.flatTopFaces=saved?.version===2&&typeof savedFlags?.flatTopFaces==='boolean'?savedFlags.flatTopFaces:defaults.flatTopFaces;
       flags.movementMarkerShape=saved?.movementMarkerRevision===2&&['diamond','square','circle'].includes(savedFlags?.movementMarkerShape)?savedFlags.movementMarkerShape:defaults.movementMarkerShape;
       return flags;
@@ -45,6 +46,12 @@ export function createControlFeatures({persistent=true}={}){
   try{persist()}catch{}
   return{
     key:STORAGE_KEY,
+    get pomAppearance(){return value.pomAppearance??'classic'},
+    setPomAppearance(style){
+      if(!['classic','revised'].includes(style))return false;
+      value={...(persistent?(read()??value):value),pomAppearance:style};
+      try{persist();return true}catch{return false}
+    },
     get pomEyeStyle(){return value.pomEyeStyle??'classic'},
     setPomEyeStyle(style){
       if(!isPomEyeStyle(style))return false;
