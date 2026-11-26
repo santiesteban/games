@@ -1,6 +1,6 @@
 # Murals
 
-The 18 Murals appear after More Challenges and before Japan Challenges. Their display
+The 18 Murals appear between Level 1 Challenges and Level 2 Challenges. Their display
 numbers are 55–72. Movement Studio and Pull out a path are now 89 and 90; their
 permanent IDs (`builtin-055`, `builtin-056`) and legacy progress mappings remain
 unchanged.

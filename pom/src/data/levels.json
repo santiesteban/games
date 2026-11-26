@@ -5,19 +5,27 @@
   "groups": [
     {
       "id": "basic-lessons",
-      "name": "Basic Lessons"
+      "name": "Basic Lessons - P3DS"
     },
     {
       "id": "first-challenges",
-      "name": "First Challenges"
-    },
-    {
-      "id": "more-challenges",
-      "name": "More Challenges"
+      "name": "Level 1 Challenges - P3DS"
     },
     {
       "id": "murals",
-      "name": "Murals"
+      "name": "Murals - P3DS"
+    },
+    {
+      "id": "more-challenges",
+      "name": "Level 2 Challenges - P3DS"
+    },
+    {
+      "id": "advanced-lessons",
+      "name": "Advanced Lessons - P3DS"
+    },
+    {
+      "id": "level-3-challenges",
+      "name": "Level 3 Challenges - P3DS"
     },
     {
       "id": "interesting-challenges",
@@ -48,12 +56,1658 @@
   ],
   "levels": [
     {
+      "id": "p3ds-level-3-01",
+      "number": 153,
+      "group": "level-3-challenges",
+      "kind": "puzzle",
+      "name": "Challenge 3-1 - P3DS",
+      "description": "Pushmo Level 3 Challenge 1.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 8,
+      "palette": {
+        "P": [
+          243,
+          112,
+          166
+        ],
+        "T": [
+          0,
+          177,
+          185
+        ]
+      },
+      "grid": [
+        "TTPP",
+        "PTPT",
+        "PTPT",
+        "PPTT",
+        "TTPP",
+        "PTPT",
+        "PTPT",
+        "PPTT"
+      ],
+      "start": {
+        "x": 0,
+        "y": 8,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Level 3 Challenges",
+        "originalName": "Challenge 3-1",
+        "referenceImage": "Screenshot 2026-11-25 at 9.53.41 p.m..png",
+        "url": "https://www.youtube.com/watch?v=jO3XUbQJG7s"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 4
+          },
+          {
+            "x": 1,
+            "y": 7
+          }
+        ],
+        [
+          {
+            "x": 3,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 7
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-level-3-02",
+      "number": 154,
+      "group": "level-3-challenges",
+      "kind": "puzzle",
+      "name": "Challenge 3-2 - P3DS",
+      "description": "Pushmo Level 3 Challenge 2.",
+      "knownIssues": true,
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 7,
+      "palette": {
+        "P": [
+          243,
+          112,
+          166
+        ],
+        "T": [
+          0,
+          177,
+          185
+        ],
+        "W": [
+          245,
+          233,
+          216
+        ]
+      },
+      "grid": [
+        "PPPPP",
+        "PTTTT",
+        "PTTTT",
+        "PTTWP",
+        "PTWWP",
+        "PTTTP",
+        "PPPPP"
+      ],
+      "start": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "goal": {
+        "x": 4,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Level 3 Challenges",
+        "originalName": "Challenge 3-2",
+        "referenceImage": "Screenshot 2026-11-25 at 9.54.31 p.m..png",
+        "url": "https://www.youtube.com/watch?v=jO3XUbQJG7s"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 4,
+            "y": 2,
+            "inverted": true
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-level-3-03",
+      "number": 155,
+      "group": "level-3-challenges",
+      "kind": "puzzle",
+      "name": "Challenge 3-3 - P3DS",
+      "description": "Pushmo Level 3 Challenge 3.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 9,
+      "height": 10,
+      "palette": {
+        "P": [
+          243,
+          112,
+          166
+        ],
+        "T": [
+          0,
+          177,
+          185
+        ],
+        "W": [
+          245,
+          233,
+          216
+        ]
+      },
+      "grid": [
+        "TTTTTTWWW",
+        "TTTTTTTTW",
+        "TTTTTTTTW",
+        "TTTTTTTPW",
+        "TTTWWWWPW",
+        "TTWWPPPPW",
+        "TWWWPPPWW",
+        "WWPPPPWWW",
+        "WPPPPPPPP",
+        "PPPPPPPPP"
+      ],
+      "start": {
+        "x": 0,
+        "y": 10,
+        "z": 0
+      },
+      "goal": {
+        "x": 8,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Level 3 Challenges",
+        "originalName": "Challenge 3-3",
+        "referenceImage": "Screenshot 2026-11-25 at 9.55.06 p.m..png",
+        "url": "https://www.youtube.com/watch?v=jO3XUbQJG7s"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 7,
+            "y": 6
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-level-3-04",
+      "number": 156,
+      "group": "level-3-challenges",
+      "kind": "puzzle",
+      "name": "Challenge 3-4 - P3DS",
+      "description": "Pushmo Level 3 Challenge 4.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 11,
+      "height": 5,
+      "palette": {
+        "P": [
+          243,
+          112,
+          166
+        ],
+        "T": [
+          0,
+          177,
+          185
+        ],
+        "W": [
+          245,
+          233,
+          216
+        ]
+      },
+      "grid": [
+        "PPPPPPPPPPP",
+        "PWWWPWPWWWP",
+        "PPPPPPPPPPP",
+        "PTTTPTPTTTP",
+        "PPPPPPPPPPP"
+      ],
+      "start": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "goal": {
+        "x": 5,
+        "y": 1
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Level 3 Challenges",
+        "originalName": "Challenge 3-4",
+        "referenceImage": "Screenshot 2026-11-25 at 9.55.39 p.m..png",
+        "url": "https://www.youtube.com/watch?v=jO3XUbQJG7s"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 1,
+          "y": 1,
+          "color": "W"
+        },
+        {
+          "x": 5,
+          "y": 3,
+          "color": "T"
+        }
+      ],
+      "warpPairs": [
+        [
+          {
+            "x": 7,
+            "y": 1
+          },
+          {
+            "x": 1,
+            "y": 3
+          }
+        ],
+        [
+          {
+            "x": 3,
+            "y": 3
+          },
+          {
+            "x": 8,
+            "y": 4
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-level-3-05",
+      "number": 157,
+      "group": "level-3-challenges",
+      "kind": "puzzle",
+      "name": "Challenge 3-5 - P3DS",
+      "description": "Pushmo Level 3 Challenge 5.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 16,
+      "palette": {
+        "P": [
+          243,
+          112,
+          166
+        ],
+        "T": [
+          0,
+          177,
+          185
+        ],
+        "W": [
+          245,
+          233,
+          216
+        ]
+      },
+      "grid": [
+        "TTWTT",
+        "TWWWT",
+        "TPPPT",
+        "WWPWW",
+        "WWTWW",
+        "PTTTP",
+        "PWWWP",
+        "PPWPP",
+        "TTPTT",
+        "TPPPT",
+        "TWWWT",
+        "PPWPP",
+        "PPTPP",
+        "WTTTW",
+        "WPPPW",
+        "WWPWW"
+      ],
+      "start": {
+        "x": 0,
+        "y": 16,
+        "z": 0
+      },
+      "goal": {
+        "x": 4,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Level 3 Challenges",
+        "originalName": "Challenge 3-5",
+        "referenceImage": "Screenshot 2026-11-25 at 9.56.37 p.m..png",
+        "url": "https://www.youtube.com/watch?v=jO3XUbQJG7s"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      }
+    },
+    {
+      "id": "p3ds-advanced-19",
+      "number": 135,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 19 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 4,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OOOOO",
+        "CCCCC",
+        "GGGGG",
+        "OOOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 4,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 19",
+        "referenceImage": "level-19_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 2,
+          "y": 2,
+          "color": "G"
+        }
+      ]
+    },
+    {
+      "id": "p3ds-advanced-20",
+      "number": 136,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 20 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 5,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OGGGG",
+        "OOGGG",
+        "CCCCC",
+        "GGGGG",
+        "OOOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 20",
+        "referenceImage": "level-20_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 2,
+          "y": 2,
+          "color": "O"
+        }
+      ]
+    },
+    {
+      "id": "p3ds-advanced-21",
+      "number": 137,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 21 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 5,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "GGGGG",
+        "GOOOG",
+        "OGGGO",
+        "OOOOO",
+        "CCCCC"
+      ],
+      "start": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "goal": {
+        "x": 2,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 21",
+        "referenceImage": "level-21_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 2,
+          "y": 2,
+          "color": "G"
+        }
+      ]
+    },
+    {
+      "id": "p3ds-advanced-22",
+      "number": 138,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 22 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 6,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OOOOO",
+        "GGGGG",
+        "OOOOO",
+        "CCCCC",
+        "GGGGG",
+        "OOOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 6,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 22",
+        "referenceImage": "level-22_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 2,
+          "y": 1,
+          "color": "G"
+        },
+        {
+          "x": 2,
+          "y": 3,
+          "color": "C"
+        }
+      ]
+    },
+    {
+      "id": "p3ds-advanced-23",
+      "number": 139,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 23 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 6,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "GGGGG",
+        "GCCCG",
+        "OOOOO",
+        "OCCCO",
+        "OGGGO",
+        "OOOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 6,
+        "z": 0
+      },
+      "goal": {
+        "x": 4,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 23",
+        "referenceImage": "level-23_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 2,
+          "y": 2,
+          "color": "O"
+        },
+        {
+          "x": 2,
+          "y": 4,
+          "color": "G"
+        }
+      ]
+    },
+    {
+      "id": "p3ds-advanced-24",
+      "number": 140,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 24 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 3,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOO",
+        "OOOO",
+        "GGGG"
+      ],
+      "start": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "goal": {
+        "x": 3,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 24",
+        "referenceImage": "level-24_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 2
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-25",
+      "number": 141,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 25 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 7,
+      "height": 5,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOGOOO",
+        "OOGGGOO",
+        "OGGGGGO",
+        "OOGGGOO",
+        "OOOGOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "goal": {
+        "x": 3,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 25",
+        "referenceImage": "level-25_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 4,
+            "y": 1
+          },
+          {
+            "x": 1,
+            "y": 3
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-26",
+      "number": 142,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 26 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 5,
+      "height": 6,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OGCGG",
+        "OOCGG",
+        "GGCOO",
+        "CCCOO",
+        "GGGOO",
+        "CCCOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 6,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 26",
+        "referenceImage": "level-26_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 4,
+            "y": 2
+          },
+          {
+            "x": 0,
+            "y": 3
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-27",
+      "number": 143,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 27 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 3,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOO",
+        "OOOO",
+        "OGGO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 27",
+        "referenceImage": "level-27_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 3,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "inverted": true
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-28",
+      "number": 144,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 28 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 4,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOO",
+        "OOOO",
+        "OGGO",
+        "OGGO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 4,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 28",
+        "referenceImage": "level-28_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 3,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 1,
+            "inverted": true
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-29",
+      "number": 145,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 29 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 3,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOO",
+        "OOOO",
+        "GGGG"
+      ],
+      "start": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "goal": {
+        "x": 0,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 29",
+        "referenceImage": "level-29_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 3,
+            "y": 0
+          },
+          {
+            "x": 3,
+            "y": 1,
+            "inverted": true
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-30",
+      "number": 146,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 30 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 5,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOO",
+        "OOOO",
+        "GGGG",
+        "GGGG",
+        "OOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "goal": {
+        "x": 3,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 30",
+        "referenceImage": "level-30_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 2
+          },
+          {
+            "x": 0,
+            "y": 4
+          }
+        ],
+        [
+          {
+            "x": 1,
+            "y": 0
+          },
+          {
+            "x": 1,
+            "y": 2
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-31",
+      "number": 147,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 31 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 5,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOGG",
+        "OOGG",
+        "GGOO",
+        "GGOO",
+        "OOGG"
+      ],
+      "start": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "goal": {
+        "x": 3,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 31",
+        "referenceImage": "level-31_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 2
+          },
+          {
+            "x": 0,
+            "y": 4
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 3,
+            "y": 4
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-32",
+      "number": 148,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 32 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "knownIssues": true,
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 13,
+      "height": 13,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "OOOOOOOOOOOOO",
+        "OOOOOOOOOOOOO",
+        "OOOOOGGGOOOOO",
+        "OOOOGGOGGOOOO",
+        "OOOGGOOOGGOOO",
+        "OOGGOOOOOGGOO",
+        "OGGOOGGGOOGGO",
+        "OOGGOOGOOGGOO",
+        "OOOGGOOOGGOOO",
+        "OOOOGGOGGOOOO",
+        "OOOOOGGGOOOOO",
+        "OOOOOOGOOOOOO",
+        "OOOOOOOOOOOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 13,
+        "z": 0
+      },
+      "goal": {
+        "x": 6,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 32",
+        "referenceImage": "level-32_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 6,
+          "y": 3,
+          "color": "G"
+        }
+      ],
+      "warpPairs": [
+        [
+          {
+            "x": 6,
+            "y": 1,
+            "inverted": true
+          },
+          {
+            "x": 6,
+            "y": 5,
+            "inverted": true
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-33",
+      "number": 149,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 33 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 7,
+      "height": 7,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OOOOOOO",
+        "OGGGGGO",
+        "OGCCCGO",
+        "OGCGCGO",
+        "OGCCCGO",
+        "OGGGGGO",
+        "OOOOOOO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "goal": {
+        "x": 3,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 33",
+        "referenceImage": "level-33_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "switches": [
+        {
+          "x": 4,
+          "y": 2,
+          "color": "C"
+        }
+      ],
+      "warpPairs": [
+        [
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 6
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-34",
+      "number": 150,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 34 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 6,
+      "height": 10,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OCCGGG",
+        "OOCCGG",
+        "OOOCCG",
+        "OOOOCG",
+        "OOOOOG",
+        "OOOOOG",
+        "OOOOCG",
+        "OOOCCG",
+        "OOCCGG",
+        "OCCGGG"
+      ],
+      "start": {
+        "x": 0,
+        "y": 10,
+        "z": 0
+      },
+      "goal": {
+        "x": 5,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 34",
+        "referenceImage": "level-34_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 4,
+            "y": 1,
+            "inverted": true
+          },
+          {
+            "x": 4,
+            "y": 8
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-35",
+      "number": 151,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 35 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 9,
+      "height": 13,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ],
+        "C": [
+          249,
+          218,
+          164
+        ]
+      },
+      "grid": [
+        "OOOOOOOOO",
+        "OGGGGOOOO",
+        "OGGGGGOOO",
+        "OOOOGGGOO",
+        "OOOOOGGGO",
+        "OOOOCCCCO",
+        "OOOCCCCCO",
+        "OOCCCOOOO",
+        "OCCCOOOOO",
+        "OGGGGOOOO",
+        "OGGGGGOOO",
+        "OOOOGGGOO",
+        "OOOOOGGGO"
+      ],
+      "start": {
+        "x": 0,
+        "y": 13,
+        "z": 0
+      },
+      "goal": {
+        "x": 8,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 35",
+        "referenceImage": "level-35_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 1,
+            "y": 1
+          },
+          {
+            "x": 1,
+            "y": 11
+          }
+        ]
+      ]
+    },
+    {
+      "id": "p3ds-advanced-36",
+      "number": 152,
+      "group": "advanced-lessons",
+      "kind": "puzzle",
+      "name": "Lesson 36 - P3DS",
+      "description": "A Pushmo Advanced Lesson.",
+      "coordinateOrigin": "top-left",
+      "emptyCell": ".",
+      "width": 4,
+      "height": 7,
+      "palette": {
+        "O": [
+          255,
+          144,
+          62
+        ],
+        "G": [
+          155,
+          194,
+          42
+        ]
+      },
+      "grid": [
+        "GGOO",
+        "GGOO",
+        "OOGG",
+        "OOGG",
+        "GGOO",
+        "GGOO",
+        "OOGG"
+      ],
+      "start": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "goal": {
+        "x": 3,
+        "y": 0
+      },
+      "source": {
+        "format": "screenshot-reconstruction",
+        "game": "Pushmo",
+        "collection": "Advanced Lessons",
+        "originalName": "Lesson 36",
+        "referenceImage": "level-36_pink-grid.png",
+        "url": "https://www.youtube.com/watch?v=3lW3vkYEsZY"
+      },
+      "objects": {
+        "switches": [],
+        "manholes": []
+      },
+      "warpPairs": [
+        [
+          {
+            "x": 0,
+            "y": 4
+          },
+          {
+            "x": 0,
+            "y": 6
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 6
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 3,
+            "y": 4
+          }
+        ]
+      ]
+    },
+    {
       "id": "builtin-001",
       "legacyId": 1,
       "number": 1,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 1",
+      "name": "Lesson 1 - P3DS",
       "description": "Climb the little staircase.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -62,9 +1716,9 @@
       "height": 4,
       "palette": {
         "R": [
-          255,
-          113,
-          56
+          155,
+          194,
+          42
         ],
         "O": [
           242,
@@ -72,9 +1726,9 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          255,
+          144,
+          62
         ],
         "B": [
           85,
@@ -113,7 +1767,7 @@
       "number": 2,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 2",
+      "name": "Lesson 2 - P3DS",
       "description": "Find a path through the cross.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -132,14 +1786,14 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          155,
+          194,
+          42
         ],
         "B": [
-          85,
-          169,
-          174
+          255,
+          144,
+          62
         ],
         "Y": [
           255,
@@ -174,7 +1828,7 @@
       "number": 3,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 3",
+      "name": "Lesson 3 - P3DS",
       "description": "Climb from one colored row to the next.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -198,14 +1852,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          255,
+          144,
+          62
         ],
         "Y": [
-          255,
-          223,
-          63
+          155,
+          194,
+          42
         ]
       },
       "grid": [
@@ -233,7 +1887,7 @@
       "number": 4,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 4",
+      "name": "Lesson 4 - P3DS",
       "description": "Step into the center of the square.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -242,14 +1896,14 @@
       "height": 4,
       "palette": {
         "R": [
-          255,
-          113,
-          56
+          155,
+          194,
+          42
         ],
         "O": [
-          242,
-          160,
-          90
+          255,
+          144,
+          62
         ],
         "G": [
           121,
@@ -262,9 +1916,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          249,
+          218,
+          164
         ]
       },
       "grid": [
@@ -293,7 +1947,7 @@
       "number": 5,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 5",
+      "name": "Lesson 5 - P3DS",
       "description": "Follow the rising green steps.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -302,14 +1956,14 @@
       "height": 5,
       "palette": {
         "R": [
-          255,
-          113,
-          56
+          155,
+          194,
+          42
         ],
         "O": [
-          242,
-          160,
-          90
+          255,
+          144,
+          62
         ],
         "G": [
           121,
@@ -354,7 +2008,7 @@
       "number": 6,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 6",
+      "name": "Lesson 6 - P3DS",
       "description": "Cross the dips to reach the top.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -364,8 +2018,8 @@
       "palette": {
         "R": [
           255,
-          113,
-          56
+          144,
+          62
         ],
         "O": [
           242,
@@ -373,9 +2027,9 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          155,
+          194,
+          42
         ],
         "B": [
           85,
@@ -417,7 +2071,7 @@
       "number": 7,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 7",
+      "name": "Lesson 7 - P3DS",
       "description": "Climb the green cross set into the orange wall.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -436,14 +2090,14 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          155,
+          194,
+          42
         ],
         "B": [
-          85,
-          169,
-          174
+          255,
+          144,
+          62
         ],
         "Y": [
           255,
@@ -480,7 +2134,7 @@
       "number": 8,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 8",
+      "name": "Lesson 8 - P3DS",
       "description": "Find a route through the winding color bands.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -494,9 +2148,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          249,
+          218,
+          164
         ],
         "G": [
           121,
@@ -504,14 +2158,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          155,
+          194,
+          42
         ],
         "Y": [
           255,
-          223,
-          63
+          144,
+          62
         ]
       },
       "grid": [
@@ -543,7 +2197,7 @@
       "number": 9,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 9",
+      "name": "Lesson 9 - P3DS",
       "description": "Pull through the doorway in the orange wall.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -552,14 +2206,14 @@
       "height": 4,
       "palette": {
         "R": [
-          255,
-          113,
-          56
+          249,
+          218,
+          164
         ],
         "O": [
-          242,
-          160,
-          90
+          155,
+          194,
+          42
         ],
         "G": [
           121,
@@ -573,8 +2227,8 @@
         ],
         "Y": [
           255,
-          223,
-          63
+          144,
+          62
         ]
       },
       "grid": [
@@ -603,7 +2257,7 @@
       "number": 10,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 10",
+      "name": "Lesson 10 - P3DS",
       "description": "Reach the top of the green doorway.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -612,19 +2266,19 @@
       "height": 5,
       "palette": {
         "R": [
-          255,
-          113,
-          56
+          155,
+          194,
+          42
         ],
         "O": [
-          242,
-          160,
-          90
+          255,
+          144,
+          62
         ],
         "G": [
-          121,
-          166,
-          110
+          249,
+          218,
+          164
         ],
         "B": [
           85,
@@ -664,7 +2318,7 @@
       "number": 11,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 11",
+      "name": "Lesson 11 - P3DS",
       "description": "Climb from the broad orange wall onto green.",
       "coordinateOrigin": "top-left",
       "emptyCell": ".",
@@ -673,8 +2327,8 @@
       "palette": {
         "R": [
           255,
-          113,
-          56
+          144,
+          62
         ],
         "O": [
           242,
@@ -682,9 +2336,9 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          155,
+          194,
+          42
         ],
         "B": [
           85,
@@ -723,7 +2377,7 @@
       "number": 12,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 12",
+      "name": "Lesson 12 - P3DS",
       "description": "Cross three broad bands to reach the flag.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -742,14 +2396,14 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          255,
+          144,
+          62
         ],
         "B": [
-          85,
-          169,
-          174
+          155,
+          194,
+          42
         ],
         "Y": [
           255,
@@ -784,7 +2438,7 @@
       "number": 13,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 13",
+      "name": "Lesson 13 - P3DS",
       "description": "Climb across the checker of colored panels.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -798,9 +2452,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          155,
+          194,
+          42
         ],
         "G": [
           121,
@@ -808,14 +2462,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          255,
+          144,
+          62
         ],
         "Y": [
-          255,
-          223,
-          63
+          249,
+          218,
+          164
         ]
       },
       "grid": [
@@ -844,7 +2498,7 @@
       "number": 14,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 14",
+      "name": "Lesson 14 - P3DS",
       "description": "Follow the stepped path around the center.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -858,9 +2512,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          155,
+          194,
+          42
         ],
         "G": [
           121,
@@ -874,8 +2528,8 @@
         ],
         "Y": [
           255,
-          223,
-          63
+          144,
+          62
         ]
       },
       "grid": [
@@ -905,7 +2559,7 @@
       "number": 15,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 15",
+      "name": "Lesson 15 - P3DS",
       "description": "Make your way through the nested square walls.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -914,19 +2568,19 @@
       "height": 4,
       "palette": {
         "R": [
-          255,
-          113,
-          56
+          155,
+          194,
+          42
         ],
         "O": [
-          242,
-          160,
-          90
+          255,
+          144,
+          62
         ],
         "G": [
-          121,
-          166,
-          110
+          249,
+          218,
+          164
         ],
         "B": [
           85,
@@ -965,7 +2619,7 @@
       "number": 16,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 16",
+      "name": "Lesson 16 - P3DS",
       "description": "Climb the stepped center between the orange walls.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -975,8 +2629,8 @@
       "palette": {
         "R": [
           255,
-          113,
-          56
+          144,
+          62
         ],
         "O": [
           242,
@@ -984,26 +2638,26 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          155,
+          194,
+          42
         ],
         "B": [
-          85,
-          169,
-          174
+          249,
+          218,
+          164
         ],
         "Y": [
-          255,
-          223,
-          63
+          126,
+          219,
+          152
         ]
       },
       "grid": [
         "RRRR",
-        "RGBR",
+        "RYBR",
         "RGGR",
-        "RRGR"
+        "RRRR"
       ],
       "start": {
         "x": 0,
@@ -1025,7 +2679,7 @@
       "number": 17,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 17",
+      "name": "Lesson 17 - P3DS",
       "description": "Trace the green and cream switchback.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1044,14 +2698,14 @@
           90
         ],
         "G": [
-          121,
-          166,
-          110
+          255,
+          144,
+          62
         ],
         "B": [
-          85,
-          169,
-          174
+          155,
+          194,
+          42
         ],
         "Y": [
           255,
@@ -1084,7 +2738,7 @@
       "number": 18,
       "group": "basic-lessons",
       "kind": "puzzle",
-      "name": "Lesson 18",
+      "name": "Lesson 18 - P3DS",
       "description": "Climb the alternating color panels.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1098,9 +2752,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          249,
+          218,
+          164
         ],
         "G": [
           121,
@@ -1108,14 +2762,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          155,
+          194,
+          42
         ],
         "Y": [
           255,
-          223,
-          63
+          144,
+          62
         ]
       },
       "grid": [
@@ -1148,7 +2802,7 @@
       "number": 19,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-1",
+      "name": "Challenge 1-1 - P3DS",
       "description": "Challenge 1-1.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1162,14 +2816,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1177,9 +2831,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1210,7 +2864,7 @@
       "number": 20,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-2",
+      "name": "Challenge 1-2 - P3DS",
       "description": "Challenge 1-2.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1224,14 +2878,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1239,9 +2893,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1272,7 +2926,7 @@
       "number": 21,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-3",
+      "name": "Challenge 1-3 - P3DS",
       "description": "Challenge 1-3.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1286,14 +2940,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1301,9 +2955,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1333,7 +2987,7 @@
       "number": 22,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-4",
+      "name": "Challenge 1-4 - P3DS",
       "description": "Challenge 1-4.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1347,14 +3001,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1362,9 +3016,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1395,7 +3049,7 @@
       "number": 23,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-5",
+      "name": "Challenge 1-5 - P3DS",
       "description": "Challenge 1-5.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1409,14 +3063,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1424,9 +3078,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1459,7 +3113,7 @@
       "number": 24,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-6",
+      "name": "Challenge 1-6 - P3DS",
       "description": "Challenge 1-6.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1473,14 +3127,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1488,9 +3142,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1522,7 +3176,7 @@
       "number": 25,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-7",
+      "name": "Challenge 1-7 - P3DS",
       "description": "Challenge 1-7.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1536,14 +3190,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1551,9 +3205,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1591,7 +3245,7 @@
       "number": 26,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-8",
+      "name": "Challenge 1-8 - P3DS",
       "description": "Challenge 1-8.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1605,14 +3259,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1620,9 +3274,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1657,7 +3311,7 @@
       "number": 27,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-9",
+      "name": "Challenge 1-9 - P3DS",
       "description": "Challenge 1-9.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1671,14 +3325,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1686,9 +3340,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1717,7 +3371,7 @@
       "number": 28,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-10",
+      "name": "Challenge 1-10 - P3DS",
       "description": "Challenge 1-10.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1731,14 +3385,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1746,9 +3400,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1779,7 +3433,7 @@
       "number": 29,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-11",
+      "name": "Challenge 1-11 - P3DS",
       "description": "Challenge 1-11.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1793,14 +3447,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1808,9 +3462,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1841,7 +3495,7 @@
       "number": 30,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-12",
+      "name": "Challenge 1-12 - P3DS",
       "description": "Challenge 1-12.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1855,14 +3509,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1870,9 +3524,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1905,7 +3559,7 @@
       "number": 31,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-13",
+      "name": "Challenge 1-13 - P3DS",
       "description": "Challenge 1-13.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -1919,14 +3573,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1934,9 +3588,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -1965,7 +3619,7 @@
       "number": 32,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-14",
+      "name": "Challenge 1-14 - P3DS",
       "description": "Challenge 1-14.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -1979,14 +3633,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -1994,9 +3648,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2025,7 +3679,7 @@
       "number": 33,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-15",
+      "name": "Challenge 1-15 - P3DS",
       "description": "Challenge 1-15.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -2039,14 +3693,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -2054,9 +3708,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2085,7 +3739,7 @@
       "number": 34,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-16",
+      "name": "Challenge 1-16 - P3DS",
       "description": "Challenge 1-16.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -2099,14 +3753,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -2114,9 +3768,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2147,7 +3801,7 @@
       "number": 35,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-17",
+      "name": "Challenge 1-17 - P3DS",
       "description": "Challenge 1-17.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -2161,14 +3815,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -2176,13 +3830,13 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
-        "OOGO",
+        "OOOO",
         "OGYO",
         "OOOO"
       ],
@@ -2192,7 +3846,7 @@
         "y": 3
       },
       "goal": {
-        "x": 2,
+        "x": 0,
         "y": 0
       },
       "objects": {
@@ -2206,7 +3860,7 @@
       "number": 36,
       "group": "first-challenges",
       "kind": "puzzle",
-      "name": "Challenge 1-18",
+      "name": "Challenge 1-18 - P3DS",
       "description": "Challenge 1-18.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2220,14 +3874,14 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
-          121,
-          166,
-          110
+          0,
+          177,
+          185
         ],
         "B": [
           85,
@@ -2235,9 +3889,9 @@
           174
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2267,7 +3921,7 @@
       "number": 37,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-1",
+      "name": "Challenge 2-1 - P3DS",
       "description": "Challenge 2-1.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2281,9 +3935,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2291,14 +3945,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2330,7 +3984,7 @@
       "number": 38,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-2",
+      "name": "Challenge 2-2 - P3DS",
       "description": "Challenge 2-2.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -2344,9 +3998,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2354,14 +4008,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2396,7 +4050,7 @@
       "number": 39,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-3",
+      "name": "Challenge 2-3 - P3DS",
       "description": "Challenge 2-3.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2410,9 +4064,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2420,14 +4074,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2457,7 +4111,7 @@
       "number": 40,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-4",
+      "name": "Challenge 2-4 - P3DS",
       "description": "Challenge 2-4.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -2471,9 +4125,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2481,14 +4135,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2521,7 +4175,7 @@
       "number": 41,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-5",
+      "name": "Challenge 2-5 - P3DS",
       "description": "Challenge 2-5.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2535,9 +4189,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2545,14 +4199,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2586,7 +4240,7 @@
       "number": 42,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-6",
+      "name": "Challenge 2-6 - P3DS",
       "description": "Challenge 2-6.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2600,9 +4254,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2610,14 +4264,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2649,7 +4303,7 @@
       "number": 43,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-7",
+      "name": "Challenge 2-7 - P3DS",
       "description": "Challenge 2-7.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -2663,9 +4317,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2673,14 +4327,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2710,7 +4364,7 @@
       "number": 44,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-8",
+      "name": "Challenge 2-8 - P3DS",
       "description": "Challenge 2-8.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2724,9 +4378,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2734,14 +4388,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2774,7 +4428,7 @@
       "number": 45,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-9",
+      "name": "Challenge 2-9 - P3DS",
       "description": "Challenge 2-9.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2788,9 +4442,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2798,14 +4452,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2837,7 +4491,7 @@
       "number": 46,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-10",
+      "name": "Challenge 2-10 - P3DS",
       "description": "Challenge 2-10.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2851,9 +4505,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2861,14 +4515,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2900,7 +4554,7 @@
       "number": 47,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-11",
+      "name": "Challenge 2-11 - P3DS",
       "description": "Challenge 2-11.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2914,9 +4568,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2924,14 +4578,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -2961,7 +4615,7 @@
       "number": 48,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-12",
+      "name": "Challenge 2-12 - P3DS",
       "description": "Challenge 2-12.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -2975,9 +4629,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -2985,14 +4639,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3032,7 +4686,7 @@
       "number": 49,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-13",
+      "name": "Challenge 2-13 - P3DS",
       "description": "Challenge 2-13.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3046,9 +4700,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -3056,14 +4710,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3095,7 +4749,7 @@
       "number": 50,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-14",
+      "name": "Challenge 2-14 - P3DS",
       "description": "Challenge 2-14.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3109,9 +4763,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -3119,14 +4773,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3160,7 +4814,7 @@
       "number": 51,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-15",
+      "name": "Challenge 2-15 - P3DS",
       "description": "Challenge 2-15.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3174,9 +4828,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -3184,14 +4838,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3223,7 +4877,7 @@
       "number": 52,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-16",
+      "name": "Challenge 2-16 - P3DS",
       "description": "Challenge 2-16.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3237,9 +4891,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -3247,14 +4901,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3284,7 +4938,7 @@
       "number": 53,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-17",
+      "name": "Challenge 2-17 - P3DS",
       "description": "Challenge 2-17.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3298,9 +4952,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -3308,14 +4962,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3349,7 +5003,7 @@
       "number": 54,
       "group": "more-challenges",
       "kind": "puzzle",
-      "name": "Challenge 2-18",
+      "name": "Challenge 2-18 - P3DS",
       "description": "Challenge 2-18.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3363,9 +5017,9 @@
           56
         ],
         "O": [
-          242,
-          160,
-          90
+          243,
+          112,
+          166
         ],
         "G": [
           121,
@@ -3373,14 +5027,14 @@
           110
         ],
         "B": [
-          85,
-          169,
-          174
+          0,
+          177,
+          185
         ],
         "Y": [
-          255,
-          223,
-          63
+          245,
+          233,
+          216
         ]
       },
       "grid": [
@@ -3411,7 +5065,7 @@
       "number": 55,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Strawberry",
+      "name": "Strawberry - P3DS",
       "description": "Reach the flag on the Strawberry mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3508,7 +5162,7 @@
       "number": 56,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Chick",
+      "name": "Chick - P3DS",
       "description": "Reach the flag on the Chick mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3607,7 +5261,7 @@
       "number": 57,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Peach",
+      "name": "Peach - P3DS",
       "description": "Reach the flag on the Peach mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3704,7 +5358,7 @@
       "number": 58,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Shooting Star",
+      "name": "Shooting Star - P3DS",
       "description": "Reach the flag on the Shooting Star mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3807,7 +5461,7 @@
       "number": 59,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Kitten",
+      "name": "Kitten - P3DS",
       "description": "Reach the flag on the Kitten mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -3909,7 +5563,7 @@
       "number": 60,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Crab",
+      "name": "Crab - P3DS",
       "description": "Reach the flag on the Crab mural.",
       "knownIssues": true,
       "coordinateOrigin": "top-left",
@@ -4017,7 +5671,7 @@
       "number": 61,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Mario (1)",
+      "name": "Mario (1) - P3DS",
       "description": "Reach the flag on the Mario (1) mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4111,7 +5765,7 @@
       "number": 62,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Bananas",
+      "name": "Bananas - P3DS",
       "description": "Reach the flag on the Bananas mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4204,7 +5858,7 @@
       "number": 63,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Apple Tree",
+      "name": "Apple Tree - P3DS",
       "description": "Reach the flag on the Apple Tree mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4312,7 +5966,7 @@
       "number": 64,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Swim Trunks",
+      "name": "Swim Trunks - P3DS",
       "description": "Reach the flag on the Swim Trunks mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4420,7 +6074,7 @@
       "number": 65,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Sandwich",
+      "name": "Sandwich - P3DS",
       "description": "Reach the flag on the Sandwich mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4530,7 +6184,7 @@
       "number": 66,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Ruby Ring",
+      "name": "Ruby Ring - P3DS",
       "description": "Reach the flag on the Ruby Ring mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4659,7 +6313,7 @@
       "number": 67,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Puppy",
+      "name": "Puppy - P3DS",
       "description": "Reach the flag on the Puppy mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4761,7 +6415,7 @@
       "number": 68,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Orange",
+      "name": "Orange - P3DS",
       "description": "Reach the flag on the Orange mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4873,7 +6527,7 @@
       "number": 69,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Snail",
+      "name": "Snail - P3DS",
       "description": "Reach the flag on the Snail mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -4988,7 +6642,7 @@
       "number": 70,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Pencil",
+      "name": "Pencil - P3DS",
       "description": "Reach the flag on the Pencil mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
@@ -5115,7 +6769,7 @@
       "number": 71,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Pig",
+      "name": "Pig - P3DS",
       "description": "Reach the flag on the Pig mural.",
       "coordinateOrigin": "top-left",
       "emptyCell": ".",
@@ -5211,7 +6865,7 @@
       "number": 72,
       "group": "murals",
       "kind": "puzzle",
-      "name": "Saturn",
+      "name": "Saturn - P3DS",
       "description": "Reach the flag on the Saturn mural.",
       "knownIssues": false,
       "coordinateOrigin": "top-left",
