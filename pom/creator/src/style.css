@@ -689,6 +689,10 @@
   }
 }
 /* Little Ledges theme for the neobrutalism.dev components. */
+.creator-page {
+  --cream: #ffdf72;
+  --surface: #ffdf72;
+}
 @font-face {
   font-family: Figtree;
   src: url('../../src/assets/interface/figtree-variable.ttf') format('truetype');
